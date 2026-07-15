@@ -1,0 +1,50 @@
+[
+    {
+        "id": 1,
+        "name": "Purple Nails",
+        "price": 20000,
+        "image": "Nails1.jpg"
+    },
+    {
+        "id": 2,
+        "name": "Blue Nails",
+        "price": 35000,
+        "image": "Nails2.jpg"
+    },
+    {
+        "id": 3,
+        "name": "Yellow Nails",
+        "price": 25000,
+        "image": "Nails3.jpg"
+    },
+    {
+        "id": 4,
+        "name": "Red Nails",
+        "price": 10000,
+        "image": "Nails3.jpg"
+    },
+    {
+        "id": 5,
+        "name": "Maroon Nails",
+        "price": 30000,
+        "image": "Shop3.jpg"
+    },
+    {
+        "id": 6,
+        "name": "Baby Blue Nails",
+        "price": 40000,
+        "image": "Nails1.jpg"
+    },
+    {
+        "id": 7,
+        "name": "Burgandy Nails",
+        "price": 20000,
+        "image": "Nails1.jpg"
+    },
+    {
+        "id": 8,
+        "name": "Almond Nails",
+        "price": 27000,
+        "image": "Shop3.jpg"
+    }
+]

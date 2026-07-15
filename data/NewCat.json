@@ -1,0 +1,50 @@
+[
+    {
+        "id": 1,
+        "name": "NAILS",
+        "price": 200,
+        "image": "Nails1.jpg"
+    },
+    {
+        "id": 2,
+        "name": "WIGS",
+        "price": 300,
+        "image": "Nails2.jpg"
+    },
+    {
+        "id": 3,
+        "name": "EXTENSIONS",
+        "price": 200,
+        "image": "Nails1.jpg"
+    },
+    {
+        "id": 4,
+        "name": "PRES0N NAILS",
+        "price": 100,
+        "image": "Nails2.jpg"
+    },
+    {
+        "id": 5,
+        "name": "ACCESSORIES",
+        "price": 300,
+        "image": "Nails1.jpg"
+    },
+    {
+        "id": 6,
+        "name": "GEL BUILDER",
+        "price": 200,
+        "image": "Nails2.jpg"
+    },
+    {
+        "id": 7,
+        "name": "LOCS EXTENSIONS",
+        "price": 200,
+        "image": "Nails2.jpg"
+    },
+    {
+        "id": 8,
+        "name": "NAILS PEACE",
+        "price": 200,
+        "image": "Nails1.jpg"
+    } 
+]

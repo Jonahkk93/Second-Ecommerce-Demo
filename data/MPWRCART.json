@@ -1,0 +1,75 @@
+[
+    {
+        "id": 1,
+        "name": "Lemon Blast",
+        "price": 20000,
+        "image": "images/Nails1.jpg"
+    },
+    {
+        "id": 2,
+        "name": "Lavendar Feel",
+        "price": 35000,
+        "image": "images/IMG_3893.JPG"
+    },
+    {
+        "id": 3,
+        "name": "Barbie Pink",
+        "price": 25000,
+        "image": "images/IMG_3899.JPG"
+    },
+    {
+        "id": 4,
+        "name": "Subtle Perfection",
+        "price": 10000,
+        "image": "images/IMG_3887h.jpg"
+    },
+    {
+        "id": 5,
+        "name": "Hot Mess",
+        "price": 30000,
+        "image": "images/IMG_3900.AVIF"
+    },
+    {
+        "id": 6,
+        "name": "Girly Girl",
+        "price": 40000,
+        "image": "images/IMG_3886.avif"
+    },
+    {
+        "id": 7,
+        "name": "Cactus Desert",
+        "price": 20000,
+        "image": "images/IMG_3884.AVIF"
+    },
+    {
+        "id": 8,
+        "name": "Snow White",
+        "price": 27000,
+        "image": "images/IMG_389p.jpg"
+    },
+    {
+    "id": 9,
+    "name": "80s Retro",
+    "price": 28000,
+    "image": "images/IMG_3882.AVIF"
+},  
+{
+    "id": 10,
+    "name": "Pearly White",
+    "price": 26000,
+    "image": "images/IMG_3885.AVIF"
+},
+{
+    "id": 11,
+    "name": "Classic",
+    "price": 30000,
+    "image": "images/IMG_3888.AVIF"
+},
+{
+"id": 12,
+"name": "Show Off",
+"price": 20000,
+"image": "images/Snow White.jpg"
+}
+]
+

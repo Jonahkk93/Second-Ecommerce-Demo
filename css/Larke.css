@@ -1,0 +1,7 @@
+@font-face{
+    font-family: Larke;
+    src:url(../fonts/Larke\ Neue\ Regular.ttf);
+}
+p{
+    font-family: Larke;
+}
