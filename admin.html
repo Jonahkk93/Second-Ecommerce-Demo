@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <header class="admin-header">
+        <h1>Admin Dashboard</h1>
+        <div class="dashboard-stats">
+
+    <div class="stat-card">
+        <h3>Total Orders</h3>
+        <p id="total-orders">...</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Pending Orders</h3>
+        <p id="pending-orders">...</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Total Revenue</h3>
+        <p id="total-revenue">Loading...</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Total Customers</h3>
+        <p id="total-customers">...</p>
+    </div>
+
+</div>
+    </header>
+
+    <main class="admin-container">
+
+        <h2>Orders</h2>
+
+<div class="admin-toolbar">
+
+    <input
+        type="text"
+        id="order-search"
+        placeholder="Search by Order ID or Customer..."
+    >
+
+    <div class="status-filters">
+
+        <button class="filter-btn active" data-status="All">All</button>
+
+        <button class="filter-btn" data-status="Pending">Pending</button>
+
+        <button class="filter-btn" data-status="Processing">Processing</button>
+
+        <button class="filter-btn" data-status="Shipped">Shipped</button>
+
+        <button class="filter-btn" data-status="Delivered">Delivered</button>
+
+        <button class="filter-btn" data-status="Cancelled">Cancelled</button>
+
+    </div>
+
+</div>
+
+        <div class="orders-list">
+            <!-- Orders will appear here -->
+        </div>
+        <div id="admin-toast"></div>
+
+    </main>
+
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/products.js"></script>
+    <script type="module" src="js/admin.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Product</title>
+
+    <link
+        rel="stylesheet"
+        href="css/product.css">
+        <link rel="stylesheet" href="css/Larke.css">
+    
+
+</head>
+
+<body>
+    <header class="product-page-header">
+        <div class="product-page-header-inner">
+
+<!--THE NAV BACK BUTTON-->
+    <button class="product-back-btn">
+
+        <img
+            src="images/Arrow Black.png"
+            alt="Back"
+        >
+
+    </button>
+
+ <div class="product-page-icons">
+
+    <!-- SEARCH -->
+    <div id="search-icon">
+        <img
+            src="images/Search icon black .png"
+            class="search-image"
+        >
+    </div>
+
+    <!-- WISHLIST -->
+    <div id="wishlist-nav-icon">
+        <img
+            src="images/Heart4Nav.PNG"
+            class="wishlist-nav-image"
+        >
+    </div>
+
+    <!-- CART -->
+    <div id="cart-icon">
+        <img
+            src="images/Cart black.png"
+            class="cart-image"
+        >
+        <span class="cart-item-count"></span>
+    </div>
+
+</div>
+</header>
+
+
+<div class="search-bar">
+
+    <div class="search-input-wrapper">
+
+        <input
+            type="text"
+            id="search-input"
+            placeholder="Search products..."
+        >
+
+        <img src="images/BlackClose.jpg" id="search-close">
+
+    </div>
+
+</div>
+
+
+<!--THE CART FOR PRODUCT-->
+<div class="cart">
+
+    <h2 class="cart-title">My Cart</h2>
+
+    <div class="cart-content">
+    </div>
+
+    <div class="cart-empty">
+
+        <img
+            src="images/Cart black.png"
+            class="empty-cart-icon"
+        >
+
+        <h3>Your cart is empty</h3>
+
+        <p>Add your favorite products to get started.</p>
+
+        <button class="continue-shopping">
+            Continue Shopping
+        </button>
+
+    </div>
+
+    <div class="total">
+
+        <div class="total-title">Total</div>
+
+        <div class="total-price">
+            UGX 0
+        </div>
+
+    </div>
+
+    <button class="btn-buy">
+        Check Out
+    </button>
+
+    <img
+        src="images/BlackClose.jpg"
+        class="ri-close-line"
+        id="cart-close"
+    >
+
+</div>
+
+
+
+<!--WISHLIST-->
+<div class="wishlist">
+
+    <h2 class="wishlist-title">My Wishlist</h2>
+
+    <div class="wishlist-content">
+
+    </div>
+
+    <div class="wishlist-empty">
+
+        <img
+            src="images/BlackHeart.PNG"
+            class="wishlist-empty-icon"
+        >
+
+        <h3>Your Wishlist is empty</h3>
+
+        <p>
+            Save products you love and they'll appear here.
+        </p>
+
+        <button class="wishlist-continue">
+            Continue Shopping
+        </button>
+
+    </div>
+
+    <div class="wishlist-footer">
+
+        <button class="clear-wishlist">
+
+            <img
+                src="images/trashbin.png"
+                class="clear-wishlist-icon"
+            >
+
+            <span>Clear Wishlist</span>
+
+        </button>
+
+    </div>
+
+    <img
+        src="images/BlackClose.jpg"
+        id="wishlist-close"
+    >
+
+</div>
+
+<!-- CONFIRM CLEAR WISHLIST -->
+<div class="confirm-overlay">
+
+    <div class="confirm-box">
+
+        <h3>Clear Wishlist?</h3>
+
+        <p>
+            Are you sure you want to remove all items from your wishlist?
+        </p>
+
+        <div class="confirm-buttons">
+
+            <button class="confirm-cancel">
+                Cancel
+            </button>
+
+            <button class="confirm-clear">
+                Clear
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!--THE PRODUCT -->
+<section class="product-details">
+
+    <div class="product-layout">
+
+        <!-- LEFT COLUMN -->
+        <div class="product-gallery">
+
+            <div class="product-gallery-wrapper">
+
+                <!-- Thumbnails -->
+                <div class="product-thumbnails">
+
+                    <img
+                        class="product-thumbnail active"
+                        src=""
+                        alt="Thumbnail 1"
+                    >
+
+                    <img
+                        class="product-thumbnail"
+                        src=""
+                        alt="Thumbnail 2"
+                    >
+
+                    <img
+                        class="product-thumbnail"
+                        src=""
+                        alt="Thumbnail 3"
+                    >
+
+                </div>
+
+                <!-- Main Image -->
+                <div class="product-image-container">
+
+                    <img
+                        src=""
+                        alt="Product"
+                        class="product-page-image"
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="product-info">
+
+            <div class="product-title-section">
+
+<h1 class="product-page-title">Luxury Square French Tips</h1>
+
+<div class="product-rating">
+    <span class="stars">★★★★★</span>
+    <span class="rating-text">
+        <span class="rating-score">4.9</span>
+        <span class="rating-divider">•</span>
+        <span class="review-count">127 Reviews</span>
+    </span>
+</div>
+
+<p class="product-page-price">UGX 50,000</p>
+            </div>
+
+            <div class="product-description-section">
+
+                <h3>Description</h3>
+
+                <p class="product-page-description"></p>
+
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="product-colors">
+
+                <h3>Color</h3>
+
+                <div class="color-options"></div>
+
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="product-sizes">
+
+                <h3>Size</h3>
+
+                <div class="size-options"></div>
+
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="product-benefits">
+
+                <div class="benefit-item">
+
+                    <span>🚚</span>
+
+                    <div>
+
+                        <strong>Free Delivery</strong>
+
+                        <p>Available on qualifying orders.</p>
+
+                    </div>
+
+                </div>
+
+                <div class="benefit-item">
+
+                    <span>🔒</span>
+
+                    <div>
+
+                        <strong>Secure Checkout</strong>
+
+                        <p>Safe and encrypted payments.</p>
+
+                    </div>
+
+                </div>
+
+                <div class="benefit-item">
+
+                    <span>↩</span>
+
+                    <div>
+
+                        <strong>Easy Returns</strong>
+
+                        <p>Simple return policy.</p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<div class="product-bottom-bar">
+    <div class="product-bottom-bar-inner">
+
+        <button class="product-bottom-favorite">
+
+    <img
+        src="images/Heart-Outline2.PNG"
+        class="product-bottom-favorite-icon"
+        alt="Favorite"
+    >
+
+    <span>Add to Favorites</span>
+
+</button>
+
+        <div class="purchase-pill">
+
+            <button class="product-bottom-cart">
+                Add to Cart
+            </button>
+
+            <div class="purchase-divider"></div>
+
+            <div class="quantity-selector">
+                <button class="quantity-minus">−</button>
+                <span class="quantity-value">1</span>
+                <button class="quantity-plus">+</button>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+
+<script src="js/products.js"></script>
+
+<script type="module" src="js/firebase.js"></script>
+
+<script type="module" src="js/product.js"></script>
+
+</body>
+
+</html>

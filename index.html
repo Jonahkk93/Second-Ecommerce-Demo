@@ -10,26 +10,84 @@
 
 <body>
     <header>
-        <a href="#" class="logo">LOGO</a>
+
+<!--LOGO-->
+        <a href="#" class="logo">MPWR</a>
         <div class="nav-icons">
 
+<!--SEARCH ICON IN NAV-->
     <div id="search-icon">
         <img src="images/Search icon black .png" class="search-image">
     </div>
 
+
+<!--HEART ICON IN NAV-->
+    <div id="wishlist-nav-icon">
+
+    <img
+        src="images/Heart4Nav.PNG"
+        class="wishlist-nav-image"
+    >
+
+</div>
+
+
+<!--ACCOUNT ICON IN NAV-->
+<div id="account-icon">
+
+    <img
+        src="images/Account Logo 3.PNG"
+        class="account-image"
+        alt="Account"
+    >
+
+</div>
+
+<!--CART ICON IN NAV-->
     <div id="cart-icon">
         <img src="images/Cart black.png" class="cart-image">
         <span class="cart-item-count"></span>
     </div>
 
 </div>
+
+<!--SEARCH BAR-->
     </header>
-    <div class="search-bar">
-    <input
-        type="text"
-        id="search-input"
-        placeholder="Search products..."
-    >
+   <div class="search-bar">
+
+    <div class="search-input-wrapper">
+
+        <input
+            type="text"
+            id="search-input"
+            placeholder="Search products..."
+        >
+
+        <img src="images/BlackClose.jpg" id="search-close">
+
+    </div>
+
+</div>
+
+
+<div class="filter-bar">
+
+    <button class="filter-btn active" data-filter="all">
+        All
+    </button>
+
+    <button class="filter-btn" data-filter="press-ons">
+        Press-ons
+    </button>
+
+    <button class="filter-btn" data-filter="polish">
+        Polish
+    </button>
+
+    <button class="filter-btn" data-filter="care">
+        Care
+    </button>
+
 </div>
 
     <div class="cart">
@@ -67,126 +125,673 @@
      <i><img src="images/BlackClose.jpg" class="ri-close-line" id="cart-close"></i>
     </div>
 
-    
+    <!--THE WISHLIST-->
+<div class="wishlist">
+
+    <h2 class="wishlist-title">My Wishlist</h2>
+
+    <img
+        src="images/BlackClose.jpg"
+        id="wishlist-close"
+    >
+
+    <div class="wishlist-content">
+
+    </div>
+
+<div class="wishlist-empty">
+
+    <img
+        src="images/BlackHeart.PNG"
+        class="wishlist-empty-icon"
+    >
+
+    <h3>Your Wishlist is empty</h3>
+
+    <p>
+        Save products you love and they'll appear here.
+    </p>
+
+    <button class="wishlist-continue">
+        Continue Shopping
+    </button>
+
+</div>
+
+<div class="wishlist-footer">
+    <button class="clear-wishlist">
+
+        <img
+            src="images/trashbin.png"
+            class="clear-wishlist-icon"
+        >
+
+        <span>Clear Wishlist</span>
+
+    </button>
+
+</div>
+
+<!--CATALOG-->
+</div>
     <section class="shop">
         <h1 class="section-title">Products</h1>
         <div class="product-content">
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/Nails1.jpg">
-                 </div>
-                 <h2 class="product-title">Pineapple Zest rest</h2>
+            
+<!--PRODUCT ONE!-->
+            <div class="product-box"
+     data-category="polish"
+     data-id="1">
+    <div class="img-box">
+
+        <button class="wishlist-btn">
+
+            <img
+                 src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/Nails1.jpg">
+
+    </div>
+
+                 <h2 class="product-title">Pineapple Zest Rest</h2>
                  <div class="price-and-cart">
-                    <span class="price">UGX 30000</span>
+                    <span class="price">UGX 30,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
 
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/IMG_3899.JPG">
-                 </div>
+<!--PRODUCT TWO!-->
+               <div class="product-box"
+     data-category="press-ons"
+     data-id="2">
+    <div class="img-box">
+
+        <button class="wishlist-btn">
+
+            <img
+                src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/IMG_3899.JPG">
+
+    </div>
                  <h2 class="product-title">Pink Explosion</h2>
                  <div class="price-and-cart">
-                    <span class="price">UGX 40000</span>
+                    <span class="price">UGX 40,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
 
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/Nails3.jpg">
-                 </div>
+<!--PRODUCT THREE!-->
+             <div class="product-box"
+     data-category="care"
+     data-id="3">
+    <div class="img-box">
+
+        <button class="wishlist-btn">
+
+            <img
+                src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/Nails3.jpg">
+
+    </div>
                  <h2 class="product-title">Moisturizer</h2>
                  <div class="price-and-cart">
-                    <span class="price">UGX 20000</span>
+                    <span class="price">UGX 20,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
 
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/IMG_389p.jpg">
-                 </div>
+<!--PRODUCT FOUR!-->
+               <div class="product-box"
+     data-category="press-ons"
+     data-id="4">
+    <div class="img-box">
+
+        <button class="wishlist-btn">
+
+            <img
+                src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/IMG_389p.jpg">
+
+    </div>
                     <h2 class="product-title">Pearly Press-Ons</h2>
                     <div class="price-and-cart">
-                    <span class="price">UGX 25000</span>
+                    <span class="price">UGX 25,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
+<!--PRODUCT FIVE!-->
+              <div class="product-box"
+     data-category="polish"
+     data-id="5">
+    <div class="img-box">
 
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/IMG_3887h.jpg">
-                 </div>
+        <button class="wishlist-btn">
+
+            <img
+               src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/IMG_3887h.jpg">
+
+    </div>
                     <h2 class="product-title">Soft Pink Polish</h2>
                     <div class="price-and-cart">
-                    <span class="price">UGX 35000</span>
+                    <span class="price">UGX 35,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
 
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/Nails2.jpg">
-                 </div>
+<!--PRODUCT SIX!-->
+            <div class="product-box"
+     data-category="press-ons"
+     data-id="6">
+    <div class="img-box">
+
+        <button class="wishlist-btn">
+
+            <img
+                src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/Nails2.jpg">
+
+    </div>
                     <h2 class="product-title">Press-Ons</h2>
                     <div class="price-and-cart">
-                    <span class="price">UGX 45000</span>
+                    <span class="price">UGX 45,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
 
-                
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/IMG_3893.JPG">
-                 </div>
+<!--PRODUCT SEVEN!-->                
+              <div class="product-box"
+     data-category="polish"
+     data-id="7">
+    <div class="img-box">
+
+        <button class="wishlist-btn">
+
+            <img
+                src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/IMG_3893.JPG">
+
+    </div>
                     <h2 class="product-title">Lavendar</h2>
                     <div class="price-and-cart">
-                    <span class="price">UGX 50000</span>
+                    <span class="price">UGX 50,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
 
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/Snow White.jpg"></div>
+<!--PRODUCT EIGHT!-->
+   <div class="product-box"
+     data-category="press-ons"
+     data-id="8">
+    <div class="img-box">
+
+        <button class="wishlist-btn">
+
+            <img
+                 src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/Snow White.jpg">
+
+    </div>
                     <h2 class="product-title">Princess Cuts</h2>
                     <div class="price-and-cart">
-                    <span class="price">UGX 12000</span>
+                    <span class="price">UGX 12,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
 
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/IMG_3896.jpg"></div>
+<!--PRODUCT NINE!-->
+             <div class="product-box"
+     data-category="polish"
+     data-id="9">
+    <div class="img-box">
+
+        <button class="wishlist-btn">
+
+            <img
+                src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/IMG_3896.jpg">
+
+    </div>
                     <h2 class="product-title">Light Vendar</h2>
                     <div class="price-and-cart">
-                    <span class="price">UGX 52000</span>
+                    <span class="price">UGX 52,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
 
-            <div class="product-box">
-                <div class="img-box">
-                    <img src="images/Shop3.jpg"></div>
+<!--PRODUCT TEN!-->
+              <div class="product-box"
+     data-category="press-ons"
+     data-id="10">
+    <div class="img-box">
+
+        <button class="wishlist-btn">
+
+            <img
+                src="images/Heart-Outline2.PNG"
+                class="wishlist-icon"
+            >
+
+        </button>
+
+        <img src="images/Shop3.jpg">
+
+    </div>
                     <h2 class="product-title">Black Wedges</h2>
                     <div class="price-and-cart">
-                    <span class="price">UGX 31000</span>
+                    <span class="price">UGX 31,000</span>
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
                 
             </div>
 
-        </div></div></div> <div class="no-results">
+        </div></div></div> 
+
+        <div class="no-results">
     <h2>No products found</h2>
     <p>Try searching for another product.</p>
 </div>
     </section>
+
+    
 <div class="toast"></div>
-<script src="js/CARTNEW.js"></script>
+
+
+<div class="confirm-overlay">
+
+    <div class="confirm-box">
+
+        <img
+            src="images/trashbin.png"
+            class="confirm-icon"
+        >
+
+        <h2>Clear Wishlist</h2>
+
+        <p>
+            This will remove all saved products from your Wishlist.
+        </p>
+
+        <div class="confirm-buttons">
+
+            <button class="confirm-cancel">
+                Cancel
+            </button>
+
+            <button class="confirm-clear">
+                Clear Wishlist
+            </button>
+
+        </div>
+
+    </div>
+</div>
+
+    <div class="product-modal-overlay">
+
+    <div class="product-modal">
+
+
+        <div class="product-modal-top">
+
+            <div class="product-modal-left">
+
+
+        <img
+            src=""
+            class="product-modal-image"
+        >
+        </div>
+
+<div class="product-modal-right">
+
+    <div class="product-modal-header">
+
+        <h2 class="product-modal-title"></h2>
+        <button class="product-modal-favorite">
+    <img
+        src="images/Heart-Outline2.PNG"
+        class="product-modal-favorite-icon"
+    >
+</button></div>
+
+        <span class="product-modal-price"></span>
+
+        <p class="product-modal-description">
+            Product description coming soon...
+        </p>
+</div>
+</div>
+
+      <div class="product-modal-colors">
+
+    <h3>Color</h3>
+
+    <div class="product-modal-color-options"></div>
+
+</div>
+
+<div class="product-modal-sizes">
+
+    <h3>Size</h3>
+
+    <div class="product-modal-size-options"></div>
+
+
+</div>
+        <button class="product-modal-cart">
+            Add to Cart
+        </button>
+
+    </div>
+
+</div>
+
+<!--FOOTER-->
+   <footer class="footer">
+    <div class="container2">
+        <div class="row2">
+            <div class="footer-col">
+                <h4>Company</h4>
+                <ul>
+                    <li><a href="#">about us</a></li>
+                    <li><a href="#">our services</a></li>
+                    <li><a href="#">privacy policy</a></li>
+                    <li><a href="#">affililiate program</a></li>
+                </ul>
+    </div>
+    
+        <div class="footer-col">
+                 <h4>Get Help</h4>
+                 <ul>
+                    <li><a href="#">FAQ</a></li>
+                    <li><a href="#">shipping</a></li>
+                    <li><a href="#">returns</a></li>
+                    <li><a href="orders.html">order status</a></li>
+                    <li><a href="#">payment options</a></li>
+                </ul>
+             </div>
+
+            <div class="footer-col">
+                <h4>Online Shop</h4>
+                <ul>
+                    <li><a href="#">Wigs</a></li>
+                    <li><a href="#">Press-on nails</a></li>
+                    <li><a href="#">Hair Accessories</a></li>
+                    <li><a href="#">Merch</a></li>
+                    <li><a href="admin.html">Admin</a></li>
+                    <li><a href="admin-products.html">Admin Products</a></li>
+
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Follow Us</h4>
+                <div class="social-links">
+                    <a href="Forgot Psswrd.html"><img src="images/FacebookLogo.PNG" width="19px"></a>
+                    <a href="Forgot Psswrd.html"><img src="images/XLogo.PNG" width="19px"></a>
+                    <a href="Forgot Psswrd.html"><img src="images/InstagramLogo.PNG" width="19px"></a>
+                    <a href="Forgot Psswrd.html"><img src="images/LinkedInLogo2.PNG" width="19px"></a>
+                </div>	
+                
+        </div>
+    </div>
+    <div class="footer-bottom">
+
+    <div class="footer-divider"></div>
+
+    <div class="footer-bottom-content">
+
+        <p class="footer-copyright">
+            © 2026 Miracle Beauty Studio. All rights reserved.
+        </p>
+
+        <div class="footer-bottom-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact</a>
+        </div>
+
+    </div>
+
+</div>
+</footer>
+
+<!-- =========================
+     ACCOUNT MODAL
+========================= -->
+
+<div class="account-overlay">
+
+   <div class="account-modal">
+
+    <button class="account-close">&times;</button>
+
+   <div class="signin-view" id="signin-container">
+
+        <div class="account-header">
+
+            <img
+                src="images/Account Logo 2.PNG"
+                class="account-modal-icon"
+                alt="Account">
+
+            <h2>Welcome Back</h2>
+
+            <p>Sign in to continue shopping.</p>
+
+        </div>
+
+        <form class="account-form" id="signin-form">
+
+            <div class="input-group">
+                <label>Email Address</label>
+                <input
+    type="email"
+    id="signin-email"
+    placeholder="Enter your email">
+            </div>
+
+            <div class="input-group">
+                <label>Password</label>
+                <input
+    type="password"
+    id="signin-password"
+    placeholder="Enter your password">
+            </div>
+
+            <div class="account-options">
+
+                <label>
+                    <input type="checkbox">
+                    Remember Me
+                </label>
+
+                <a href="#">Forgot Password?</a>
+
+            </div>
+
+            <button
+                 class="signin-btn"
+                 id="signin-btn"
+                 type="submit">
+
+                Sign In
+
+            </button>
+
+        </form>
+
+        <div class="account-divider">
+            <span>OR</span>
+        </div>
+
+        <button class="create-account-btn">
+            Create Account
+        </button>
+
+    </div>
+
+<div class="register-view" id="register-container">
+
+    <div class="account-header">
+
+        <img
+            src="images/Account Logo 2.PNG"
+            class="account-modal-icon"
+            alt="Account">
+
+        <h2>Create Account</h2>
+
+        <p>Create an account to enjoy faster checkout.</p>
+
+    </div>
+
+    <form class="register-form" id="register-form">
+
+        <div class="input-group">
+            <label>First Name</label>
+            <input
+    type="text"
+    id="register-firstname"
+    placeholder="Enter your first name">
+        </div>
+
+        <div class="input-group">
+            <label>Last Name</label>
+            <input
+                type="text"
+                id="register-lastname"
+                placeholder="Enter your last name">
+        </div>
+
+        <div class="input-group">
+            <label>Email Address</label>
+            <input
+                type="email"
+                id="register-email"
+                placeholder="Enter your email">
+        </div>
+
+        <div class="input-group">
+            <label>Phone Number</label>
+            <input
+                type="tel"
+                id="register-phone"
+                placeholder="Enter your phone number">
+
+        <div class="input-group">
+            <label>Password</label>
+            <input
+                type="password"
+                id="register-password"
+                placeholder="Create a password">
+        </div>
+
+        <div class="input-group">
+            <label>Confirm Password</label>
+            <input
+                type="password"
+                id="register-confirm-password"
+                placeholder="Confirm your password">
+        </div>
+
+        <label class="terms-check">
+            <input type="checkbox">
+            I agree to the Terms & Conditions
+        </label>
+
+        <button
+            class="register-btn"
+            type="submit">
+            Create Account
+        </button>
+
+    </form>
+
+    <div class="account-divider">
+        <span>Already have an account?</span>
+    </div>
+
+    <button class="back-to-signin-btn">
+        Sign In
+    </button>
+
+</div>
+</div>
+<div id="account-panel" style="display:none;">
+
+    <div class="account-header">
+
+        <img
+            src="images/Account Logo 2.PNG"
+            class="account-modal-icon"
+            alt="Account">
+
+        <h2>My Account</h2>
+
+        <p id="user-email"></p>
+
+    </div>
+
+    <button id="logout-btn" class="signin-btn">
+        Sign Out
+    </button>
+
+</div>
+<script type="module" src="https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js"></script>
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/auth.js"></script>
+
+<script src="js/products.js"></script>
+
+<script type="module" src="js/CARTNEW.js"></script>
+
 </body>
 </html>
 

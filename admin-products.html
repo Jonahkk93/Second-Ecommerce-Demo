@@ -1,0 +1,112 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Manage Products</title>
+
+    <link rel="stylesheet" href="css/admin-products.css">
+    <link rel="stylesheet" href="css/Larke.css">
+
+</head>
+
+<body>
+
+ <div class="admin-container">
+
+    <div class="admin-header">
+
+        <h1>Product Management</h1>
+
+        <button id="add-product-btn">
+
+            + Add Product
+
+        </button>
+
+    </div>
+
+    <div class="products-toolbar">
+
+        <input
+            type="text"
+            id="product-search"
+            placeholder="Search products..."
+        >
+
+    </div>
+
+<div class="products-list"></div>
+
+
+</div>
+
+<div class="product-modal hidden">
+
+    <div class="product-modal-content">
+
+        <div class="modal-header">
+
+            <h2>Add Product</h2>
+
+            <button class="close-modal">&times;</button>
+
+        </div>
+
+        <form id="product-form">
+
+            <input
+                type="text"
+                id="product-title"
+                placeholder="Product Title"
+                required
+            >
+
+            <input
+                type="number"
+                id="product-price"
+                placeholder="Price"
+                required
+            >
+
+            <textarea
+                id="product-description"
+                placeholder="Description"
+                rows="4"
+            ></textarea>
+
+           <input
+    type="file"
+    id="product-image"
+    accept="image/*"
+>
+
+            <button type="submit">
+
+                Save Product
+
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script src="js/products.js"></script>
+
+<script type="module" src="js/firebase.js"></script>
+
+<script type="module" src="js/admin-products.js"></script>
+
+</body>
+
+</html>
