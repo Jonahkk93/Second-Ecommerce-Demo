@@ -44,6 +44,28 @@ function updateSlider(animate = true) {
 function goToSlide(index) {
     currentSlide = Math.max(0, Math.min(index, galleryImages.length - 1));
     updateSlider(true);
+
+    if (!sliderTrack.dataset.swipeBound) {
+        sliderTrack.dataset.swipeBound = "true";
+
+        let startX = 0;
+
+        sliderTrack.addEventListener("touchstart", e => {
+            startX = e.touches[0].clientX;
+        }, { passive: true });
+
+        sliderTrack.addEventListener("touchend", e => {
+            const delta = e.changedTouches[0].clientX - startX;
+
+            if (Math.abs(delta) < 50) return;
+
+            if (delta < 0) {
+                goToSlide(currentSlide + 1);
+            } else {
+                goToSlide(currentSlide - 1);
+            }
+        });
+    }
 }
 
 const productTitle = document.querySelector(".product-page-title");
