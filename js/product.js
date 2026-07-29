@@ -19,75 +19,113 @@ const sliderTrack = document.querySelector(".product-slider-track");
 
 const thumbnailsContainer =
     document.querySelector(".product-thumbnails");
+
 let currentSlide = 0;
 let galleryImages = [];
+
 let startX = 0;
-let currentTranslate = 0;
+let currentX = 0;
 let isDragging = false;
+let sliderWidth = 0;
+
+function updateSlider(animate = true) {
+    sliderTrack.style.transition = animate ? "transform .35s ease" : "none";
+    sliderTrack.style.transform =
+        `translateX(-${currentSlide * sliderWidth}px)`;
+
+    document.querySelectorAll(".product-thumbnail")
+        .forEach((thumb, i) => {
+            thumb.classList.toggle("active", i === currentSlide);
+        });
+}
 
 function goToSlide(index) {
-    if (index < 0 || index >= galleryImages.length) return;
+    currentSlide = Math.max(
+        0,
+        Math.min(index, galleryImages.length - 1)
+    );
 
-    currentSlide = index;
-    sliderTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
-
-   const thumbnails = document.querySelectorAll(".product-thumbnail");
-
-thumbnails.forEach((thumbnail, i) => {
-    thumbnail.classList.toggle("active", i === currentSlide);
-});
+    sliderWidth = sliderTrack.offsetWidth;
+    updateSlider(true);
 }
 
 function dragStart(clientX) {
+    sliderWidth = sliderTrack.offsetWidth;
+
     startX = clientX;
-    currentTranslate = -currentSlide * sliderTrack.offsetWidth;
+    currentX = clientX;
     isDragging = true;
+
     sliderTrack.style.transition = "none";
 }
 
 function dragMove(clientX) {
     if (!isDragging) return;
 
-    const deltaX = clientX - startX;
-    sliderTrack.style.transform = `translateX(${currentTranslate + deltaX}px)`;
+    currentX = clientX;
+
+    const delta = currentX - startX;
+
+    sliderTrack.style.transform =
+        `translateX(${(-currentSlide * sliderWidth) + delta}px)`;
 }
 
-function dragEnd(clientX) {
+function dragEnd() {
     if (!isDragging) return;
 
     isDragging = false;
-    sliderTrack.style.transition = "transform .35s ease";
 
-    const deltaX = clientX - startX;
+    const delta = currentX - startX;
+    const threshold = sliderWidth * 0.2;
 
-    if (Math.abs(deltaX) > 60) {
-        if (deltaX < 0) {
-            goToSlide(Math.min(currentSlide + 1, galleryImages.length - 1));
-        } else {
-            goToSlide(Math.max(currentSlide - 1, 0));
-        }
-    } else {
-        goToSlide(currentSlide);
+    if (delta < -threshold && currentSlide < galleryImages.length - 1) {
+        currentSlide++;
+    } else if (delta > threshold && currentSlide > 0) {
+        currentSlide--;
     }
+
+    updateSlider(true);
 }
 
 function attachSliderEvents() {
+
     sliderTrack.ondragstart = e => e.preventDefault();
 
-    sliderTrack.ontouchstart = e => dragStart(e.touches[0].clientX);
-    sliderTrack.ontouchmove = e => {
-    if (Math.abs(e.touches[0].clientX - startX) > 5) {
+    sliderTrack.onmousedown = e => {
         e.preventDefault();
-    }
-    dragMove(e.touches[0].clientX);
-};
-    sliderTrack.ontouchend = e => dragEnd(e.changedTouches[0].clientX);
+        dragStart(e.clientX);
+    };
 
-    sliderTrack.onmousedown = e => dragStart(e.clientX);
+    sliderTrack.ontouchstart = e => {
+        dragStart(e.touches[0].clientX);
+    };
+
+    sliderTrack.ontouchmove = e => {
+        dragMove(e.touches[0].clientX);
+
+        if (Math.abs(currentX - startX) > 5) {
+            e.preventDefault();
+        }
+    };
+
+    sliderTrack.ontouchend = () => {
+        dragEnd();
+    };
 }
 
-window.addEventListener("mousemove", e => dragMove(e.clientX));
-window.addEventListener("mouseup", e => dragEnd(e.clientX));
+window.addEventListener("mousemove", e => {
+    dragMove(e.clientX);
+});
+
+window.addEventListener("mouseup", () => {
+    dragEnd();
+});
+
+window.addEventListener("resize", () => {
+    sliderWidth = sliderTrack.offsetWidth;
+    updateSlider(false);
+});
+
 
 const productTitle = document.querySelector(".product-page-title");
 
