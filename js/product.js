@@ -20,110 +20,143 @@ const sliderTrack = document.querySelector(".product-slider-track");
 const thumbnailsContainer =
     document.querySelector(".product-thumbnails");
 
+// =========================
+// PRODUCT IMAGE SLIDER
+// =========================
+
 let currentSlide = 0;
 let galleryImages = [];
 
+const sliderContainer = document.querySelector(".product-image-container");
+
 let startX = 0;
 let currentX = 0;
-let isDragging = false;
-let sliderWidth = 0;
+let dragging = false;
+
+function getSlideWidth() {
+    return sliderContainer.clientWidth;
+}
 
 function updateSlider(animate = true) {
-    sliderTrack.style.transition = animate ? "transform .35s ease" : "none";
-    sliderTrack.style.transform =
-        `translateX(-${currentSlide * sliderWidth}px)`;
 
-    document.querySelectorAll(".product-thumbnail")
-        .forEach((thumb, i) => {
-            thumb.classList.toggle("active", i === currentSlide);
-        });
+    sliderTrack.style.transition = animate ? "transform .35s ease" : "none";
+
+    sliderTrack.style.transform =
+        `translate3d(-${currentSlide * getSlideWidth()}px,0,0)`;
+
+    document.querySelectorAll(".product-thumbnail").forEach((thumb, index) => {
+        thumb.classList.toggle("active", index === currentSlide);
+    });
+
 }
 
 function goToSlide(index) {
+
     currentSlide = Math.max(
         0,
         Math.min(index, galleryImages.length - 1)
     );
 
-    sliderWidth = sliderTrack.offsetWidth;
     updateSlider(true);
+
 }
 
-function dragStart(clientX) {
-    sliderWidth = sliderTrack.offsetWidth;
+function dragStart(x) {
 
-    startX = clientX;
-    currentX = clientX;
-    isDragging = true;
+    dragging = true;
+
+    startX = x;
+    currentX = x;
 
     sliderTrack.style.transition = "none";
+
 }
 
-function dragMove(clientX) {
-    if (!isDragging) return;
+function dragMove(x) {
 
-    currentX = clientX;
+    if (!dragging) return;
+
+    currentX = x;
 
     const delta = currentX - startX;
 
     sliderTrack.style.transform =
-        `translateX(${(-currentSlide * sliderWidth) + delta}px)`;
+        `translate3d(${(-currentSlide * getSlideWidth()) + delta}px,0,0)`;
+
 }
 
 function dragEnd() {
-    if (!isDragging) return;
 
-    isDragging = false;
+    if (!dragging) return;
+
+    dragging = false;
 
     const delta = currentX - startX;
-    const threshold = sliderWidth * 0.2;
+
+    const threshold = getSlideWidth() / 5;
 
     if (delta < -threshold && currentSlide < galleryImages.length - 1) {
+
         currentSlide++;
+
     } else if (delta > threshold && currentSlide > 0) {
+
         currentSlide--;
+
     }
 
     updateSlider(true);
+
 }
 
 function attachSliderEvents() {
 
-    sliderTrack.ondragstart = e => e.preventDefault();
-
     sliderTrack.onmousedown = e => {
+
         e.preventDefault();
+
         dragStart(e.clientX);
+
+    };
+
+    window.onmousemove = e => {
+
+        dragMove(e.clientX);
+
+    };
+
+    window.onmouseup = () => {
+
+        dragEnd();
+
     };
 
     sliderTrack.ontouchstart = e => {
+
         dragStart(e.touches[0].clientX);
+
     };
 
     sliderTrack.ontouchmove = e => {
+
         dragMove(e.touches[0].clientX);
 
-        if (Math.abs(currentX - startX) > 5) {
-            e.preventDefault();
-        }
     };
 
     sliderTrack.ontouchend = () => {
+
         dragEnd();
+
     };
+
+    sliderTrack.ondragstart = e => e.preventDefault();
+
 }
 
-window.addEventListener("mousemove", e => {
-    dragMove(e.clientX);
-});
-
-window.addEventListener("mouseup", () => {
-    dragEnd();
-});
-
 window.addEventListener("resize", () => {
-    sliderWidth = sliderTrack.offsetWidth;
+
     updateSlider(false);
+
 });
 
 
