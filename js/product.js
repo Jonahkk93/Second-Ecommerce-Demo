@@ -16,6 +16,7 @@ const params = new URLSearchParams(window.location.search);
 const productId = Number(params.get("id"));
 const product = products.find(item => item.id === productId);
 const sliderTrack = document.querySelector(".product-slider-track");
+const sliderContainer = document.querySelector(".product-image-container");
 
 const thumbnailsContainer =
     document.querySelector(".product-thumbnails");
@@ -27,138 +28,23 @@ const thumbnailsContainer =
 let currentSlide = 0;
 let galleryImages = [];
 
-const sliderContainer = document.querySelector(".product-image-container");
-
-let startX = 0;
-let currentX = 0;
-let dragging = false;
-
 function getSlideWidth() {
-    return sliderContainer.clientWidth;
+    return sliderContainer.getBoundingClientRect().width;
 }
 
 function updateSlider(animate = true) {
-
     sliderTrack.style.transition = animate ? "transform .35s ease" : "none";
+    sliderTrack.style.transform = `translateX(-${currentSlide * getSlideWidth()}px)`;
 
-    sliderTrack.style.transform =
-        `translate3d(-${currentSlide * getSlideWidth()}px,0,0)`;
-
-    document.querySelectorAll(".product-thumbnail").forEach((thumb, index) => {
-        thumb.classList.toggle("active", index === currentSlide);
+    document.querySelectorAll(".product-thumbnail").forEach((thumb, i) => {
+        thumb.classList.toggle("active", i === currentSlide);
     });
-
 }
 
 function goToSlide(index) {
-
-    currentSlide = Math.max(
-        0,
-        Math.min(index, galleryImages.length - 1)
-    );
-
+    currentSlide = Math.max(0, Math.min(index, galleryImages.length - 1));
     updateSlider(true);
-
 }
-
-function dragStart(x) {
-
-    dragging = true;
-
-    startX = x;
-    currentX = x;
-
-    sliderTrack.style.transition = "none";
-
-}
-
-function dragMove(x) {
-
-    if (!dragging) return;
-
-    currentX = x;
-
-    const delta = currentX - startX;
-
-    sliderTrack.style.transform =
-        `translate3d(${(-currentSlide * getSlideWidth()) + delta}px,0,0)`;
-
-}
-
-function dragEnd() {
-
-    if (!dragging) return;
-
-    dragging = false;
-
-    const delta = currentX - startX;
-
-    const threshold = getSlideWidth() / 5;
-
-    if (delta < -threshold && currentSlide < galleryImages.length - 1) {
-
-        currentSlide++;
-
-    } else if (delta > threshold && currentSlide > 0) {
-
-        currentSlide--;
-
-    }
-
-    updateSlider(true);
-
-}
-
-function attachSliderEvents() {
-
-    sliderTrack.onmousedown = e => {
-
-        e.preventDefault();
-
-        dragStart(e.clientX);
-
-    };
-
-    window.onmousemove = e => {
-
-        dragMove(e.clientX);
-
-    };
-
-    window.onmouseup = () => {
-
-        dragEnd();
-
-    };
-
-    sliderTrack.ontouchstart = e => {
-
-        dragStart(e.touches[0].clientX);
-
-    };
-
-    sliderTrack.ontouchmove = e => {
-
-        dragMove(e.touches[0].clientX);
-
-    };
-
-    sliderTrack.ontouchend = () => {
-
-        dragEnd();
-
-    };
-
-    sliderTrack.ondragstart = e => e.preventDefault();
-
-}
-
-window.addEventListener("resize", () => {
-
-    updateSlider(false);
-
-});
-
 
 const productTitle = document.querySelector(".product-page-title");
 
