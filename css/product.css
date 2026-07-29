@@ -73,22 +73,20 @@ body{
 }
 
 .product-image-container{
-    width:100%;
-    max-width:680px;
-    overflow:hidden;
-    border-radius:28px;
-    touch-action: pan-y;
-}
 
+    width:100%;
+
+    max-width:680px;
+
+    overflow:hidden;
+
+    border-radius:28px;
+
+}
 .product-slider-track{
     display:flex;
     width:100%;
     transition:transform .35s ease;
-
-    touch-action: pan-y;
-    user-select:none;
-    -webkit-user-select:none;
-    -webkit-user-drag:none;
 }
 
 .product-slide{
