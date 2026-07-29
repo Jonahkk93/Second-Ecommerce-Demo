@@ -437,7 +437,6 @@ if (product) {
     });
 
     goToSlide(0);
-    attachSliderEvents();
 
     const colorButtons = document.querySelectorAll(".color-btn");
 
@@ -468,7 +467,6 @@ if (product) {
                 thumbnailsContainer.appendChild(thumbnail);
             });
             goToSlide(0);
-            attachSliderEvents();
         });
     });
 }
