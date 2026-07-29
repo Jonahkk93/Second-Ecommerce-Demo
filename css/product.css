@@ -83,21 +83,24 @@ body{
     border-radius:28px;
 
 }
+.product-slider-track{
+    display:flex;
+    width:100%;
+    transition:transform .35s ease;
+}
 
-.product-page-image{
+.product-slide{
+    min-width:100%;
+    flex-shrink:0;
+}
+
+.product-slide img{
     width:100%;
     height:620px;
-
     object-fit:cover;
     object-position:center;
-
-    border-radius:28px;
-
     display:block;
-
-    transition:
-        transform .35s ease,
-        box-shadow .35s ease;
+    border-radius:28px;
 }
 
 /* ==========================
@@ -327,23 +330,6 @@ align-items: center;
 
 }
 
-
-.product-thumbnail:hover{
-
-    transform:translateY(-3px);
-
-}
-
-.product-page-image:hover{
-    transform:scale(1.03);
-    transform:translateY(-4px);
-    box-shadow:
-
-        0 18px 40px rgba(0,0,0,.12),
-
-        0 6px 16px rgba(0,0,0,.06);
-
-}
 
 /* ==========================
    TITLE
@@ -1965,10 +1951,8 @@ align-items: center;
     }
 
     .product-gallery-wrapper{
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        gap:16px;
+        display:block;
+        position:relative;
     }
 
     .product-page{
@@ -1980,18 +1964,17 @@ align-items: center;
     width:100%;
     max-width:100%;
     margin-bottom:0;
-    position:relative;
 }
 
-    .product-page-image{
-        width:100%;
-        aspect-ratio:1/1.15;
-        height:auto;
-        object-fit:cover;
-        object-position:center;
-        border-radius:0;
-        display:block;
-    }
+.product-slide img{
+    width:100%;
+    height:auto;
+    max-height:520px;
+    object-fit:cover;
+    object-position:center;
+    display:block;
+    border-radius:0;
+}
 
 .product-thumbnails{
     position:absolute;
@@ -2021,10 +2004,13 @@ align-items: center;
     }
 
 .product-image-container{
-    order:1;
     width:100%;
-    border-radius: 0;
-    }
+    max-height:520px;
+    position:relative;
+    overflow:hidden;
+    border-radius:0;
+    background:transparent;
+}
 
  .product-thumbnail{
     width:44px;
@@ -2137,6 +2123,8 @@ align-items: center;
         padding:0 24px;
         margin-top:30px;
     }
+
+    
 
     .benefit-item{
         display:flex;

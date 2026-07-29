@@ -15,8 +15,79 @@ const params = new URLSearchParams(window.location.search);
 
 const productId = Number(params.get("id"));
 const product = products.find(item => item.id === productId);
-const productImage = document.querySelector(".product-page-image");
-const productThumbnails = document.querySelectorAll(".product-thumbnail");
+const sliderTrack = document.querySelector(".product-slider-track");
+
+const thumbnailsContainer =
+    document.querySelector(".product-thumbnails");
+let currentSlide = 0;
+let galleryImages = [];
+let startX = 0;
+let currentTranslate = 0;
+let isDragging = false;
+
+function goToSlide(index) {
+    if (index < 0 || index >= galleryImages.length) return;
+
+    currentSlide = index;
+    sliderTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+
+   const thumbnails = document.querySelectorAll(".product-thumbnail");
+
+thumbnails.forEach((thumbnail, i) => {
+    thumbnail.classList.toggle("active", i === currentSlide);
+});
+}
+
+function dragStart(clientX) {
+    startX = clientX;
+    currentTranslate = -currentSlide * sliderTrack.offsetWidth;
+    isDragging = true;
+    sliderTrack.style.transition = "none";
+}
+
+function dragMove(clientX) {
+    if (!isDragging) return;
+
+    const deltaX = clientX - startX;
+    sliderTrack.style.transform = `translateX(${currentTranslate + deltaX}px)`;
+}
+
+function dragEnd(clientX) {
+    if (!isDragging) return;
+
+    isDragging = false;
+    sliderTrack.style.transition = "transform .35s ease";
+
+    const deltaX = clientX - startX;
+
+    if (Math.abs(deltaX) > 60) {
+        if (deltaX < 0) {
+            goToSlide(Math.min(currentSlide + 1, galleryImages.length - 1));
+        } else {
+            goToSlide(Math.max(currentSlide - 1, 0));
+        }
+    } else {
+        goToSlide(currentSlide);
+    }
+}
+
+function attachSliderEvents() {
+    sliderTrack.ondragstart = e => e.preventDefault();
+
+    sliderTrack.ontouchstart = e => dragStart(e.touches[0].clientX);
+    sliderTrack.ontouchmove = e => {
+    if (Math.abs(e.touches[0].clientX - startX) > 5) {
+        e.preventDefault();
+    }
+    dragMove(e.touches[0].clientX);
+};
+    sliderTrack.ontouchend = e => dragEnd(e.changedTouches[0].clientX);
+
+    sliderTrack.onmousedown = e => dragStart(e.clientX);
+}
+
+window.addEventListener("mousemove", e => dragMove(e.clientX));
+window.addEventListener("mouseup", e => dragEnd(e.clientX));
 
 const productTitle = document.querySelector(".product-page-title");
 
@@ -368,26 +439,33 @@ function updateFavoriteIcon() {
 }
 
 if (product) {
-    if (product.images) {
-        productImage.src = product.images[product.colors[0]];
-    } else {
-        productImage.src = product.image;
-        productThumbnails.forEach(thumbnail => {
-            thumbnail.src = product.image;
-            thumbnail.addEventListener("click", () => {
-                productImage.src = thumbnail.src;
-                productThumbnails.forEach(t => t.classList.remove("active"));
-                thumbnail.classList.add("active");
-            });
+    galleryImages = product.gallery || [product.image];
+
+    sliderTrack.innerHTML = galleryImages.map(src => `
+        <div class="product-slide">
+            <img src="${src}" alt="Product image">
+        </div>
+    `).join("");
+
+    thumbnailsContainer.innerHTML = "";
+
+    galleryImages.forEach((src, index) => {
+        const thumbnail = document.createElement("img");
+        thumbnail.src = src;
+        thumbnail.className = "product-thumbnail";
+        thumbnail.addEventListener("click", () => {
+            goToSlide(index);
         });
-    }
+        thumbnailsContainer.appendChild(thumbnail);
+    });
 
     productTitle.textContent = product.title;
     productPrice.textContent =
         `UGX ${Number(product.price).toLocaleString()}`;
-    productDescription.textContent = product.description;
-    colorOptions.innerHTML = "";
+    productDescription.textContent =
+        product.description;
 
+    colorOptions.innerHTML = "";
     product.colors.forEach(color => {
         colorOptions.innerHTML += `
             <button class="color-btn">${color}</button>
@@ -395,40 +473,48 @@ if (product) {
     });
 
     sizeOptions.innerHTML = "";
-
     product.sizes.forEach(size => {
         sizeOptions.innerHTML += `
-            <button class="size-btn">${size}</button>
-        `;
+                <button class="size-btn">${size}</button>
+            `;
+    });
+
+    goToSlide(0);
+    attachSliderEvents();
+
+    const colorButtons = document.querySelectorAll(".color-btn");
+
+    colorButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            colorButtons.forEach(btn =>
+                btn.classList.remove("active")
+            );
+            button.classList.add("active");
+            selectedColor = button.textContent;
+            if (!product.galleries || !product.galleries[selectedColor]) return;
+            galleryImages = [...product.galleries[selectedColor]];
+
+            sliderTrack.innerHTML = galleryImages.map(src => `
+                <div class="product-slide">
+                    <img src="${src}" alt="Product image">
+                </div>
+            `).join("");
+
+            thumbnailsContainer.innerHTML = "";
+            galleryImages.forEach((src, index) => {
+                const thumbnail = document.createElement("img");
+                thumbnail.src = src;
+                thumbnail.className = "product-thumbnail";
+                thumbnail.addEventListener("click", () => {
+                    goToSlide(index);
+                });
+                thumbnailsContainer.appendChild(thumbnail);
+            });
+            goToSlide(0);
+            attachSliderEvents();
+        });
     });
 }
-
-const colorButtons = document.querySelectorAll(".color-btn");
-
-colorButtons.forEach(button => {
-
-    button.addEventListener("click", () => {
-
-        colorButtons.forEach(btn => {
-
-            btn.classList.remove("active");
-
-        });
-
-        button.classList.add("active");
-
-        selectedColor = button.textContent;
-
-        if (product.images[selectedColor]) {
-
-            productImage.src = product.images[selectedColor];
-
-        }
-
-    });
-
-});
-
 
 selectedColor = product.colors[0];
 selectedSize = product.sizes[0];
