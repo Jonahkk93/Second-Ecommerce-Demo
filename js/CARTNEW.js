@@ -618,22 +618,32 @@ size: selectedSize || "",
 function createCartBox(cartItem) {
 
     const cartBox = document.createElement("div");
+    const productParams = new URLSearchParams({
+        id: String(cartItem.id)
+    });
+
+    if (cartItem.color) productParams.set("color", cartItem.color);
+    if (cartItem.size) productParams.set("size", cartItem.size);
+
+    const productHref = `product.html?${productParams.toString()}`;
 
     cartBox.classList.add("cart-box");
     cartBox.dataset.id = cartItem.id;
 
     cartBox.innerHTML = `
 
-        <img
-            src="${cartItem.image}"
-            class="cart-img"
-        >
+        <a href="${productHref}" class="cart-product-link" aria-label="View ${cartItem.title}">
+            <img
+                src="${cartItem.image}"
+                class="cart-img"
+            >
+        </a>
 
         <div class="cart-detail">
 
             <h2 class="cart-product-title">
-    ${cartItem.title}
-</h2>
+                <a href="${productHref}" class="cart-title-link">${cartItem.title}</a>
+            </h2>
 
 <div class="cart-variants">
     ${cartItem.color}
@@ -1340,22 +1350,23 @@ productModalFavorite.addEventListener("click", () => {
 function createWishlistItem(item) {
 
     const wishlistBox = document.createElement("div");
+    const productHref = `product.html?id=${encodeURIComponent(item.id)}`;
 
    wishlistBox.classList.add("wishlist-item");
 
     wishlistBox.innerHTML = `
 
-        <img
-            src="${item.image}"
-            class="wishlist-img"
-        >
+        <a href="${productHref}" class="wishlist-product-link" aria-label="View ${item.title}">
+            <img
+                src="${item.image}"
+                class="wishlist-img"
+            >
+        </a>
 
         <div class="wishlist-details">
 
             <h3>
-
-                ${item.title}
-
+                <a href="${productHref}" class="wishlist-title-link">${item.title}</a>
             </h3>
 
            <span>

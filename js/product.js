@@ -17,6 +17,8 @@ const db = window.db;
 const params = new URLSearchParams(window.location.search);
 
 const productId = Number(params.get("id"));
+const requestedColor = params.get("color");
+const requestedSize = params.get("size");
 const product = products.find(item => item.id === productId);
 const sliderTrack = document.querySelector(".product-slider-track");
 const sliderContainer = document.querySelector(".product-image-container");
@@ -47,29 +49,71 @@ function updateSlider(animate = true) {
 function goToSlide(index) {
     currentSlide = Math.max(0, Math.min(index, galleryImages.length - 1));
     updateSlider(true);
-
-    if (!sliderTrack.dataset.swipeBound) {
-        sliderTrack.dataset.swipeBound = "true";
-
-        let startX = 0;
-
-        sliderTrack.addEventListener("touchstart", e => {
-            startX = e.touches[0].clientX;
-        }, { passive: true });
-
-        sliderTrack.addEventListener("touchend", e => {
-            const delta = e.changedTouches[0].clientX - startX;
-
-            if (Math.abs(delta) < 50) return;
-
-            if (delta < 0) {
-                goToSlide(currentSlide + 1);
-            } else {
-                goToSlide(currentSlide - 1);
-            }
-        });
-    }
 }
+
+let touchStartX = 0;
+let touchStartY = 0;
+let touchDeltaX = 0;
+let isHorizontalSwipe = false;
+
+sliderContainer.addEventListener("touchstart", event => {
+    const touch = event.touches[0];
+
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchDeltaX = 0;
+    isHorizontalSwipe = false;
+    sliderTrack.style.transition = "none";
+}, { passive: true });
+
+sliderContainer.addEventListener("touchmove", event => {
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+
+    if (!isHorizontalSwipe && Math.abs(deltaY) > Math.abs(deltaX)) {
+        return;
+    }
+
+    if (Math.abs(deltaX) > 6) {
+        isHorizontalSwipe = true;
+    }
+
+    if (!isHorizontalSwipe) return;
+
+    event.preventDefault();
+    touchDeltaX = deltaX;
+
+    const edgeResistance =
+        (currentSlide === 0 && deltaX > 0) ||
+        (currentSlide === galleryImages.length - 1 && deltaX < 0)
+            ? 0.28
+            : 1;
+
+    const offset =
+        -(currentSlide * getSlideWidth()) +
+        (deltaX * edgeResistance);
+
+    sliderTrack.style.transform = `translate3d(${offset}px, 0, 0)`;
+}, { passive: false });
+
+function finishTouchSwipe() {
+    const threshold = Math.min(70, getSlideWidth() * 0.18);
+
+    if (isHorizontalSwipe && Math.abs(touchDeltaX) >= threshold) {
+        goToSlide(currentSlide + (touchDeltaX < 0 ? 1 : -1));
+    } else {
+        updateSlider(true);
+    }
+
+    touchDeltaX = 0;
+    isHorizontalSwipe = false;
+}
+
+sliderContainer.addEventListener("touchend", finishTouchSwipe, { passive: true });
+sliderContainer.addEventListener("touchcancel", finishTouchSwipe, { passive: true });
+
+window.addEventListener("resize", () => updateSlider(false));
 
 const productTitle = document.querySelector(".product-page-title");
 
@@ -367,13 +411,25 @@ function updateCartUI(cartItems) {
 
 function createCartBox(cartItem) {
     const cartBox = document.createElement("div");
+    const productParams = new URLSearchParams({
+        id: String(cartItem.id)
+    });
+
+    if (cartItem.color) productParams.set("color", cartItem.color);
+    if (cartItem.size) productParams.set("size", cartItem.size);
+
+    const productHref = `product.html?${productParams.toString()}`;
     cartBox.classList.add("cart-box");
 
     cartBox.innerHTML = `
-        <img src="${cartItem.image}" class="cart-img">
+        <a href="${productHref}" class="cart-product-link" aria-label="View ${cartItem.title}">
+            <img src="${cartItem.image}" class="cart-img">
+        </a>
 
         <div class="cart-detail">
-            <h2 class="cart-product-title">${cartItem.title}</h2>
+            <h2 class="cart-product-title">
+                <a href="${productHref}" class="cart-title-link">${cartItem.title}</a>
+            </h2>
 
 <div class="cart-variants">
     ${cartItem.color}
@@ -603,11 +659,22 @@ productDescriptionReadMore.addEventListener("click", () => {
         : "Read less";
 });
 
-selectedColor = product.colors[0];
-selectedSize = product.sizes[0];
+selectedColor = product.colors.includes(requestedColor)
+    ? requestedColor
+    : product.colors[0];
 
-document.querySelector(".color-btn")?.classList.add("active");
-document.querySelector(".size-btn")?.classList.add("active");
+selectedSize = product.sizes.includes(requestedSize)
+    ? requestedSize
+    : product.sizes[0];
+
+const initialColorButton = [...document.querySelectorAll(".color-btn")]
+    .find(button => button.textContent.trim() === selectedColor);
+
+const initialSizeButton = [...document.querySelectorAll(".size-btn")]
+    .find(button => button.textContent.trim() === selectedSize);
+
+initialColorButton?.click();
+initialSizeButton?.classList.add("active");
 
 const sizeButtons = document.querySelectorAll(".size-btn");
 
@@ -720,22 +787,23 @@ wishlistContinue.addEventListener("click", () => {
 function createWishlistItem(item) {
 
     const wishlistBox = document.createElement("div");
+    const productHref = `product.html?id=${encodeURIComponent(item.id)}`;
 
    wishlistBox.classList.add("wishlist-item");
 
     wishlistBox.innerHTML = `
 
-        <img
-            src="${item.image}"
-            class="wishlist-img"
-        >
+        <a href="${productHref}" class="wishlist-product-link" aria-label="View ${item.title}">
+            <img
+                src="${item.image}"
+                class="wishlist-img"
+            >
+        </a>
 
         <div class="wishlist-details">
 
             <h3>
-
-                ${item.title}
-
+                <a href="${productHref}" class="wishlist-title-link">${item.title}</a>
             </h3>
 <span>
     UGX ${Number(String(item.price).replace(/[^\d]/g, "")).toLocaleString()}

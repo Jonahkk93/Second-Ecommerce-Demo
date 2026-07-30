@@ -352,7 +352,8 @@ header{
     overflow-y: auto;
     color: #333;
     background: #fff;
-    box-shadow: 10px 0 30px rgba(50, 31, 21, .2);
+    border-right: 1px solid #e0e0e0;
+    box-shadow: 2px 0 10px rgba(93, 93, 93, .13);
     transform: translate3d(-100%, 0, 0);
     transition: transform .35s ease;
     will-change: transform;
@@ -421,7 +422,7 @@ header{
 }
 
 .sidebar-section-title{
-    margin: 0 16px 10px;
+    margin: 0 16px 10px 24px;
     color: #999;
     font-size: 12px;
     font-weight: 700;
@@ -535,7 +536,7 @@ header{
         padding: 16px;
         box-shadow:
             0 140px 0 #fff,
-            10px 0 30px rgba(50, 31, 21, .2);
+            2px 0 10px rgba(93, 93, 93, .13);
     }
 }
 
@@ -2972,6 +2973,34 @@ margin-top:50px;
 
 .toast.warning{
     background: rgba(229, 164, 132, .96);
+}
+
+.cart-product-link,
+.wishlist-product-link{
+    display: block;
+    flex: 0 0 auto;
+}
+
+.cart-title-link,
+.wishlist-title-link{
+    color: inherit;
+    text-decoration: none;
+}
+
+.cart-title-link:hover,
+.wishlist-title-link:hover{
+    color: #E5A484;
+}
+
+@media screen and (max-width: 600px){
+    .toast{
+        width: fit-content;
+        max-width: calc(100vw - 32px);
+        padding: 11px 18px;
+        font-size: 14px;
+        text-align: center;
+        white-space: normal;
+    }
 }
 
 /* Subtle boundary around the add-to-cart modal. */
