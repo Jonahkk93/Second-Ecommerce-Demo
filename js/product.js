@@ -135,6 +135,22 @@ const toast = document.querySelector(".toast");
 const confirmOverlay = document.querySelector(".confirm-overlay");
 const confirmCancel = document.querySelector(".confirm-cancel");
 const confirmClear = document.querySelector(".confirm-clear");
+const sidePanelBackdrop = document.querySelector(".side-panel-backdrop");
+
+function syncSidePanelScrollLock() {
+    const panelIsOpen =
+        cart?.classList.contains("active") ||
+        wishlist?.classList.contains("active");
+
+    document.documentElement.classList.toggle("side-panel-open", panelIsOpen);
+    document.body.classList.toggle("side-panel-open", panelIsOpen);
+}
+
+sidePanelBackdrop?.addEventListener("click", () => {
+    cart?.classList.remove("active");
+    wishlist?.classList.remove("active");
+    syncSidePanelScrollLock();
+});
 
 function showToast(message, type = "success") {
     toast.textContent = message;
@@ -675,6 +691,7 @@ wishlistNavIcon.addEventListener("click", () => {
 
     if (wishlist) {
         wishlist.classList.add("active");
+        syncSidePanelScrollLock();
     }
 
 });
@@ -684,6 +701,7 @@ if (wishlistClose) {
     wishlistClose.addEventListener("click", () => {
 
         wishlist.classList.remove("active");
+        syncSidePanelScrollLock();
 
     });
 
@@ -691,6 +709,7 @@ if (wishlistClose) {
 
 wishlistContinue.addEventListener("click", () => {
     wishlist.classList.remove("active");
+    syncSidePanelScrollLock();
 });
 
 
@@ -965,17 +984,40 @@ bottomwishlistNavIcon?.addEventListener("click", () => {
 cartIcon.addEventListener("click", () => {
 
     cart.classList.add("active");
+    syncSidePanelScrollLock();
 
 });
 
 cartClose.addEventListener("click", () => {
 
     cart.classList.remove("active");
+    syncSidePanelScrollLock();
 
 });
 
 continueShopping.addEventListener("click", () => {
     cart.classList.remove("active");
+    syncSidePanelScrollLock();
+});
+
+document.addEventListener("click", event => {
+    if (
+        cart.classList.contains("active") &&
+        !cart.contains(event.target) &&
+        !cartIcon.contains(event.target)
+    ) {
+        cart.classList.remove("active");
+    }
+
+    if (
+        wishlist.classList.contains("active") &&
+        !wishlist.contains(event.target) &&
+        !wishlistNavIcon.contains(event.target)
+    ) {
+        wishlist.classList.remove("active");
+    }
+
+    syncSidePanelScrollLock();
 });
 
 checkoutButton.addEventListener("click", async () => {

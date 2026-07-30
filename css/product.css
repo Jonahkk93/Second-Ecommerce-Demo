@@ -16,6 +16,27 @@ body{
     padding-bottom:110px;
 }
 
+html.side-panel-open,
+body.side-panel-open{
+    overflow:hidden;
+    overscroll-behavior:none;
+}
+
+.side-panel-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:1001;
+    background:transparent;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .25s ease, visibility .25s ease;
+}
+
+body.side-panel-open .side-panel-backdrop{
+    opacity:1;
+    visibility:visible;
+}
+
 /* ===== PRODUCT GALLERY ===== */
 
 .product-gallery{
@@ -1361,23 +1382,26 @@ align-items: center;
 .cart {
     position: fixed;
     top: 0;
-    right: -100%;
+    right: 0;
     width: 360px;
     height: 100%;
 
     background: #fff;
     box-shadow: -2px 0 10px rgba(93,93,93,.13);
 
-    z-index: 1001;
+    z-index: 1002;
 
     display: flex;
     flex-direction: column;
 
-    transition:right .35s ease;
+    transform: translate3d(100%, 0, 0);
+    transition: transform .35s ease;
+    will-change: transform;
+    contain: layout paint;
 }
 
 .cart.active{
-    right: 0;
+    transform: translate3d(0, 0, 0);
 }
 
 
@@ -2404,59 +2428,4 @@ align-items: center;
         font-size: 10px;
     }
 
-    /* Match the add-to-cart modal's outlined, softly raised panels. */
-    .product-title-section,
-    .product-description-section,
-    .product-colors,
-    .product-sizes{
-        margin: 0 0 14px;
-        padding: 18px;
-        border: 1px solid #dedede;
-        border-radius: 20px;
-        background: linear-gradient(145deg, #ffffff, #f0f0f0);
-        box-shadow: 0 3px 8px rgba(0, 0, 0, .06);
-    }
-
-    .product-info .section-divider{
-        display: none;
-    }
-
-    .product-title-section{
-        position: relative;
-        margin-bottom: 0;
-        border-bottom: none;
-        border-radius: 20px 20px 0 0;
-        box-shadow: none;
-    }
-
-    .product-title-section::after,
-    .product-colors::after{
-        content: "";
-        position: absolute;
-        right: 18px;
-        bottom: 0;
-        left: 18px;
-        height: 1px;
-        background: #e4e4e4;
-    }
-
-    .product-description-section{
-        border-top: none;
-        border-radius: 0 0 20px 20px;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, .06);
-    }
-
-    .product-colors{
-        position: relative;
-        margin-bottom: 0;
-        border-bottom: none;
-        border-radius: 20px 20px 0 0;
-        box-shadow: none;
-    }
-
-    .product-sizes{
-        border-top: none;
-        border-radius: 0 0 20px 20px;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, .06);
-    }
 }

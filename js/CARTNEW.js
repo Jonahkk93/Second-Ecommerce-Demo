@@ -92,6 +92,17 @@ const wishlistContinue = document.querySelector(".wishlist-continue");
 
 const clearWishlistButton = document.querySelector(".clear-wishlist");
 
+function syncSidePanelScrollLock() {
+
+    const panelIsOpen =
+        cart.classList.contains("active") ||
+        wishlist.classList.contains("active");
+
+    document.documentElement.classList.toggle("side-panel-open", panelIsOpen);
+    document.body.classList.toggle("side-panel-open", panelIsOpen);
+
+}
+
 
 /* ============================================================
    CONFIRMATION POPUP
@@ -947,12 +958,14 @@ addCartButtons.forEach(button => {
 cartIcon.addEventListener("click", () => {
 
     cart.classList.add("active");
+    syncSidePanelScrollLock();
 
 });
 
 cartClose.addEventListener("click", () => {
 
     cart.classList.remove("active");
+    syncSidePanelScrollLock();
 
 });
 
@@ -964,6 +977,7 @@ cartClose.addEventListener("click", () => {
 continueShopping.addEventListener("click", () => {
 
     cart.classList.remove("active");
+    syncSidePanelScrollLock();
 
     document.querySelector(".shop").scrollIntoView({
 
@@ -1416,6 +1430,7 @@ function createWishlistItem(item) {
     openProductModal(productBox);
 
     wishlist.classList.remove("active");
+    syncSidePanelScrollLock();
 });
 
     return wishlistBox;
@@ -1452,12 +1467,14 @@ function renderWishlist() {
 wishlistNavIcon.addEventListener("click", () => {
 
     wishlist.classList.add("active");
+    syncSidePanelScrollLock();
 
 });
 
 wishlistClose.addEventListener("click", () => {
 
     wishlist.classList.remove("active");
+    syncSidePanelScrollLock();
 
 });
 
@@ -1469,12 +1486,35 @@ wishlistClose.addEventListener("click", () => {
 wishlistContinue.addEventListener("click", () => {
 
     wishlist.classList.remove("active");
+    syncSidePanelScrollLock();
 
     document.querySelector(".shop").scrollIntoView({
 
         behavior: "smooth"
 
     });
+
+});
+
+document.addEventListener("click", event => {
+
+    if (
+        cart.classList.contains("active") &&
+        !cart.contains(event.target) &&
+        !cartIcon.contains(event.target)
+    ) {
+        cart.classList.remove("active");
+    }
+
+    if (
+        wishlist.classList.contains("active") &&
+        !wishlist.contains(event.target) &&
+        !wishlistNavIcon.contains(event.target)
+    ) {
+        wishlist.classList.remove("active");
+    }
+
+    syncSidePanelScrollLock();
 
 });
 

@@ -9,6 +9,12 @@ body {
     color: #333;
 }
 
+html.side-panel-open,
+body.side-panel-open{
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
 header{
     position: fixed;
     top: 0;
@@ -243,13 +249,307 @@ header{
 }
 
 /* ==========================================================
+   SIDE BAR
+========================================================== */
+
+.sidebar-toggle{
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.header-brand-controls{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.main_box{
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.sidebar-open{
+    position: relative;
+    z-index: 1002;
+    display: grid;
+    width: 25px;
+    height: 25px;
+    place-items: center;
+    border: 1px solid #d9d9d9;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .25s ease, opacity .25s ease;
+}
+
+@media (hover: hover){
+    .sidebar-open:hover{
+        transform: scale(1.08);
+        opacity: .8;
+    }
+}
+
+.sidebar-open:active{
+    transform: scale(.92);
+}
+
+.sidebar-open:hover,
+.sidebar-open:active,
+.sidebar-open:focus{
+    border-color: #d9d9d9;
+    background-color: #fff;
+    color: #000;
+}
+
+.sidebar-toggle:focus-visible ~ header .sidebar-open{
+    outline: 2px solid #333;
+    outline-offset: 3px;
+}
+
+.sidebar-open img{
+    display: block;
+    width: 10px;
+    height: 10px;
+    object-fit: contain;
+}
+
+.sidebar-backdrop{
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1098;
+    background: rgba(20, 15, 12, .38);
+    opacity: 0;
+    visibility: hidden;
+    cursor: pointer;
+    transition: opacity .3s ease, visibility .3s ease;
+}
+
+.sidebar_menu{
+    position: fixed;
+    top: 0;
+    bottom: auto;
+    left: 0;
+    z-index: 1099;
+    display: flex;
+    width: min(330px, 86vw);
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    padding: 24px 22px;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    color: #fff;
+    background: #333;
+    box-shadow: 10px 0 30px rgba(50, 31, 21, .2);
+    transform: translate3d(-100%, 0, 0);
+    transition: transform .35s ease;
+    will-change: transform;
+    contain: layout paint;
+}
+
+.sidebar-toggle:checked ~ .sidebar-backdrop{
+    opacity: 1;
+    visibility: visible;
+}
+
+.sidebar-toggle:checked ~ .sidebar_menu{
+    transform: translate3d(0, 0, 0);
+}
+
+.sidebar-toggle:checked ~ header .sidebar-open{
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sidebar-header{
+    position: relative;
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px 18px 16px;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.sidebar-header > span{
+    position: static;
+    margin-left: 8px;
+    transform: translateY(10px);
+    font-size: 32px;
+    color: #E5A484;
+}
+
+.sidebar-close{
+    display: grid;
+    margin-left: auto;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color .2s ease, transform .2s ease;
+}
+
+.sidebar-close:hover{
+    background: rgba(255, 255, 255, .2);
+    transform: rotate(5deg);
+}
+
+.sidebar-close img{
+    display: block;
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.menu2{
+    margin-top: 22px;
+}
+
+.menu2 ul{
+    list-style: none;
+}
+
+.menu2 li{
+    position: relative;
+}
+
+.menu2 li:not(:last-child)::after{
+    content: "";
+    position: absolute;
+    right: 24px;
+    bottom: 0;
+    left: 24px;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        #424242 18%,
+        #424242 82%,
+        transparent
+    );
+}
+
+.menu2 a{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 50px;
+    padding: 15px 16px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 17px;
+    text-decoration: none;
+    transition: background-color .2s ease, padding-left .2s ease;
+}
+
+.menu2 a span{
+    display: flex;
+    align-items: center;
+    line-height: 20px;
+}
+
+.sidebar-item-icon{
+    display: block;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    object-fit: contain;
+    transform: translateY(-1px);
+}
+
+.menu2 a:hover,
+.menu2 a:focus-visible,
+.menu2 a:active{
+    padding-left: 22px;
+    background: #555;
+    outline: none;
+}
+
+.social_media{
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: auto;
+    padding-top: 24px;
+}
+
+.social_media a{
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .16);
+    transition: background-color .2s ease, transform .2s ease;
+}
+
+.social_media a:hover{
+    background: rgba(255, 255, 255, .3);
+    transform: translateY(-2px);
+}
+
+.social_media img{
+    display: block;
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
+@media screen and (max-width: 600px){
+    .sidebar-open{
+        width: 21px;
+        height: 21px;
+    }
+
+    .sidebar-open img{
+        width: 8px;
+        height: 8px;
+    }
+
+    .sidebar_menu{
+        width: min(260px, 72vw);
+        padding: 16px;
+        box-shadow:
+            0 140px 0 #333,
+            10px 0 30px rgba(50, 31, 21, .2);
+    }
+}
+
+@media (prefers-reduced-motion: reduce){
+    .sidebar-backdrop{
+        transition: none;
+    }
+
+    .sidebar_menu{
+        transition: transform .35s ease;
+    }
+}
+
+
+
+/* ==========================================================
    HOMEPAGE CART
 ========================================================== */
 
 .cart {
     position: fixed;
     top: 0;
-    right: -100%;
+    right: 0;
     width: 360px;
     height: 100%;
 
@@ -261,11 +561,14 @@ header{
     display: flex;
     flex-direction: column;
 
-    transition:right .35s ease;
+    transform: translate3d(100%, 0, 0);
+    transition: transform .35s ease;
+    will-change: transform;
+    contain: layout paint;
 }
 
 .cart.active{
-    right: 0;
+    transform: translate3d(0, 0, 0);
 }
 
 
