@@ -2985,6 +2985,20 @@ margin-top:50px;
     flex: 0 0 auto;
 }
 
+.wishlist-product-link{
+    width: 82px;
+    height: 82px;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.wishlist-product-link .wishlist-img{
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .cart-title-link,
 .wishlist-title-link{
     color: inherit;
