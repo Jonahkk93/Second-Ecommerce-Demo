@@ -1029,9 +1029,23 @@ renderSavedCart();
 
 searchIcon.addEventListener("click", () => {
 
+    if (searchBar.classList.contains("active")) {
+
+        searchBar.classList.remove("active");
+        filterBar.classList.remove("active");
+        document.body.classList.remove("search-open");
+        searchInput.value = "";
+        filterProducts("");
+
+        return;
+
+    }
+
     searchBar.classList.add("active");
 
     filterBar.classList.add("active");
+
+    document.body.classList.add("search-open");
 
     searchInput.focus();
 
@@ -1047,6 +1061,8 @@ searchClose.addEventListener("click", () => {
     searchBar.classList.remove("active");
 
     filterBar.classList.remove("active");
+
+    document.body.classList.remove("search-open");
 
     searchInput.value = "";
 

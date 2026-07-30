@@ -77,6 +77,10 @@ const productPrice = document.querySelector(".product-page-price");
 
 const productDescription = document.querySelector(".product-page-description");
 
+const productDescriptionReadMore = document.querySelector(
+    ".product-description-read-more"
+);
+
 const colorOptions = document.querySelector(".color-options");
 
 const sizeOptions = document.querySelector(".size-options");
@@ -518,6 +522,13 @@ if (product) {
         `UGX ${Number(product.price).toLocaleString()}`;
     productDescription.textContent =
         product.description;
+    productDescription.classList.add("is-collapsed");
+    productDescriptionReadMore.textContent = "Read more";
+
+    requestAnimationFrame(() => {
+        productDescriptionReadMore.hidden =
+            productDescription.scrollHeight <= productDescription.clientHeight + 1;
+    });
 
     colorOptions.innerHTML = "";
     product.colors.forEach(color => {
@@ -567,6 +578,14 @@ if (product) {
         });
     });
 }
+
+productDescriptionReadMore.addEventListener("click", () => {
+    const isCollapsed = productDescription.classList.toggle("is-collapsed");
+
+    productDescriptionReadMore.textContent = isCollapsed
+        ? "Read more"
+        : "Read less";
+});
 
 selectedColor = product.colors[0];
 selectedSize = product.sizes[0];

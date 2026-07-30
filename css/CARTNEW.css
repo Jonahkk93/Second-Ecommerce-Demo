@@ -2797,37 +2797,37 @@ margin-top:50px;
 
 @media screen and (min-width: 1024px) and (max-width: 1200px){
     .product-modal{
-        width: min(68vw, 440px);
-        padding: 14px;
-        border-radius: 22px;
+        width: min(50vw, 320px);
+        padding: 12px;
+        border-radius: 18px;
     }
 
     .product-modal-top{
-        padding: 10px;
-        gap: 12px;
+        padding: 8px;
+        gap: 10px;
     }
 
     .product-modal-left{
-        flex-basis: 92px;
+        flex-basis: 76px;
     }
 
     .product-modal-image,
     .product-modal-right{
-        height: 92px;
+        height: 76px;
     }
 
     .product-modal-image{
-        width: 92px;
+        width: 76px;
     }
 
     .product-modal-options-group{
-        margin-top: 24px;
-        padding: 10px;
-        border-radius: 16px;
+        margin-top: 18px;
+        padding: 8px;
+        border-radius: 14px;
     }
 
     .product-modal-options-group + .product-modal-cart{
-        margin-top: 24px;
+        margin-top: 18px;
     }
 }
 
@@ -2843,7 +2843,7 @@ margin-top:50px;
 
 @media screen and (min-width: 1024px) and (max-width: 1200px){
     .product-modal{
-        padding-bottom: 24px;
+        padding-bottom: 18px;
     }
 }
 
@@ -2860,4 +2860,371 @@ margin-top:50px;
         height: 16px;
     }
 }
+
+.product-modal-overlay{
+    background: rgba(0, 0, 0, .55);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+body.search-open .shop{
+    padding-top: 280px;
+}
+
+body.search-open .section-title{
+    display: none;
+}
+
+@media screen and (max-width: 600px){
+    body.search-open .shop{
+        padding-top: 232px;
+    }
+}
+
+@media screen and (min-width: 601px) and (max-width: 1023px){
+    body.search-open::before{
+        top: 88px;
+        height: 160px;
+    }
+
+    body.search-open .shop{
+        padding-top: 248px;
+    }
+}
+
+.toast{
+    z-index: 100000;
+}
+
+@media screen and (min-width: 601px) and (max-width: 1023px){
+    .product-content{
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .price-and-cart .price{
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .price-and-cart .addie{
+        width: 24px;
+        padding: 5px;
+        border-radius: 8px;
+    }
+
+    .wishlist-btn{
+        top: 8px;
+        left: 8px;
+        width: 28px;
+        height: 28px;
+    }
+
+    .wishlist-icon{
+        width: 13px;
+        height: 13px;
+    }
+}
+
+@media screen and (min-width: 1024px) and (max-width: 1200px){
+    .price-and-cart .price{
+        white-space: nowrap;
+    }
+}
+
+@media screen and (max-width: 600px){
+    header{
+        padding-top: 18px;
+        padding-bottom: 18px;
+    }
+
+    .logo{
+        font-size: 24px;
+        letter-spacing: 1.5px;
+    }
+
+    .nav-icons{
+        gap: 12px;
+    }
+
+    .search-image{
+        width: 21px;
+        height: 21px;
+    }
+
+    .wishlist-nav-image,
+    .account-image{
+        width: 22px;
+    }
+
+    #cart-icon,
+    .cart-image{
+        width: 24px;
+    }
+
+    #cart-icon .cart-item-count{
+        top: -2px;
+        right: -5px;
+        width: 16px;
+        height: 16px;
+        font-size: 10px;
+    }
+
+    .section-title{
+        font-size: 28px;
+        letter-spacing: 1px;
+        margin-bottom: 22px;
+    }
+
+    .search-bar{
+        top: 64px;
+    }
+
+    .filter-bar{
+        top: 140px;
+    }
+}
+
+@media screen and (max-width: 600px){
+    header{
+        height: 72px;
+        padding: 0 9%;
+    }
+
+    .search-bar{
+        top: 72px;
+    }
+
+    .search-bar.active{
+        padding: 0 25px 15px;
+    }
+
+    .filter-bar{
+        top: 134px;
+    }
+}
+
+@media screen and (min-width: 601px) and (max-width: 1200px){
+    header{
+        height: 88px;
+        padding: 0 9%;
+    }
+
+    .search-bar{
+        top: 96px;
+    }
+
+    .search-bar.active{
+        padding: 0 25px 15px;
+    }
+
+    .filter-bar{
+        top: 166px;
+    }
+}
+
+@media screen and (min-width: 601px) and (max-width: 1200px){
+    body.search-open::before{
+        content: "";
+        position: fixed;
+        inset: 0 0 auto;
+        height: 260px;
+        background: #fff;
+        pointer-events: none;
+        z-index: 997;
+    }
+}
+
+@media screen and (min-width: 1024px) and (max-width: 1200px){
+    body.search-open::before{
+        top: 88px;
+        height: 192px;
+        z-index: 1001;
+    }
+
+    header{
+        z-index: 1004;
+        background: rgba(255, 255, 255, .92);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .search-bar{
+        z-index: 1003;
+    }
+
+    .filter-bar{
+        z-index: 1002;
+    }
+}
+
+@media screen and (min-width: 601px) and (max-width: 1200px){
+    .search-bar{
+        padding-left: 9%;
+        padding-right: 9%;
+    }
+
+    .search-bar.active{
+        padding: 0 9% 15px;
+    }
+
+    .filter-bar{
+        padding-left: 9%;
+        padding-right: 9%;
+    }
+
+    .filter-bar.active{
+        padding: 15px 9% 20px;
+    }
+}
+
+.search-bar{
+    padding-left: 9%;
+    padding-right: 9%;
+}
+
+.search-bar.active{
+    padding: 0 9% 15px;
+}
+
+.filter-bar{
+    padding-left: 9%;
+    padding-right: 9%;
+}
+
+.filter-bar.active{
+    padding: 15px 9% 20px;
+}
+
+.filter-bar{
+    top: 150px;
+}
+
+@media screen and (max-width: 600px){
+    .filter-bar{
+        top: 132px;
+    }
+}
+
+@media screen and (min-width: 601px) and (max-width: 1200px){
+    .filter-bar{
+        top: 160px;
+    }
+}
+
+@media screen and (max-width: 600px){
+    body.search-open::before{
+        content: "";
+        position: fixed;
+        top: 72px;
+        left: 0;
+        right: 0;
+        height: 160px;
+        background: #fff;
+        pointer-events: none;
+        z-index: 997;
+    }
+
+    header{
+        z-index: 1000;
+    }
+
+    .search-bar{
+        z-index: 999;
+    }
+
+    .filter-bar{
+        z-index: 998;
+    }
+}
+
+@media screen and (max-width: 600px){
+    .search-bar{
+        top: 80px;
+    }
+
+    .filter-bar{
+        top: 142px;
+    }
+}
+
+@media screen and (min-width: 1024px) and (max-width: 1200px){
+    .search-bar{
+        top: 104px;
+    }
+
+    .filter-bar{
+        top: 168px;
+    }
+}
+
+@media screen and (min-width: 1201px){
+    .search-bar.active::before{
+        content: "";
+        position: absolute;
+        top: -12px;
+        left: 0;
+        width: 100%;
+        height: 12px;
+        background: #fff;
+    }
+}
+
+@media screen and (min-width: 1024px) and (max-width: 1440px){
+    .search-bar{
+        top: 120px;
+    }
+
+    .filter-bar{
+        top: 184px;
+    }
+}
+
+/* Raised panels for the add-to-cart modal sections. */
+.product-modal-top,
+.product-modal-options-group{
+    border: 1px solid #dedede;
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .06);
+}
+
+.product-modal-cart{
+    border: 1px solid #d98d69;
+    box-shadow: 0 3px 8px rgba(201, 133, 98, .14);
+}
+
+.product-modal-cart:active{
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(201, 133, 98, .12);
+}
+
+/* Define the image edge separately from its surrounding section panel. */
+.product-modal-image{
+    box-sizing: border-box;
+    border: 1px solid #e1e1e1;
+}
+
+/* Use the same outlined, softly raised surfaces in the cart and wishlist. */
+.cart-content,
+.wishlist-content{
+    padding: 14px;
+}
+
+.cart-box,
+.wishlist-item,
+.cart-empty,
+.wishlist-empty{
+    margin: 0 0 14px;
+    padding: 16px;
+    border: 1px solid #dedede;
+    border-radius: 20px;
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .06);
+}
+
+.cart-box,
+.wishlist-item{
+    border-bottom: 1px solid #dedede;
+}
+
 
