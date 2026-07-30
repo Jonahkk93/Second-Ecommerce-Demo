@@ -283,6 +283,12 @@ header{
     border-bottom: 2px solid #e6e6e6; 
 }
 
+.cart-title-count{
+    color: #555;
+    font-size: .5em;
+    font-weight: 500;
+}
+
 /*scroll bar for cart*/
 .cart-content{
     flex: 1;
@@ -413,6 +419,14 @@ header{
     transition: .25s ease;
 }
 
+.btn-buy:hover{
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(229,164,132,.45);
+}
+.btn-buy:hover{
+    transform: translateY(0) scale(.98);
+}
+
 .flying-image{
     position: fixed;
     width: 80px;
@@ -432,14 +446,6 @@ header{
         opacity .65s ease;
 }
 
-
-.btn-buy:hover{
-    transform: translateY(-3px);
-    box-shadow: 0 14px 30px rgba(229,164,132,.45);
-}
-.btn-buy:hover{
-    transform: translateY(0) scale(.98);
-}
 
 .cart-empty{
     display:flex;
@@ -1805,41 +1811,23 @@ header{
 }
 
 .product-modal-favorite{
-    width: 40px;
-    height: 40px;
+    display: inline-block;
+    width: fit-content;
+    padding: 0;
+    margin: -8px 0 18px;
 
-    background: #fff;
+    background: transparent;
     border: none;
-    border-radius: 50%;
-
     cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    flex-shrink: 0;
-
-    box-shadow: 0 6px 18px rgba(0,0,0,.10);
-    transition:
-    transform .25s ease,
-    box-shadow .25s ease;
-}
-
-.product-modal-favorite-icon{
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    display: block;
-}
-.product-modal-favorite:active{
-    transform: scale(.92);
+    color: #74b816;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
 }
 
 .product-modal-favorite:hover{
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 10px 24px rgba(0,0,0,.14);
-    transition: .25s ease;
+    color: #5c940d;
 }
 
 
@@ -1972,6 +1960,112 @@ header{
     width: 100%;
 }
 
+.product-modal-description-row{
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.product-modal-description{
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.product-modal-read-more{
+    flex: 0 0 auto;
+    color: #a8a8a8;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+/* Keep the add-to-cart modal compact on laptop screens. */
+@media screen and (min-width: 601px) and (max-width: 1200px){
+    .product-modal{
+        width: min(86vw, 560px);
+        padding: 20px;
+    }
+
+    .product-modal-left{
+        flex-basis: 120px;
+    }
+
+    .product-modal-image{
+        width: 120px;
+        height: 120px;
+    }
+
+    .product-modal-right{
+        height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .product-modal-title{
+        font-size: 22px;
+    }
+
+    .product-modal-header{
+        margin-bottom: 0;
+        flex: 0 0 auto;
+    }
+
+    .product-modal-price{
+        margin: 0;
+    }
+
+    .product-modal-favorite{
+        margin: 0;
+    }
+
+    .product-modal-description{
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .product-modal-description-row{
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .product-modal-description{
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
+    .product-modal-read-more{
+        flex: 0 0 auto;
+        color: #a8a8a8;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .product-modal-title{
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .product-modal-colors,
+    .product-modal-sizes{
+        margin-top: 14px;
+    }
+}
+
  /*-----------FOOTER----------------*/
  
  
@@ -2052,6 +2146,7 @@ margin-top:50px;
     font-size: 15px;
     text-transform: capitalize;
     line-height:1.7;
+    white-space:nowrap;
     text-decoration: none;
     font-weight: 300;
     color: #555;
@@ -2077,6 +2172,7 @@ margin-top:50px;
     justify-content:center;
 
     width:42px;
+    min-width:42px;
     height:42px;
 
     border:1px solid #EAEAEA;
@@ -2157,11 +2253,142 @@ margin-top:50px;
     color:#E5A484;
 }
 
+@media screen and (min-width:601px) and (max-width:1200px) {
+    .footer{
+        padding:90px 9% 70px;
+    }
+
+    .social-links{
+        display:grid;
+        grid-template-columns:repeat(2, 42px);
+        gap:14px;
+    }
+
+    .social-links a{
+        width:42px;
+        min-width:42px;
+        height:42px;
+    }
+
+    .footer-bottom-content{
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+    }
+
+    .footer-bottom-links{
+        justify-content:center;
+    }
+}
+
 
 
 
 
 @media screen and (max-width:600px) {
+
+/* Compact the add-to-cart modal while preserving vertical scrolling. */
+.product-modal-overlay{
+    padding: 14px;
+}
+
+.product-modal{
+    width: 100%;
+    max-height: calc(100dvh - 28px);
+    box-sizing: border-box;
+    padding: 18px;
+    border-radius: 20px;
+    overflow-y: auto;
+}
+
+.product-modal-top{
+    gap: 12px;
+}
+
+.product-modal-left{
+    flex-basis: 96px;
+}
+
+.product-modal-image{
+    width: 96px;
+    height: 96px;
+    border-radius: 14px;
+}
+
+.product-modal-right{
+    height: 96px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.product-modal-title{
+    font-size: 20px;
+}
+
+.product-modal-header{
+    margin-bottom: 0;
+    flex: 0 0 auto;
+}
+
+.product-modal-price{
+    margin: 0;
+}
+
+.product-modal-favorite{
+    margin: 0;
+}
+
+.product-modal-description{
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.product-modal-description-row{
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+}
+
+.product-modal-description{
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.product-modal-read-more{
+    flex: 0 0 auto;
+    color: #a8a8a8;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.product-modal-title{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.product-modal-colors,
+.product-modal-sizes{
+    margin-top: 14px;
+}
+
+.product-modal-color-btn,
+.product-modal-size-btn{
+    padding: 8px 14px;
+}
+
+.product-modal-cart{
+    margin-top: 18px;
+    padding: 12px;
+}
 
 /* ==========================
    FOOTER
@@ -2417,5 +2644,33 @@ margin-top:50px;
 
 .toast.warning{
     background: rgba(229, 164, 132, .96);
+}
+
+/* Subtle boundary around the add-to-cart modal. */
+.product-modal{
+    border: 1px solid #d9d9d9;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, .18);
+    filter: none;
+}
+
+.product-modal-read-more:hover,
+.product-modal-read-more:focus-visible,
+.product-modal-read-more:active{
+    color: #E5A484;
+}
+
+.product-modal-image-link{
+    display: block;
+    width: fit-content;
+    cursor: pointer;
+}
+
+.product-modal-title-link{
+    display: block;
+    flex: 1;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
 }
 

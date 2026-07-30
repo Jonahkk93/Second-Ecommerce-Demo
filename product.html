@@ -85,7 +85,12 @@
 <!--THE CART FOR PRODUCT-->
 <div class="cart">
 
-    <h2 class="cart-title">My Cart</h2>
+    <h2 class="cart-title">My Cart <span class="cart-title-count" aria-live="polite">(0)</span></h2>
+    <img
+        src="images/BlackClose.jpg"
+        class="ri-close-line"
+        id="cart-close"
+    >
 
     <div class="cart-content">
     </div>
@@ -119,13 +124,7 @@
 
     <button class="btn-buy">
         Check Out
-    </button>
-
-    <img
-        src="images/BlackClose.jpg"
-        class="ri-close-line"
-        id="cart-close"
-    >
+    </button><br><br>
 
 </div>
 
@@ -164,7 +163,7 @@
         <button class="clear-wishlist">
 
             <img
-                src="images/trashbin.png"
+                src="images/Icon Folder/Delete Icon_Black.PNG"
                 class="clear-wishlist-icon"
             >
 
@@ -186,10 +185,15 @@
 
     <div class="confirm-box">
 
-        <h3>Clear Wishlist?</h3>
+        <img
+            src="images/trashbin.png"
+            class="confirm-icon"
+        >
+
+        <h2>Clear Wishlist</h2>
 
         <p>
-            Are you sure you want to remove all items from your wishlist?
+            This will remove all saved products from your Wishlist.
         </p>
 
         <div class="confirm-buttons">
@@ -199,7 +203,7 @@
             </button>
 
             <button class="confirm-clear">
-                Clear
+                Clear Wishlist
             </button>
 
         </div>
@@ -207,7 +211,6 @@
     </div>
 
 </div>
-
 
 <!--THE PRODUCT -->
 <section class="product-details">
@@ -370,6 +373,7 @@
     </div>
 </div>
 
+<div class="toast"></div>
 
 <script src="js/products.js"></script>
 

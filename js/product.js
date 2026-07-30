@@ -5,7 +5,10 @@ import {
 import {
     doc,
     getDoc,
-    setDoc
+    setDoc,
+    collection,
+    addDoc,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const auth = window.auth;
@@ -124,6 +127,26 @@ const checkoutButton = document.querySelector(".btn-buy");
 
 const continueShopping = document.querySelector(".continue-shopping");
 const backButton = document.querySelector(".product-back-btn");
+const toast = document.querySelector(".toast");
+const confirmOverlay = document.querySelector(".confirm-overlay");
+const confirmCancel = document.querySelector(".confirm-cancel");
+const confirmClear = document.querySelector(".confirm-clear");
+
+function showToast(message, type = "success") {
+    toast.textContent = message;
+
+    toast.className = "toast";
+
+    toast.classList.add(type);
+
+    toast.classList.add("show");
+
+    clearTimeout(toast.timeout);
+
+    toast.timeout = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2500);
+}
 
 let quantity = 1;
 quantityValue.textContent = quantity;
@@ -149,6 +172,7 @@ let favorites = JSON.parse(
 
 function updateCartBadge() {
     const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+    const titleCount = document.querySelector(".cart-title-count");
 
     console.log("updateCartBadge()", cartItems);
 
@@ -161,6 +185,10 @@ function updateCartBadge() {
         (sum, item) => sum + Number(item.quantity || 1),
         0
     );
+
+    if (titleCount) {
+        titleCount.textContent = `(${totalItems})`;
+    }
 
     cartBadge.textContent = String(totalItems);
     cartBadge.style.display = totalItems > 0 ? "flex" : "none";
@@ -201,6 +229,36 @@ async function saveCartToFirestore() {
 
     }
 
+}
+
+async function saveOrderToFirestore(cartItems) {
+
+    const user = auth.currentUser;
+
+    if (!user || cartItems.length === 0) return;
+
+    try {
+
+        await addDoc(collection(db, "orders"), {
+            userId: user.uid,
+            items: cartItems,
+            total: cartItems.reduce((sum, item) => {
+                const price = Number(
+                    String(item.price).replace(/[^\d]/g, "")
+                );
+
+                return sum + (price * item.quantity);
+            }, 0),
+            status: "Pending",
+            createdAt: serverTimestamp()
+        });
+
+        console.log("Order saved successfully.");
+
+    } catch (error) {
+
+        console.error("Error saving order:", error);
+    }
 }
 
 async function saveFavoritesToFirestore() {
@@ -281,6 +339,7 @@ function updateTotalPrice(cartItems) {
 function updateCartUI(cartItems) {
     const isEmpty = cartItems.length === 0;
 
+    cartContent.style.display = isEmpty ? "none" : "block";
     cartEmpty.style.display = isEmpty ? "flex" : "none";
     totalSection.style.display = isEmpty ? "none" : "flex";
     checkoutButton.style.display = isEmpty ? "none" : "block";
@@ -316,7 +375,7 @@ function createCartBox(cartItem) {
         </div>
 
         <img
-    src="images/trashbin.png"
+    src="images/Icon Folder/Delete Icon_Black.PNG"
     class="cart-remove"
 >
     `;
@@ -331,6 +390,18 @@ function attachCartEvents(cartBox, cartItem) {
     const increment = cartBox.querySelector(".increment");
     const quantityText = cartBox.querySelector(".number");
     const removeButton = cartBox.querySelector(".cart-remove");
+
+    removeButton.addEventListener("pointerdown", () => {
+        removeButton.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    });
+
+    removeButton.addEventListener("pointerenter", () => {
+        removeButton.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    });
+
+    removeButton.addEventListener("pointerleave", () => {
+        removeButton.src = "images/Icon Folder/Delete Icon_Black.PNG";
+    });
 
     increment.addEventListener("click", () => {
         let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
@@ -349,6 +420,7 @@ function attachCartEvents(cartBox, cartItem) {
 
         saveCart(cartItems);
         updateTotalPrice(cartItems);
+        updateCartBadge();
     });
 
     decrement.addEventListener("click", () => {
@@ -369,10 +441,12 @@ function attachCartEvents(cartBox, cartItem) {
 
             saveCart(cartItems);
             updateTotalPrice(cartItems);
+            updateCartBadge();
         }
     });
 
     removeButton.addEventListener("click", () => {
+        setTimeout(() => {
         let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
 
         cartItems = cartItems.filter(i =>
@@ -388,6 +462,7 @@ function attachCartEvents(cartBox, cartItem) {
         renderSavedCart();
 
         updateCartBadge();
+        }, 120);
     });
 }
 
@@ -544,7 +619,7 @@ addTocartIcon.addEventListener("click", () => {
     });
 
     if (existingItem) {
-        alert("This product is already in your cart.");
+        showToast("This product is already in your cart.", "warning");
         return;
     }
 
@@ -555,6 +630,7 @@ addTocartIcon.addEventListener("click", () => {
     renderSavedCart();
 
     updateCartBadge();
+    showToast("Added to cart🛒", "success");
 
     console.log(cartItems);
 });
@@ -593,6 +669,10 @@ if (wishlistClose) {
     });
 
 }
+
+wishlistContinue.addEventListener("click", () => {
+    wishlist.classList.remove("active");
+});
 
 
 /* ============================================================
@@ -634,7 +714,7 @@ function createWishlistItem(item) {
        <button class="wishlist-remove">
 
     <img
-        src="images/trashbin.png"
+        src="images/Icon Folder/Delete Icon_Black.PNG"
         class="wishlist-remove-icon"
     >
 
@@ -644,10 +724,26 @@ function createWishlistItem(item) {
 
     const removeButton =
         wishlistBox.querySelector(".wishlist-remove");
+    const removeIcon =
+        wishlistBox.querySelector(".wishlist-remove-icon");
         const addTocartIcon =
     wishlistBox.querySelector(".wishlist-add-cart");
 
+    removeButton.addEventListener("pointerenter", () => {
+        removeIcon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    });
+
+    removeButton.addEventListener("pointerleave", () => {
+        removeIcon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+    });
+
+    removeButton.addEventListener("pointerdown", () => {
+        removeIcon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    });
+
     removeButton.addEventListener("click", () => {
+
+        setTimeout(() => {
 
         favorites = favorites.filter(favorite => {
 
@@ -663,6 +759,8 @@ function createWishlistItem(item) {
 saveFavoritesToFirestore();    
 
         renderWishlist();
+
+        }, 120);
 
     });
 
@@ -734,9 +832,74 @@ function clearWishlist() {
 
     renderWishlist();
 }
-clearWishlistButton?.addEventListener("click", clearWishlist);
 
+clearWishlistButton?.addEventListener("pointerenter", () => {
+    clearWishlistButton.querySelector(".clear-wishlist-icon").src =
+        "images/Icon Folder/Delete Icon_Red.PNG";
+});
 
+clearWishlistButton?.addEventListener("pointerleave", () => {
+    clearWishlistButton.querySelector(".clear-wishlist-icon").src =
+        "images/Icon Folder/Delete Icon_Black.PNG";
+});
+
+clearWishlistButton?.addEventListener("pointerdown", () => {
+    const icon = clearWishlistButton.querySelector(".clear-wishlist-icon");
+
+    icon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+
+    setTimeout(() => {
+        if (!clearWishlistButton.matches(":hover")) {
+            icon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+        }
+    }, 120);
+});
+
+clearWishlistButton?.addEventListener("click", () => {
+
+    if (favorites.length === 0) {
+
+        showToast(
+            "Wishlist is already empty",
+            "warning"
+        );
+
+        return;
+
+    }
+
+    confirmOverlay.classList.add("active");
+
+});
+
+confirmCancel.addEventListener("click", () => {
+
+    confirmOverlay.classList.remove("active");
+
+});
+
+confirmOverlay.addEventListener("click", (e) => {
+
+    if (e.target === confirmOverlay) {
+
+        confirmOverlay.classList.remove("active");
+
+    }
+
+});
+
+confirmClear.addEventListener("click", () => {
+
+    clearWishlist();
+
+    confirmOverlay.classList.remove("active");
+
+    showToast(
+        "Wishlist cleared",
+        "success"
+    );
+
+});
 
 bottomwishlistNavIcon?.addEventListener("click", () => {
 
@@ -753,9 +916,16 @@ bottomwishlistNavIcon?.addEventListener("click", () => {
             image: product.image
         });
 
+        bottomFavoriteIcon?.classList.remove("heart-pop");
+        void bottomFavoriteIcon?.offsetWidth;
+        bottomFavoriteIcon?.classList.add("heart-pop");
+
+        showToast("Added to wishlist❤️", "success");
+
     } else {
 
         favorites.splice(index, 1);
+        showToast("Removed from wishlist💔", "warning");
 
     }
 
@@ -784,6 +954,33 @@ cartClose.addEventListener("click", () => {
     cart.classList.remove("active");
 
 });
+
+continueShopping.addEventListener("click", () => {
+    cart.classList.remove("active");
+});
+
+checkoutButton.addEventListener("click", async () => {
+    if (!auth.currentUser) {
+        showToast("Please sign in before checking out⚠️.", "warning");
+        return;
+    }
+
+    const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+
+    if (cartItems.length === 0) {
+        showToast("Your cart is empty 🛒", "warning");
+        return;
+    }
+
+    await saveOrderToFirestore(cartItems);
+
+    showToast("Thank you for your order ❤️", "success");
+
+    saveCart([]);
+    renderSavedCart();
+    updateCartBadge();
+});
+
 searchIcon.addEventListener("click", () => {
     searchBar.classList.add("active");
 });
@@ -814,5 +1011,3 @@ onAuthStateChanged(auth, async (user) => {
     updateTotalPrice(JSON.parse(localStorage.getItem("cart")) || []);
     updateCartBadge();
 });
-
-

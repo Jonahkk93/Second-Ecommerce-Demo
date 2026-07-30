@@ -37,7 +37,7 @@ sizes: [
         "images/IMG_3899.JPG"
 
     ],
-    description: "Product description coming soon.",
+    description: "Pink Explosion is a vibrant, high-impact press-on nail set designed for anyone who loves a playful burst of colour. Featuring bright pink tones, delicate French-inspired details, and a touch of glitter, each nail creates a polished statement look with minimal effort. The lightweight set is comfortable for everyday wear, easy to apply at home, and ideal for parties, weekends, photos, and special occasions. Mix the sizes for your most natural fit, then pair Pink Explosion with your favourite rings and accessories for a cheerful finish that stands out beautifully from every angle.",
    colors: [
     "Pink",
     "French",

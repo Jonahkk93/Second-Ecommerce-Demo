@@ -91,7 +91,7 @@
 </div>
 
     <div class="cart">
-        <h2 class="cart-title">My Cart</h2>
+        <h2 class="cart-title">My Cart <span class="cart-title-count" aria-live="polite">(0)</span></h2>
         <div class="cart-content">
             <!--<div class="cart-box">
                 <img src="images/Nails1.jpg" class="cart-img">
@@ -162,7 +162,7 @@
     <button class="clear-wishlist">
 
         <img
-            src="images/trashbin.png"
+            src="images/Icon Folder/Delete Icon_Black.PNG"
             class="clear-wishlist-icon"
         >
 
@@ -481,29 +481,33 @@
             <div class="product-modal-left">
 
 
-        <img
-            src=""
-            class="product-modal-image"
-        >
+        <a class="product-modal-image-link" href="product.html" aria-label="View product details">
+            <img
+                src=""
+                class="product-modal-image"
+            >
+        </a>
         </div>
 
 <div class="product-modal-right">
 
     <div class="product-modal-header">
 
-        <h2 class="product-modal-title"></h2>
-        <button class="product-modal-favorite">
-    <img
-        src="images/Heart-Outline2.PNG"
-        class="product-modal-favorite-icon"
-    >
-</button></div>
+        <a class="product-modal-title-link" href="product.html">
+            <h2 class="product-modal-title"></h2>
+        </a>
+    </div>
 
         <span class="product-modal-price"></span>
 
-        <p class="product-modal-description">
-            Product description coming soon...
-        </p>
+        <button type="button" class="product-modal-favorite">Add To Favorites</button>
+
+        <div class="product-modal-description-row">
+            <p class="product-modal-description">
+                Product description coming soon...
+            </p>
+            <a class="product-modal-read-more" href="product.html">Read more</a>
+        </div>
 </div>
 </div>
 

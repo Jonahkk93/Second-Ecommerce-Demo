@@ -114,16 +114,19 @@ const productModal = document.querySelector(".product-modal");
 
 const productModalImage = document.querySelector(".product-modal-image");
 
+const productModalImageLink = document.querySelector(".product-modal-image-link");
+
 const productModalTitle = document.querySelector(".product-modal-title");
+
+const productModalTitleLink = document.querySelector(".product-modal-title-link");
 const productModalFavorite =
     document.querySelector(".product-modal-favorite");
-
-const productModalFavoriteIcon =
-    document.querySelector(".product-modal-favorite-icon");
 
 const productModalPrice = document.querySelector(".product-modal-price");
 
 const productModalDescription = document.querySelector(".product-modal-description");
+
+const productModalReadMore = document.querySelector(".product-modal-read-more");
 
 const productModalCart = document.querySelector(".product-modal-cart");
 
@@ -385,11 +388,16 @@ function showToast(message, type = "success") {
 function updateCartCount() {
 
     const badge = document.querySelector(".cart-item-count");
+    const titleCount = document.querySelector(".cart-title-count");
 
     cartItemCount = cartItems.reduce(
     (sum, item) => sum + Number(item.quantity || 1),
     0
 );
+
+    if (titleCount) {
+        titleCount.textContent = `(${cartItemCount})`;
+    }
 
     if (cartItemCount > 0) {
 
@@ -449,6 +457,7 @@ function updateCartUI() {
 
     if (cartItems.length === 0) {
 
+        cartContent.style.display = "none";
         cartEmpty.style.display = "flex";
 
         totalSection.style.display = "none";
@@ -457,6 +466,7 @@ function updateCartUI() {
 
     } else {
 
+        cartContent.style.display = "block";
         cartEmpty.style.display = "none";
 
         totalSection.style.display = "flex";
@@ -642,7 +652,7 @@ UGX ${Number(String(cartItem.price).replace(/[^\d]/g, "")).toLocaleString()}
         </div>
 
         <img
-            src="images/trashbin.png"
+            src="images/Icon Folder/Delete Icon_Black.PNG"
             class="cart-remove"
         >
 
@@ -663,7 +673,21 @@ function attachCartEvents(cartBox, cartItem) {
 
     const numberElement = cartBox.querySelector(".number");
 
+    removeButton.addEventListener("pointerdown", () => {
+        removeButton.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    });
+
+    removeButton.addEventListener("pointerenter", () => {
+        removeButton.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    });
+
+    removeButton.addEventListener("pointerleave", () => {
+        removeButton.src = "images/Icon Folder/Delete Icon_Black.PNG";
+    });
+
     removeButton.addEventListener("click", () => {
+
+    setTimeout(() => {
 
    cartItems = cartItems.filter(item => {
 
@@ -680,6 +704,8 @@ function attachCartEvents(cartBox, cartItem) {
     renderSavedCart();
 
     updateCartCount();
+
+    }, 120);
 
 });
 
@@ -720,6 +746,7 @@ decrementButton.addEventListener("click", () => {
         numberElement.textContent = item.quantity;
 
         saveCart();
+        updateCartCount();
 
         updateTotalPrice();
 
@@ -1273,14 +1300,6 @@ productModalFavorite.addEventListener("click", () => {
 
     toggleWishlist(selectedProduct);
 
-    const isFavorite = favorites.some(item =>
-        item.id === selectedProduct.dataset.id
-    );
-
-    productModalFavoriteIcon.src = isFavorite
-        ? "images/Heart7.PNG"
-        : "images/Heart-Outline2.PNG";
-
 });
 
 
@@ -1325,7 +1344,7 @@ function createWishlistItem(item) {
        <button class="wishlist-remove">
 
     <img
-        src="images/trashbin.png"
+        src="images/Icon Folder/Delete Icon_Black.PNG"
         class="wishlist-remove-icon"
     >
 
@@ -1335,10 +1354,26 @@ function createWishlistItem(item) {
 
     const removeButton =
         wishlistBox.querySelector(".wishlist-remove");
+    const removeIcon =
+        wishlistBox.querySelector(".wishlist-remove-icon");
         const addCartButton =
     wishlistBox.querySelector(".wishlist-add-cart");
 
+    removeButton.addEventListener("pointerenter", () => {
+        removeIcon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    });
+
+    removeButton.addEventListener("pointerleave", () => {
+        removeIcon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+    });
+
+    removeButton.addEventListener("pointerdown", () => {
+        removeIcon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    });
+
     removeButton.addEventListener("click", () => {
+
+        setTimeout(() => {
 
         favorites = favorites.filter(favorite => {
 
@@ -1349,6 +1384,8 @@ function createWishlistItem(item) {
         saveWishlist();
 
         renderWishlist();
+
+        }, 120);
 
     });
 
@@ -1472,7 +1509,7 @@ function updateWishlistButtons() {
 
         } else {
 
-            icon.src = "images/heart-outline2.PNG";
+            icon.src = "images/Heart-Outline2.PNG";
 
         }
 
@@ -1484,6 +1521,28 @@ function updateWishlistButtons() {
 /* ============================================================
    CLEAR WISHLIST
 ============================================================ */
+
+clearWishlistButton.addEventListener("pointerenter", () => {
+    clearWishlistButton.querySelector(".clear-wishlist-icon").src =
+        "images/Icon Folder/Delete Icon_Red.PNG";
+});
+
+clearWishlistButton.addEventListener("pointerleave", () => {
+    clearWishlistButton.querySelector(".clear-wishlist-icon").src =
+        "images/Icon Folder/Delete Icon_Black.PNG";
+});
+
+clearWishlistButton.addEventListener("pointerdown", () => {
+    const icon = clearWishlistButton.querySelector(".clear-wishlist-icon");
+
+    icon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+
+    setTimeout(() => {
+        if (!clearWishlistButton.matches(":hover")) {
+            icon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+        }
+    }, 120);
+});
 
 clearWishlistButton.addEventListener("click", () => {
 
@@ -1513,6 +1572,16 @@ clearWishlistButton.addEventListener("click", () => {
 confirmCancel.addEventListener("click", () => {
 
     confirmOverlay.classList.remove("active");
+
+});
+
+confirmOverlay.addEventListener("click", (e) => {
+
+    if (e.target === confirmOverlay) {
+
+        confirmOverlay.classList.remove("active");
+
+    }
 
 });
 
@@ -1578,14 +1647,6 @@ function openProductModal(productBox) {
 
     if (!product) return;
 
-const isFavorite = favorites.some(item =>
-    item.id === product.id.toString()
-);
-
-productModalFavoriteIcon.src = isFavorite
-    ? "images/Heart7.PNG"
-    : "images/Heart-Outline2.PNG";
-
 productModalImage.src = product.image;
 productModalTitle.textContent = product.title;
 
@@ -1593,7 +1654,12 @@ productModalTitle.textContent = product.title;
     productModalTitle.textContent = product.title;
     productModalPrice.textContent =
         `UGX ${Number(product.price).toLocaleString()}`;
-    productModalDescription.textContent = product.description;
+    const previewWords = product.description.trim().split(/\s+/).slice(0, 6);
+
+    productModalDescription.textContent = `${previewWords.join(" ")}...`;
+    productModalReadMore.href = `product.html?id=${product.id}`;
+    productModalImageLink.href = `product.html?id=${product.id}`;
+    productModalTitleLink.href = `product.html?id=${product.id}`;
    productModalColorOptions.innerHTML = "";
    selectedModalColor = product.colors[0];
    selectedModalSize = product.sizes[0];
