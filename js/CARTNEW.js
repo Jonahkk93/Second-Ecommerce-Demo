@@ -2048,11 +2048,13 @@ onAuthStateChanged(auth, async (user) => {
 
     } else {
 
-        cartItems = [];
-        favorites = [];
+        cartItems = JSON.parse(
+            localStorage.getItem("cart")
+        ) || [];
 
-        localStorage.removeItem("cart");
-        localStorage.removeItem("favorites");
+        favorites = JSON.parse(
+            localStorage.getItem("favorites")
+        ) || [];
 
         renderSavedCart();
         renderWishlist();

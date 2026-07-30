@@ -721,7 +721,7 @@ addTocartIcon.addEventListener("click", () => {
     });
 
     if (existingItem) {
-        showToast("This product is already in your cart.", "warning");
+        showToast("This product is already in your cart⚠️", "warning");
         return;
     }
 
