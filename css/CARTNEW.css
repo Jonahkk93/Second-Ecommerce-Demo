@@ -977,7 +977,7 @@ header{
 
     padding: 20px;
 
-    border-top: 1px solid #f1f1f1;
+    border-top: 1px solid #ececec;
     margin-top: auto;
 
 }
@@ -3204,27 +3204,5 @@ body.search-open .section-title{
     border: 1px solid #e1e1e1;
 }
 
-/* Use the same outlined, softly raised surfaces in the cart and wishlist. */
-.cart-content,
-.wishlist-content{
-    padding: 14px;
-}
-
-.cart-box,
-.wishlist-item,
-.cart-empty,
-.wishlist-empty{
-    margin: 0 0 14px;
-    padding: 16px;
-    border: 1px solid #dedede;
-    border-radius: 20px;
-    background: linear-gradient(145deg, #ffffff, #f0f0f0);
-    box-shadow: 0 3px 8px rgba(0, 0, 0, .06);
-}
-
-.cart-box,
-.wishlist-item{
-    border-bottom: 1px solid #dedede;
-}
 
 
