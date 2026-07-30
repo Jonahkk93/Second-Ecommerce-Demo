@@ -350,8 +350,8 @@ header{
     flex-direction: column;
     overflow-x: hidden;
     overflow-y: auto;
-    color: #fff;
-    background: #333;
+    color: #333;
+    background: #fff;
     box-shadow: 10px 0 30px rgba(50, 31, 21, .2);
     transform: translate3d(-100%, 0, 0);
     transition: transform .35s ease;
@@ -420,6 +420,15 @@ header{
     margin-top: 22px;
 }
 
+.sidebar-section-title{
+    margin: 0 16px 10px;
+    color: #999;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
 .menu2 ul{
     list-style: none;
 }
@@ -438,8 +447,8 @@ header{
     background: linear-gradient(
         90deg,
         transparent,
-        #424242 18%,
-        #424242 82%,
+        #dedede 18%,
+        #dedede 82%,
         transparent
     );
 }
@@ -451,7 +460,7 @@ header{
     min-height: 50px;
     padding: 15px 16px;
     border-radius: 10px;
-    color: #fff;
+    color: #333;
     font-size: 17px;
     text-decoration: none;
     transition: background-color .2s ease, padding-left .2s ease;
@@ -476,7 +485,7 @@ header{
 .menu2 a:focus-visible,
 .menu2 a:active{
     padding-left: 22px;
-    background: #555;
+    background: #ededed;
     outline: none;
 }
 
@@ -494,12 +503,12 @@ header{
     height: 34px;
     place-items: center;
     border-radius: 50%;
-    background: rgba(255, 255, 255, .16);
+    background: #f0f0f0;
     transition: background-color .2s ease, transform .2s ease;
 }
 
 .social_media a:hover{
-    background: rgba(255, 255, 255, .3);
+    background: #e2e2e2;
     transform: translateY(-2px);
 }
 
@@ -525,7 +534,7 @@ header{
         width: min(260px, 72vw);
         padding: 16px;
         box-shadow:
-            0 140px 0 #333,
+            0 140px 0 #fff,
             10px 0 30px rgba(50, 31, 21, .2);
     }
 }
