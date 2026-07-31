@@ -82,6 +82,22 @@ const wishlist = document.querySelector(".wishlist");
 
 const wishlistClose = document.querySelector("#wishlist-close");
 
+[searchClose, cartClose, wishlistClose].filter(Boolean).forEach(closeIcon => {
+    let resetTimer;
+    const resetCloseIcon = () => {
+        resetTimer = setTimeout(() => {
+            closeIcon.src = "images/Icon Folder/Close Icon_333.PNG";
+        }, 220);
+    };
+
+    closeIcon.addEventListener("pointerdown", () => {
+        clearTimeout(resetTimer);
+        closeIcon.src = "images/Icon Folder/Close Icon_Gray.PNG";
+    });
+    closeIcon.addEventListener("pointerup", resetCloseIcon);
+    closeIcon.addEventListener("pointercancel", resetCloseIcon);
+});
+
 const wishlistContent = document.querySelector(".wishlist-content");
 
 const wishlistEmpty = document.querySelector(".wishlist-empty");

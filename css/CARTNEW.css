@@ -1234,6 +1234,26 @@ header{
 
 }
 
+#cart-close,
+#wishlist-close{
+    transition:transform .25s ease, opacity .25s ease;
+}
+
+#cart-close:hover,
+#wishlist-close:hover{
+    transform:translateY(-2px) scale(1.08);
+    opacity:.8;
+}
+
+#cart-close:active,
+#wishlist-close:active{
+    transform:scale(.92);
+}
+
+#search-close:active{
+    transform:translateY(-50%) scale(.92);
+}
+
 .wishlist-item{
 
     display: flex;

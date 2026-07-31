@@ -1847,6 +1847,26 @@ align-items: center;
     cursor: pointer;
 }
 
+#cart-close,
+#wishlist-close{
+    transition:transform .25s ease, opacity .25s ease;
+}
+
+#cart-close:hover,
+#wishlist-close:hover{
+    transform:translateY(-2px) scale(1.08);
+    opacity:.8;
+}
+
+#cart-close:active,
+#wishlist-close:active{
+    transform:scale(.92);
+}
+
+#search-close:active{
+    transform:translateY(-50%) scale(.92);
+}
+
 .continue-shopping:hover{
     background:#d99273;
     transform:translateY(-2px);
@@ -2468,7 +2488,7 @@ align-items: center;
     height:24px;
     object-fit:contain;
     position:static;
-    transform:translateY(-1.5px);
+    transform:none;
     margin:0;
 }
 
@@ -2640,6 +2660,10 @@ align-items: center;
 #search-close:hover{
     opacity:1;
     transform:translateY(-50%) scale(1.08);
+}
+
+#search-close:active{
+    transform:translateY(-50%) scale(.92);
 }
 
 .product-benefits{

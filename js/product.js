@@ -161,9 +161,42 @@ const wishlistContinue = document.querySelector(".wishlist-continue");
 const bottomwishlistNavIcon = document.querySelector(".product-bottom-favorite");
 const bottomFavoriteIcon = bottomwishlistNavIcon?.querySelector("img");
 const productShareButton = document.querySelector(".product-bottom-share");
+const productShareIcon = productShareButton?.querySelector(".product-bottom-share-icon");
+
+if (productShareIcon) {
+    let shareIconResetTimer;
+    const resetShareIcon = () => {
+        shareIconResetTimer = setTimeout(() => {
+            productShareIcon.src = "images/Icon Folder/Share Icon V3_333.PNG";
+        }, 220);
+    };
+
+    productShareButton.addEventListener("pointerdown", () => {
+        clearTimeout(shareIconResetTimer);
+        productShareIcon.src = "images/Icon Folder/Share Icon V3_Gray.PNG";
+    });
+    productShareButton.addEventListener("pointerup", resetShareIcon);
+    productShareButton.addEventListener("pointercancel", resetShareIcon);
+}
 
 const searchBar = document.querySelector(".search-bar");
 const searchClose = document.querySelector("#search-close");
+
+[searchClose, cartClose, wishlistClose].filter(Boolean).forEach(closeIcon => {
+    let resetTimer;
+    const resetCloseIcon = () => {
+        resetTimer = setTimeout(() => {
+            closeIcon.src = "images/Icon Folder/Close Icon_333.PNG";
+        }, 220);
+    };
+
+    closeIcon.addEventListener("pointerdown", () => {
+        clearTimeout(resetTimer);
+        closeIcon.src = "images/Icon Folder/Close Icon_Gray.PNG";
+    });
+    closeIcon.addEventListener("pointerup", resetCloseIcon);
+    closeIcon.addEventListener("pointercancel", resetCloseIcon);
+});
 const searchInput = document.querySelector("#search-input");
 const productBoxes = document.querySelectorAll(".product-box");
 
