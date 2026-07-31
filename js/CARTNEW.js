@@ -50,9 +50,19 @@ const searchIcon = document.querySelector("#search-icon");
 const searchBar = document.querySelector(".search-bar");
 const searchInput = document.querySelector("#search-input");
 const searchClose = document.querySelector("#search-close");
+let productSearchReturnUrl = null;
 
 const filterBar = document.querySelector(".filter-bar");
 const filterButtons = document.querySelectorAll(".filter-btn");
+
+const filterColumnCount = Math.min(Math.max(filterButtons.length, 1), 10);
+const additionalFilterRows = Math.max(Math.ceil(filterButtons.length / 10) - 1, 0);
+const mobileFilterColumnCount = Math.min(Math.max(filterButtons.length, 1), 5);
+const additionalMobileFilterRows = Math.max(Math.ceil(filterButtons.length / 5) - 1, 0);
+document.documentElement.style.setProperty("--filter-columns", filterColumnCount);
+document.documentElement.style.setProperty("--additional-filter-space", `${additionalFilterRows * 52}px`);
+document.documentElement.style.setProperty("--mobile-filter-columns", mobileFilterColumnCount);
+document.documentElement.style.setProperty("--additional-mobile-filter-space", `${additionalMobileFilterRows * 52}px`);
 
 
 /* ============================================================
@@ -1262,6 +1272,11 @@ searchIcon.addEventListener("click", () => {
 
     if (searchBar.classList.contains("active")) {
 
+        if (productSearchReturnUrl) {
+            window.location.href = productSearchReturnUrl;
+            return;
+        }
+
         searchBar.classList.remove("active");
         filterBar.classList.remove("active");
         document.body.classList.remove("search-open");
@@ -1289,6 +1304,11 @@ searchIcon.addEventListener("click", () => {
 
 searchClose.addEventListener("click", () => {
 
+    if (productSearchReturnUrl) {
+        window.location.href = productSearchReturnUrl;
+        return;
+    }
+
     searchBar.classList.remove("active");
 
     filterBar.classList.remove("active");
@@ -1300,6 +1320,30 @@ searchClose.addEventListener("click", () => {
     filterProducts("");
 
 });
+
+document.addEventListener("click", event => {
+    const clickedSearchControls = event.target.closest?.(
+        ".search-bar, .filter-bar, #search-icon"
+    );
+
+    if (!document.body.classList.contains("search-open") || clickedSearchControls) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (productSearchReturnUrl) {
+        window.location.href = productSearchReturnUrl;
+        return;
+    }
+
+    searchBar.classList.remove("active");
+    filterBar.classList.remove("active");
+    document.body.classList.remove("search-open");
+    searchInput.value = "";
+    filterProducts("");
+}, true);
 
 
 /* ============================================================
@@ -2205,8 +2249,11 @@ function initializeApp() {
 const search = params.get("search");
 
 if (search) {
+    productSearchReturnUrl = sessionStorage.getItem("mpwrProductSearchReturnUrl");
+    sessionStorage.removeItem("mpwrProductSearchReturnUrl");
     searchBar.classList.add("active");
     filterBar.classList.add("active");
+    document.body.classList.add("search-open");
     searchInput.value = search;
     applyCategoryFilter(currentFilter);
 

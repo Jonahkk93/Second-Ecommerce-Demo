@@ -1784,6 +1784,7 @@ searchInput.addEventListener("keydown", (e) => {
     const query = searchInput.value.trim();
 
     if (query) {
+        sessionStorage.setItem("mpwrProductSearchReturnUrl", window.location.href);
         window.location.href = `index.html?search=${encodeURIComponent(query)}`;
     } else {
         window.location.href = "index.html";

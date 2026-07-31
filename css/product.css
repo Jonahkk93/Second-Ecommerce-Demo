@@ -1752,7 +1752,8 @@ align-items: center;
 
 .cart-title-link:hover,
 .wishlist-title-link:hover{
-    color:#E5A484;
+    color:#777;
+    text-shadow:none;
 }
 
 .cart-detail{
@@ -2812,6 +2813,17 @@ align-items: center;
     font-size:22px;
 }
 
+.benefit-item .benefit-icon{
+    flex:0 0 auto;
+    width:22px;
+    height:22px;
+    object-fit:contain;
+}
+
+.benefit-item .benefit-icon-truck{
+    transform:scale(1.25);
+}
+
 .benefit-item strong{
     display:block;
     margin-bottom:4px;
@@ -3281,6 +3293,11 @@ align-items: center;
         left:11px;
         width:14px;
         height:14px;
+    }
+
+    .product-page-header .product-search-clear img{
+        width:11px;
+        height:11px;
     }
 
     .product-page-header .product-back-btn img{
