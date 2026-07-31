@@ -22,23 +22,32 @@ a[x-apple-data-detectors]{
 
 .admin-login{
     min-height:100vh;
-    display:grid;
-    grid-template-columns:minmax(320px, 1fr) minmax(420px, 1fr);
-    background:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px;
+    background:#F7F4F2;
 }
 
 .admin-login-card{
-    align-self:center;
-    width:min(100% - 48px, 460px);
-    margin:0 auto;
-    padding:48px 0;
-    border-radius:0;
+    position:relative;
+    width:min(100%, 460px);
+    margin:auto;
+    padding:36px;
+    border:1px solid #e8e4e1;
+    border-radius:22px;
     background:#fff;
-    box-shadow:none;
+    box-shadow:
+        0 10px 24px rgba(51,51,51,.07),
+        0 24px 55px rgba(51,51,51,.08);
+}
+
+.admin-login-card::before{
+    content:none;
 }
 
 .admin-login-intro{
-    display:flex;
+    display:none;
     flex-direction:column;
     justify-content:space-between;
     min-height:100vh;
@@ -85,19 +94,31 @@ a[x-apple-data-detectors]{
 }
 
 .admin-login-brand{
-    margin-bottom:24px;
+    margin-bottom:7px;
     color:#E5A484;
-    font-size:18px;
+    font-size:32px;
     font-weight:700;
     letter-spacing:.16em;
+    text-align:center;
+}
+
+.admin-login-portal{
+    margin-bottom:22px;
+    color:#999;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-align:center;
+    text-transform:uppercase;
 }
 
 .admin-login-card h1{
-    margin-bottom:10px;
-    font-size:30px;
+    margin-bottom:24px;
+    font-size:24px;
+    text-align:center;
 }
 
-.admin-login-card > p:not(.admin-login-error){
+.admin-login-subtitle{
     margin-bottom:28px;
     color:#777;
     line-height:1.5;
@@ -105,16 +126,23 @@ a[x-apple-data-detectors]{
 
 .admin-login-card label{
     display:block;
-    margin:18px 0 8px;
+    margin:15px 0 8px;
     font-size:14px;
     font-weight:600;
 }
 
+.admin-login-card h1 + label{
+    margin-top:32px;
+}
+
 .admin-login-card input{
     width:100%;
+    min-height:50px;
     padding:13px 15px;
-    border:1px solid #ddd;
-    border-radius:10px;
+    border:1px solid #dedad7;
+    border-radius:12px;
+    background:#fff;
+    box-shadow:none;
     outline:none;
     font-size:16px;
 }
@@ -124,22 +152,43 @@ a[x-apple-data-detectors]{
     box-shadow:0 0 0 3px rgba(229,164,132,.18);
 }
 
+.admin-login-card input:-webkit-autofill,
+.admin-login-card input:-webkit-autofill:hover{
+    -webkit-text-fill-color:#333;
+    caret-color:#333;
+    box-shadow:0 0 0 1000px #fff inset;
+    transition:background-color 9999s ease-out 0s;
+}
+
+.admin-login-card input:-webkit-autofill:focus{
+    -webkit-text-fill-color:#333;
+    caret-color:#333;
+    box-shadow:0 0 0 1000px #fff inset, 0 0 0 3px rgba(229,164,132,.18);
+}
+
 .admin-login-card button{
     width:100%;
     margin-top:12px;
+    min-height:50px;
     padding:14px 18px;
     border:0;
-    border-radius:10px;
+    border-radius:12px;
     background:#E5A484;
     color:#fff;
     cursor:pointer;
     font-size:16px;
     font-weight:600;
-    transition:background .2s ease, opacity .2s ease;
+    box-shadow:0 8px 18px rgba(229,164,132,.24);
+    transition:transform .18s ease, background .2s ease, box-shadow .2s ease, opacity .2s ease;
 }
 
 .admin-login-card button:hover{
     background:#d89575;
+}
+
+.admin-login-card button:active{
+    transform:translateY(1px);
+    box-shadow:0 4px 10px rgba(229,164,132,.2);
 }
 
 .admin-login-card button:disabled{
@@ -154,10 +203,30 @@ a[x-apple-data-detectors]{
     font-size:14px;
 }
 
+.admin-login-secure{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    margin-top:18px;
+    color:#888;
+    font-size:12px;
+    line-height:1;
+}
+
+.admin-login-secure img{
+    display:block;
+    flex:0 0 auto;
+    width:13px;
+    height:13px;
+    object-fit:contain;
+    transform:translateY(-1px);
+}
+
 @media (max-width:800px){
-    .admin-login{grid-template-columns:1fr}
+    .admin-login{padding:20px}
     .admin-login-intro{display:none}
-    .admin-login-card{min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+    .admin-login-card{padding:30px 22px;border-radius:20px}
 }
 
 .admin-nav{
@@ -499,7 +568,7 @@ a[x-apple-data-detectors]{
 
 .filter-btn[data-status="Pending"],
 .status-picker-trigger[data-status="Pending"]{
-    color:#b76e00;
+    color:#f59e0b;
 }
 
 .filter-btn[data-status="Processing"],
@@ -525,6 +594,11 @@ a[x-apple-data-detectors]{
 .filter-btn.active{
     color:#fff;
     -webkit-text-fill-color:#fff;
+}
+
+.filter-btn:not(.active){
+    color:#333;
+    -webkit-text-fill-color:#333;
 }
 
 .admin-toolbar{
@@ -627,7 +701,7 @@ a[x-apple-data-detectors]{
 }
 
 .status-picker-menu button[data-status="Pending"]{
-    --status-option:#b76e00;
+    --status-option:#f59e0b;
     --status-option-tint:#fff3d6;
 }
 
@@ -1091,8 +1165,8 @@ a[x-apple-data-detectors]{
     }
 
     .admin-login-card{
-        width:calc(100% - 36px);
-        padding:36px 0;
+        width:100%;
+        padding:30px 22px;
     }
 }
 
