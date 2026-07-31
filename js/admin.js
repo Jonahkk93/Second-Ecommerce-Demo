@@ -254,7 +254,7 @@ orderCard.innerHTML = `
     ${statusBadge}
 
     <div class="status-picker">
-        <button class="status-picker-trigger" type="button" aria-expanded="false">
+        <button class="status-picker-trigger" type="button" data-status="${order.status}" aria-expanded="false">
             ${order.status}<span aria-hidden="true">⌄</span>
         </button>
         <div class="status-picker-menu" hidden>
@@ -341,6 +341,7 @@ option.addEventListener("click", async event => {
     }
 
     orderCard.dataset.status = nextStatus;
+    statusTrigger.dataset.status = nextStatus;
     statusTrigger.firstChild.textContent = nextStatus;
     statusMenu.querySelectorAll("button").forEach(button =>
         button.classList.toggle("selected", button === option)

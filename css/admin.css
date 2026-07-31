@@ -489,6 +489,44 @@ a[x-apple-data-detectors]{
     border-color:#000;
 }
 
+.filter-btn,
+.status-picker-trigger{
+    appearance:none;
+    -webkit-appearance:none;
+    color:#333;
+    -webkit-text-fill-color:currentColor;
+}
+
+.filter-btn[data-status="Pending"],
+.status-picker-trigger[data-status="Pending"]{
+    color:#b76e00;
+}
+
+.filter-btn[data-status="Processing"],
+.status-picker-trigger[data-status="Processing"]{
+    color:#2563c7;
+}
+
+.filter-btn[data-status="Shipped"],
+.status-picker-trigger[data-status="Shipped"]{
+    color:#7047c7;
+}
+
+.filter-btn[data-status="Delivered"],
+.status-picker-trigger[data-status="Delivered"]{
+    color:#07845d;
+}
+
+.filter-btn[data-status="Cancelled"],
+.status-picker-trigger[data-status="Cancelled"]{
+    color:#c43d3d;
+}
+
+.filter-btn.active{
+    color:#fff;
+    -webkit-text-fill-color:#fff;
+}
+
 .admin-toolbar{
     display:flex;
     justify-content:space-between;
@@ -615,6 +653,7 @@ a[x-apple-data-detectors]{
 
 .status-picker-menu button[data-status]{
     color:var(--status-option);
+    -webkit-text-fill-color:var(--status-option);
 }
 
 .status-picker-menu button[data-status]:hover{
@@ -624,6 +663,7 @@ a[x-apple-data-detectors]{
 .status-picker-menu button[data-status].selected{
     background:var(--status-option);
     color:#fff;
+    -webkit-text-fill-color:#fff;
 }
 
 .order-card{
