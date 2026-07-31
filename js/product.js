@@ -724,7 +724,7 @@ function createCartBox(cartItem) {
         <div class="cart-swipe-actions" aria-hidden="true">
             <button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist">
                 <img src="images/Icon Folder/Move To Favorites Icon_333.PNG" alt="">
-                <span>Wishlist</span>
+                <span>Move</span>
             </button>
             <button class="cart-swipe-action cart-share" type="button" aria-label="Share item">
                 <img src="images/Icon Folder/Share Icon V2_White.PNG" alt="">
@@ -754,9 +754,13 @@ function createCartBox(cartItem) {
 </span>
 
             <div class="cart-quantity">
-                <button class="decrement">−</button>
+                <button class="decrement" type="button" aria-label="Decrease quantity">
+                    <img src="images/Icon Folder/Minus Icon_333.PNG" alt="">
+                </button>
                 <span class="number">${cartItem.quantity}</span>
-                <button class="increment">+</button>
+                <button class="increment" type="button" aria-label="Increase quantity">
+                    <img src="images/Icon Folder/Plus Icon_333.PNG" alt="">
+                </button>
             </div>
         </div>
 
@@ -919,11 +923,12 @@ function attachCartEvents(cartBox, cartItem) {
 function attachCartSwipe(cartBox) {
     const main = cartBox.querySelector(".cart-box-main");
     const actions = cartBox.querySelector(".cart-swipe-actions");
-    let startX = 0, startY = 0, offset = 0, dragging = false;
+    let startX = 0, startY = 0, offset = 0, dragging = false, didSwipe = false;
 
     main.addEventListener("pointerdown", event => {
-        if (event.target.closest("button, a, .cart-remove")) return;
+        if (event.target.closest("button, .cart-remove")) return;
         dragging = true;
+        didSwipe = false;
         startX = event.clientX;
         startY = event.clientY;
         offset = cartBox.classList.contains("is-swiped") ? -actions.offsetWidth : 0;
@@ -940,6 +945,7 @@ function attachCartSwipe(cartBox) {
             main.style.transform = "";
             return;
         }
+        if (Math.abs(dx) > 8) didSwipe = true;
         main.style.transform = `translateX(${Math.max(-actions.offsetWidth, Math.min(0, offset + dx))}px)`;
     });
     const finish = event => {
@@ -948,11 +954,29 @@ function attachCartSwipe(cartBox) {
         main.classList.remove("is-dragging");
         const shouldOpen = offset + event.clientX - startX < -actions.offsetWidth * .35;
         main.style.transform = "";
+
+        if (shouldOpen) {
+            cartBox.closest(".cart-content")
+                ?.querySelectorAll(".cart-box.is-swiped")
+                .forEach(openCartBox => {
+                    if (openCartBox === cartBox) return;
+                    openCartBox.classList.remove("is-swiped");
+                    openCartBox.querySelector(".cart-swipe-actions")
+                        ?.setAttribute("aria-hidden", "true");
+                });
+        }
+
         cartBox.classList.toggle("is-swiped", shouldOpen);
         actions.setAttribute("aria-hidden", String(!shouldOpen));
     };
     main.addEventListener("pointerup", finish);
     main.addEventListener("pointercancel", finish);
+    main.addEventListener("click", event => {
+        if (!didSwipe) return;
+        event.preventDefault();
+        event.stopPropagation();
+        didSwipe = false;
+    }, true);
 }
 
 function renderSavedCart() {

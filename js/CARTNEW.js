@@ -668,7 +668,9 @@ UGX ${Number(String(cartItem.price).replace(/[^\d]/g, "")).toLocaleString()}
 
             <div class="cart-quantity">
 
-                <button class="decrement">-</button>
+                <button class="decrement" type="button" aria-label="Decrease quantity">
+                    <img src="images/Icon Folder/Minus Icon_333.PNG" alt="">
+                </button>
 
                 <span class="number">
 
@@ -676,7 +678,9 @@ UGX ${Number(String(cartItem.price).replace(/[^\d]/g, "")).toLocaleString()}
 
                 </span>
 
-                <button class="increment">+</button>
+                <button class="increment" type="button" aria-label="Increase quantity">
+                    <img src="images/Icon Folder/Plus Icon_333.PNG" alt="">
+                </button>
 
             </div>
 
@@ -895,6 +899,18 @@ function attachCartSwipe(cartBox) {
         const dx = event.clientX - startX;
         const shouldOpen = offset + dx < -actions.offsetWidth * .35;
         main.style.transform = "";
+
+        if (shouldOpen) {
+            cartBox.closest(".cart-content")
+                ?.querySelectorAll(".cart-box.is-swiped")
+                .forEach(openCartBox => {
+                    if (openCartBox === cartBox) return;
+                    openCartBox.classList.remove("is-swiped");
+                    openCartBox.querySelector(".cart-swipe-actions")
+                        ?.setAttribute("aria-hidden", "true");
+                });
+        }
+
         cartBox.classList.toggle("is-swiped", shouldOpen);
         actions.setAttribute("aria-hidden", String(!shouldOpen));
     };

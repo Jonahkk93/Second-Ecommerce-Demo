@@ -1619,6 +1619,14 @@ align-items: center;
     align-items: center;
 }
 
+.cart-quantity button img{
+    display:block;
+    width:8px;
+    height:8px;
+    object-fit:contain;
+    pointer-events:none;
+}
+
 .number{
     width: 40px;
     display: flex;
@@ -1635,6 +1643,7 @@ align-items: center;
     flex:0 0 auto;
     align-items:center;
     gap:10px;
+    margin-right:12px;
 }
 
 .cart-move-wishlist{
