@@ -24,6 +24,8 @@ const adminDashboard = document.getElementById("admin-dashboard");
 const adminAccountButton = document.getElementById("admin-account-button");
 const adminAccountMenu = document.getElementById("admin-account-menu");
 const adminAccountEmail = document.getElementById("admin-account-email");
+const adminAccountPhoto = document.getElementById("admin-account-photo");
+const adminAccountInitials = document.getElementById("admin-account-initials");
 const adminSignout = document.getElementById("admin-signout");
 const statusConfirm = document.getElementById("admin-status-confirm");
 const statusConfirmName = document.getElementById("admin-status-confirm-name");
@@ -56,9 +58,24 @@ statusConfirm.addEventListener("click", event => {
     if (event.target === statusConfirm) closeStatusConfirmation(false);
 });
 
-function showDashboard() {
+function showDashboard(profile = {}) {
     adminDashboard.hidden = false;
     adminAccountEmail.textContent = auth.currentUser?.email || "Admin account";
+
+    const initials = `${profile.firstName?.trim()?.[0] || ""}${profile.lastName?.trim()?.[0] || ""}` ||
+        auth.currentUser?.email?.[0] || "A";
+    adminAccountInitials.textContent = initials.toUpperCase();
+
+    if (profile.profileImage) {
+        adminAccountPhoto.src = profile.profileImage;
+        adminAccountButton.classList.add("has-photo");
+        adminAccountPhoto.onerror = () => {
+            adminAccountPhoto.onerror = null;
+            adminAccountButton.classList.remove("has-photo");
+        };
+    } else {
+        adminAccountButton.classList.remove("has-photo");
+    }
 }
 
 adminAccountButton.addEventListener("click", event => {
@@ -95,7 +112,8 @@ onAuthStateChanged(auth, async (user) => {
 
     try {
         const userDoc = await getDoc(doc(db, "users", user.uid));
-        const isAdmin = userDoc.exists() && userDoc.data().role === "admin";
+        const userData = userDoc.exists() ? userDoc.data() : {};
+        const isAdmin = userDoc.exists() && userData.role === "admin";
 
         if (!isAdmin) {
             await signOut(auth);
@@ -103,7 +121,7 @@ onAuthStateChanged(auth, async (user) => {
             return;
         }
 
-        showDashboard();
+        showDashboard(userData);
     } catch (error) {
         console.error("Unable to verify administrator access:", error);
         await signOut(auth);

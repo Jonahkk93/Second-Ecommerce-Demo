@@ -139,12 +139,10 @@ const quantityPlus = document.querySelector(".quantity-plus");
 const quantityValue = document.querySelector(".quantity-value");
 
 const cartIcon = document.querySelector("#cart-icon");
-const accountIcon = document.querySelector("#account-icon");
 const cartBadge = document.querySelector(".cart-item-count");
 console.log("cartBadge element:", cartBadge);
 
 const wishlist = document.querySelector(".wishlist");
-const searchIcon = document.querySelector("#search-icon");
 const cart = document.querySelector(".cart");
 
 const cartClose = document.querySelector("#cart-close");
@@ -179,10 +177,7 @@ if (productShareIcon) {
     productShareButton.addEventListener("pointercancel", resetShareIcon);
 }
 
-const searchBar = document.querySelector(".search-bar");
-const searchClose = document.querySelector("#search-close");
-
-[searchClose, cartClose, wishlistClose].filter(Boolean).forEach(closeIcon => {
+[cartClose, wishlistClose].filter(Boolean).forEach(closeIcon => {
     let resetTimer;
     const resetCloseIcon = () => {
         resetTimer = setTimeout(() => {
@@ -198,6 +193,7 @@ const searchClose = document.querySelector("#search-close");
     closeIcon.addEventListener("pointercancel", resetCloseIcon);
 });
 const searchInput = document.querySelector("#search-input");
+const searchClearButton = document.querySelector(".product-search-clear");
 const productBoxes = document.querySelectorAll(".product-box");
 
 
@@ -274,27 +270,6 @@ function renderRelatedProducts() {
 }
 
 renderRelatedProducts();
-
-accountIcon?.addEventListener("click", () => {
-    if (auth.currentUser) {
-        sessionStorage.setItem("accountReturnUrl", window.location.href);
-        window.location.href = "Account.html";
-        return;
-    }
-    window.location.href = "index.html?account=login";
-});
-
-accountIcon?.addEventListener("keydown", event => {
-    if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        if (auth.currentUser) {
-            sessionStorage.setItem("accountReturnUrl", window.location.href);
-            window.location.href = "Account.html";
-            return;
-        }
-        window.location.href = "index.html?account=login";
-    }
-});
 
 function positionReviews() {
     const isTabletOrLaptop = window.matchMedia("(min-width: 601px)").matches;
@@ -1777,13 +1752,31 @@ checkoutButton.addEventListener("click", async () => {
     updateCartBadge();
 });
 
-searchIcon.addEventListener("click", () => {
-    searchBar.classList.add("active");
+function syncProductSearchClearButton() {
+    searchClearButton.hidden = !searchInput.value;
+}
+
+searchInput.addEventListener("input", syncProductSearchClearButton);
+
+searchClearButton.addEventListener("pointerdown", () => {
+    searchClearButton.querySelector("img").src = "images/Icon Folder/Close Icon_333.PNG";
 });
 
-searchClose.addEventListener("click", () => {
-    searchBar.classList.remove("active");
+const resetProductSearchClearIcon = () => {
+    searchClearButton.querySelector("img").src = "images/Icon Folder/Close Icon_Gray.PNG";
+};
+
+searchClearButton.addEventListener("pointerup", resetProductSearchClearIcon);
+searchClearButton.addEventListener("pointercancel", resetProductSearchClearIcon);
+searchClearButton.addEventListener("pointerleave", resetProductSearchClearIcon);
+searchClearButton.addEventListener("click", () => {
+    searchInput.value = "";
+    syncProductSearchClearButton();
+    searchInput.focus();
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
 });
+
+syncProductSearchClearButton();
 
 searchInput.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;

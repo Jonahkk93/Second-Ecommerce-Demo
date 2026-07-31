@@ -8,12 +8,64 @@ import {
 
 import {
     doc,
+    getDoc,
     setDoc
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const auth = window.auth;
 const db = window.db;
 const authToast = document.querySelector(".toast");
+const accountIcon = document.getElementById("account-icon");
+const accountImage = accountIcon?.querySelector(".account-image");
+const accountInitials = accountIcon?.querySelector(".account-initials");
+const homeAccountMenu = document.getElementById("home-account-menu");
+const homeAccountName = document.getElementById("home-account-name");
+const homeAccountEmail = document.getElementById("home-account-email");
+const homeSignout = document.getElementById("home-signout");
+const defaultAccountImage = "images/Account Logo 3.PNG";
+
+function showAccountInitials(firstName = "", lastName = "", email = "") {
+    const initials = `${firstName.trim()[0] || ""}${lastName.trim()[0] || ""}` ||
+        email.trim()[0] || "A";
+    accountInitials.textContent = initials.toUpperCase();
+    accountIcon.classList.add("show-initials");
+    accountImage.classList.remove("has-profile-image");
+}
+
+async function updateAccountNav(user) {
+    if (!accountIcon || !accountImage || !accountInitials) return;
+
+    if (!user) {
+        homeAccountMenu.hidden = true;
+        accountIcon.classList.remove("show-initials");
+        accountImage.classList.remove("has-profile-image");
+        accountImage.src = defaultAccountImage;
+        return;
+    }
+
+    try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const data = userDoc.exists() ? userDoc.data() : {};
+        homeAccountName.textContent =
+            `${data.firstName || ""} ${data.lastName || ""}`.trim() || "My Account";
+        homeAccountEmail.textContent = user.email || data.email || "";
+
+        if (data.profileImage) {
+            accountIcon.classList.remove("show-initials");
+            accountImage.classList.add("has-profile-image");
+            accountImage.src = data.profileImage;
+            accountImage.onerror = () => {
+                accountImage.onerror = null;
+                showAccountInitials(data.firstName, data.lastName, user.email);
+            };
+        } else {
+            showAccountInitials(data.firstName, data.lastName, user.email);
+        }
+    } catch (error) {
+        console.error("Unable to load account navigation profile:", error);
+        showAccountInitials("", "", user.email);
+    }
+}
 
 function showAuthToast(message, type = "success") {
     if (!authToast) return;
@@ -79,6 +131,7 @@ await setDoc(
         createdAt: new Date().toISOString()
     }
 );
+await updateAccountNav(userCredential.user);
 showAuthToast("Account created successfully!", "success");
 
 registerForm.reset();
@@ -107,6 +160,7 @@ signinForm.addEventListener("submit", async (e) => {
 });
 
 onAuthStateChanged(auth, async (user) => {
+await updateAccountNav(user);
     
 if (typeof loadCartFromFirestore === "function") {
     await loadCartFromFirestore();
@@ -139,6 +193,15 @@ if (typeof loadCartFromFirestore === "function") {
 });
 
 const logoutButton = document.getElementById("logout-btn");
+
+homeSignout?.addEventListener("click", async event => {
+    event.stopPropagation();
+    localStorage.removeItem("cart");
+    localStorage.removeItem("favorites");
+    homeAccountMenu.hidden = true;
+    await signOut(auth);
+    showAuthToast("Signed out successfully!", "success");
+});
 
 logoutButton.addEventListener("click", async () => {
 

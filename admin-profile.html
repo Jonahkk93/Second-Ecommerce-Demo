@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Profile | MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <main class="admin-profile-page" id="admin-profile-page" hidden>
+        <nav class="admin-profile-nav">
+            <a href="admin.html" class="admin-profile-back" aria-label="Back to dashboard">
+                <img src="images/Icon Folder/Back Icon_Black.PNG" alt="">
+            </a>
+            <a href="admin.html" class="admin-nav-brand">MPWR</a>
+            <span>Admin Profile</span>
+        </nav>
+
+        <section class="admin-profile-shell">
+            <header>
+                <p>Administrator</p>
+                <h1>Your Profile</h1>
+                <span>Update your profile picture and name.</span>
+            </header>
+
+            <form class="admin-profile-form" id="admin-profile-form">
+                <div class="admin-profile-photo">
+                    <img id="admin-profile-image" alt="Admin profile picture">
+                    <label for="admin-profile-file">Choose Photo</label>
+                    <input id="admin-profile-file" type="file" accept="image/*" hidden>
+                    <small>JPG, PNG or WebP. Maximum 5 MB.</small>
+                </div>
+
+                <div class="admin-profile-fields">
+                    <label for="admin-profile-first-name">First Name</label>
+                    <input id="admin-profile-first-name" type="text" required>
+
+                    <label for="admin-profile-last-name">Last Name</label>
+                    <input id="admin-profile-last-name" type="text" required>
+
+                    <label for="admin-profile-email">Email</label>
+                    <input id="admin-profile-email" type="email" disabled>
+
+                    <p class="admin-profile-message" id="admin-profile-message" role="status"></p>
+                    <button type="submit" id="admin-profile-save">Save Changes</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script type="module" src="js/admin-profile.js"></script>
+</body>
+</html>

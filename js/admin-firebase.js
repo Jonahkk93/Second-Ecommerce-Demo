@@ -5,6 +5,7 @@ import {
     browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDGl6ypgbZORkxoHu9SmhWdgWQxEc8jK-o",
@@ -20,7 +21,8 @@ const firebaseConfig = {
 const adminApp = initializeApp(firebaseConfig, "admin");
 const adminAuth = getAuth(adminApp);
 const adminDb = getFirestore(adminApp);
+const adminStorage = getStorage(adminApp);
 
 await setPersistence(adminAuth, browserSessionPersistence);
 
-export { adminAuth, adminDb };
+export { adminAuth, adminDb, adminStorage };

@@ -1700,6 +1700,7 @@ header{
 ========================================== */
 
 #account-icon{
+    position:relative;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -1709,8 +1710,108 @@ header{
 
 .account-image{
     width:26px;
+    height:26px;
     display:block;
     object-fit:contain;
+}
+
+.account-image.has-profile-image{
+    border-radius:50%;
+    object-fit:cover;
+}
+
+.account-initials{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    background:#E5A484;
+    color:#fff;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+}
+
+#account-icon.show-initials .account-image{
+    display:none;
+}
+
+#account-icon.show-initials .account-initials{
+    display:flex;
+}
+
+#account-icon:has(.home-account-menu:not([hidden])){
+    transform:none;
+    opacity:1;
+}
+
+.home-account-menu{
+    position:absolute;
+    top:calc(100% + 14px);
+    right:0;
+    z-index:1200;
+    width:250px;
+    padding:18px;
+    border:1px solid #eee;
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 18px 45px rgba(0,0,0,.16);
+    cursor:default;
+    text-align:left;
+}
+
+.home-account-name{
+    margin:0 0 5px;
+    color:#333;
+    font-size:16px;
+    font-weight:700;
+}
+
+.home-account-email{
+    overflow:hidden;
+    margin:0 0 16px;
+    color:#777;
+    font-size:13px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.home-account-menu a,
+.home-account-menu button{
+    display:block;
+    width:100%;
+    padding:11px 14px;
+    border-radius:9px;
+    font-size:14px;
+    font-weight:600;
+    text-align:center;
+    text-decoration:none;
+}
+
+.home-account-menu a{
+    margin-bottom:8px;
+    border:1px solid #E5A484;
+    background:#fff;
+    color:#E5A484;
+}
+
+.home-account-menu button{
+    border:0;
+    background:#333;
+    color:#fff;
+    cursor:pointer;
+}
+
+@media (max-width:600px){
+    .home-account-menu{
+        position:fixed;
+        top:76px;
+        right:12px;
+        width:min(270px, calc(100vw - 24px));
+    }
 }
 
 #account-icon:hover{
@@ -3616,6 +3717,16 @@ body.search-open .section-title{
     .wishlist-nav-image,
     .account-image{
         width: 22px;
+    }
+
+    .account-image,
+    .account-initials{
+        width:22px;
+        height:22px;
+    }
+
+    .account-initials{
+        font-size:9px;
     }
 
     #cart-icon,

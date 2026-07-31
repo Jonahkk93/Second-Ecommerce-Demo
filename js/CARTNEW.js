@@ -2283,14 +2283,27 @@ document.addEventListener("DOMContentLoaded", () => {
         openAccountModal();
     }
 
-    accountIcon.addEventListener("click", () => {
+    const homeAccountMenu = document.getElementById("home-account-menu");
+    const homeViewProfile = document.getElementById("home-view-profile");
+
+    accountIcon.addEventListener("click", event => {
+        if (event.target.closest(".home-account-menu")) return;
+
         if (auth.currentUser) {
-            sessionStorage.setItem("accountReturnUrl", window.location.href);
-            window.location.href = "Account.html";
+            homeAccountMenu.hidden = !homeAccountMenu.hidden;
             return;
         }
 
         openAccountModal();
+    });
+
+    homeViewProfile.addEventListener("click", () => {
+        sessionStorage.setItem("accountReturnUrl", window.location.href);
+    });
+
+    document.addEventListener("click", event => {
+        if (event.target.closest("#account-icon")) return;
+        homeAccountMenu.hidden = true;
     });
 
     if (

@@ -45,6 +45,12 @@
 </div>
 
 
+<!--CART ICON IN NAV-->
+    <div id="cart-icon">
+        <img src="images/Cart black.png" class="cart-image">
+        <span class="cart-item-count"></span>
+    </div>
+
 <!--ACCOUNT ICON IN NAV-->
 <div id="account-icon">
 
@@ -53,14 +59,16 @@
         class="account-image"
         alt="Account"
     >
+    <span class="account-initials" aria-hidden="true"></span>
+
+    <div class="home-account-menu" id="home-account-menu" hidden>
+        <p class="home-account-name" id="home-account-name">My Account</p>
+        <p class="home-account-email" id="home-account-email"></p>
+        <a href="Account.html" id="home-view-profile">View Profile</a>
+        <button type="button" id="home-signout">Sign Out</button>
+    </div>
 
 </div>
-
-<!--CART ICON IN NAV-->
-    <div id="cart-icon">
-        <img src="images/Cart black.png" class="cart-image">
-        <span class="cart-item-count"></span>
-    </div>
 
 </div>
 
@@ -711,7 +719,7 @@
                 class="account-modal-icon"
                 alt="Account">
 
-            <h2>Welcome Back</h2>
+            <h2>Welcome</h2>
 
             <p>Sign in to continue shopping.</p>
 
