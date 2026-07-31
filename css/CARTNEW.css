@@ -322,11 +322,10 @@ header{
     position: fixed;
     top: 0;
     right: 0;
-    bottom: auto;
+    bottom: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
-    height: 100dvh;
+    height: auto;
     z-index: 1098;
     background: rgba(20, 15, 12, .38);
     opacity: 0;
@@ -338,18 +337,22 @@ header{
 .sidebar_menu{
     position: fixed;
     top: 0;
-    bottom: auto;
+    bottom: 0;
     left: 0;
     z-index: 1099;
     display: flex;
     width: min(330px, 86vw);
-    height: 100vh;
-    height: 100dvh;
+    height: auto;
     max-height: none;
-    padding: 24px 22px;
+    padding:
+        max(24px, env(safe-area-inset-top, 0px))
+        22px
+        max(24px, env(safe-area-inset-bottom, 0px));
     flex-direction: column;
     overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     color: #333;
     background: #fff;
     border-right: 1px solid #e0e0e0;
@@ -533,10 +536,11 @@ header{
 
     .sidebar_menu{
         width: min(260px, 72vw);
-        padding: 16px;
-        box-shadow:
-            0 140px 0 #fff,
-            2px 0 10px rgba(93, 93, 93, .13);
+        padding:
+            max(16px, env(safe-area-inset-top, 0px))
+            16px
+            max(16px, env(safe-area-inset-bottom, 0px));
+        box-shadow: 2px 0 10px rgba(93, 93, 93, .13);
     }
 }
 
@@ -566,10 +570,10 @@ header{
 .cart {
     position: fixed;
     top: 0;
+    bottom: 0;
     right: 0;
     width: 360px;
-    height: 100vh;
-    height: 100dvh;
+    height: auto;
 
     background: #fff;
     box-shadow: -2px 0 10px rgba(93,93,93,.13);
@@ -618,11 +622,66 @@ header{
 }
 
 .cart-box {
-    display: flex;
-    align-items: center;
+    position: relative;
+    display: block;
     margin: 18px;
-    padding-bottom: 18px;
+    padding: 0;
+    overflow: hidden;
     border-bottom: 1px solid #f1f1f1;
+    border-radius: 10px 0 0 10px;
+}
+
+.cart-box-main{
+    position:relative;
+    z-index:1;
+    display:flex;
+    align-items:center;
+    padding-bottom:18px;
+    background:#fff;
+    touch-action:pan-y;
+    transition:transform .24s ease;
+}
+
+.cart-box-main.is-dragging{
+    transition:none;
+}
+
+.cart-box.is-swiped .cart-box-main{
+    transform:translateX(-148px);
+}
+
+.cart-swipe-actions{
+    position:absolute;
+    inset:0 0 0 auto;
+    display:flex;
+    width:148px;
+}
+
+.cart-swipe-action{
+    display:flex;
+    flex:1;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    padding:8px 4px;
+    border:0;
+    color:#fff;
+    font:inherit;
+    font-size:11px;
+    cursor:pointer;
+}
+
+.cart-swipe-action.cart-move-wishlist{ background:#e8b097; }
+.cart-swipe-action.cart-share{ background:#333; }
+.cart-swipe-action.cart-move-wishlist,
+.cart-swipe-action.cart-share{ width:auto; height:auto; }
+.cart-swipe-action img,
+.cart-swipe-action.cart-move-wishlist img{ width:25px; height:25px; object-fit:contain; }
+.cart-swipe-action:focus-visible{ outline:3px solid #fff; outline-offset:-4px; }
+
+@media (prefers-reduced-motion: reduce){
+    .cart-box-main{ transition:none; }
 }
 
 /*Image in cart*/
@@ -679,6 +738,39 @@ header{
     font-weight: 500;
     border-left: 1px solid #ececec;
     border-right: 1px solid #ececec;
+}
+
+.cart-item-actions{
+    display:flex;
+    flex:0 0 auto;
+    align-items:center;
+    gap:10px;
+}
+
+.cart-move-wishlist{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    height:30px;
+    padding:0;
+    border:0;
+    background:transparent;
+    cursor:pointer;
+    transition:.2s ease;
+}
+
+.cart-move-wishlist:hover,
+.cart-move-wishlist:focus-visible{
+    transform:scale(1.15);
+    opacity:.7;
+}
+
+.cart-move-wishlist img{
+    display:block;
+    width:30px;
+    height:30px;
+    object-fit:contain;
 }
 
 .cart-remove{
@@ -1048,13 +1140,13 @@ header{
     position: fixed;
 
     top: 0;
+    bottom: 0;
 
     right: 0;
 
     width: 360px;
 
-    height: 100vh;
-    height: 100dvh;
+    height: auto;
 
     background: #fff;
 

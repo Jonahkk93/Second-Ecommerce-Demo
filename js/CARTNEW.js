@@ -631,7 +631,17 @@ function createCartBox(cartItem) {
     cartBox.dataset.id = cartItem.id;
 
     cartBox.innerHTML = `
-
+        <div class="cart-swipe-actions" aria-hidden="true">
+            <button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist">
+                <img src="images/Icon Folder/Move To Favorites Icon_333.PNG" alt="">
+                <span>Wishlist</span>
+            </button>
+            <button class="cart-swipe-action cart-share" type="button" aria-label="Share item">
+                <img src="images/Icon Folder/Share Icon V2_White.PNG" alt="">
+                <span>Share</span>
+            </button>
+        </div>
+        <div class="cart-box-main">
         <a href="${productHref}" class="cart-product-link" aria-label="View ${cartItem.title}">
             <img
                 src="${cartItem.image}"
@@ -672,10 +682,16 @@ UGX ${Number(String(cartItem.price).replace(/[^\d]/g, "")).toLocaleString()}
 
         </div>
 
-        <img
-            src="images/Icon Folder/Delete Icon_Black.PNG"
-            class="cart-remove"
-        >
+        <div class="cart-item-actions">
+            <img
+                src="images/Icon Folder/Delete Icon_333.PNG"
+                class="cart-remove"
+                alt="Remove item"
+                role="button"
+                tabindex="0"
+            >
+        </div>
+        </div>
 
     `;
     attachCartEvents(cartBox, cartItem);
@@ -687,6 +703,27 @@ UGX ${Number(String(cartItem.price).replace(/[^\d]/g, "")).toLocaleString()}
 function attachCartEvents(cartBox, cartItem) {
 
     const removeButton = cartBox.querySelector(".cart-remove");
+    const moveToWishlistButton =
+        cartBox.querySelector(".cart-move-wishlist");
+    const shareButton = cartBox.querySelector(".cart-share");
+
+    attachCartSwipe(cartBox);
+
+    shareButton.addEventListener("click", async event => {
+        event.stopPropagation();
+        const url = new URL(`product.html?id=${encodeURIComponent(cartItem.id)}`, window.location.href).href;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: cartItem.title, text: `Check out ${cartItem.title}`, url });
+            } else {
+                await navigator.clipboard.writeText(url);
+                showToast("Product link copied", "success");
+            }
+            cartBox.classList.remove("is-swiped");
+        } catch (error) {
+            if (error.name !== "AbortError") showToast("Unable to share this item", "warning");
+        }
+    });
 
     const incrementButton = cartBox.querySelector(".increment");
 
@@ -694,16 +731,58 @@ function attachCartEvents(cartBox, cartItem) {
 
     const numberElement = cartBox.querySelector(".number");
 
+    moveToWishlistButton.addEventListener("click", event => {
+        event.stopPropagation();
+
+        const isAlreadySaved = favorites.some(item =>
+            String(item.id) === String(cartItem.id)
+        );
+
+        if (!isAlreadySaved) {
+            favorites.push({
+                id: cartItem.id,
+                title: cartItem.title,
+                price: cartItem.price,
+                image: cartItem.image,
+                color: cartItem.color || "",
+                size: cartItem.size || ""
+            });
+        }
+
+        cartItems = cartItems.filter(item =>
+            !(
+                item.id === cartItem.id &&
+                item.color === cartItem.color &&
+                item.size === cartItem.size
+            )
+        );
+
+        saveWishlist();
+        saveCart();
+        renderWishlist();
+        renderSavedCart();
+        updateCartCount();
+        cart.classList.add("active");
+        syncSidePanelScrollLock();
+
+        showToast(
+            isAlreadySaved
+                ? "Item removed from cart — already in wishlist"
+                : "Moved to wishlist ❤️",
+            "success"
+        );
+    });
+
     removeButton.addEventListener("pointerdown", () => {
-        removeButton.src = "images/Icon Folder/Delete Icon_Red.PNG";
+        removeButton.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     });
 
     removeButton.addEventListener("pointerenter", () => {
-        removeButton.src = "images/Icon Folder/Delete Icon_Red.PNG";
+        removeButton.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     });
 
     removeButton.addEventListener("pointerleave", () => {
-        removeButton.src = "images/Icon Folder/Delete Icon_Black.PNG";
+        removeButton.src = "images/Icon Folder/Delete Icon_333.PNG";
     });
 
     removeButton.addEventListener("click", () => {
@@ -775,6 +854,53 @@ decrementButton.addEventListener("click", () => {
 
 });
 
+}
+
+function attachCartSwipe(cartBox) {
+    const main = cartBox.querySelector(".cart-box-main");
+    const actions = cartBox.querySelector(".cart-swipe-actions");
+    let startX = 0;
+    let startY = 0;
+    let offset = 0;
+    let dragging = false;
+
+    main.addEventListener("pointerdown", event => {
+        if (event.target.closest("button, a, .cart-remove")) return;
+        dragging = true;
+        startX = event.clientX;
+        startY = event.clientY;
+        offset = cartBox.classList.contains("is-swiped") ? -actions.offsetWidth : 0;
+        main.setPointerCapture(event.pointerId);
+        main.classList.add("is-dragging");
+    });
+
+    main.addEventListener("pointermove", event => {
+        if (!dragging) return;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+            dragging = false;
+            main.classList.remove("is-dragging");
+            main.style.transform = "";
+            return;
+        }
+        const x = Math.max(-actions.offsetWidth, Math.min(0, offset + dx));
+        main.style.transform = `translateX(${x}px)`;
+    });
+
+    const finish = event => {
+        if (!dragging) return;
+        dragging = false;
+        main.classList.remove("is-dragging");
+        const dx = event.clientX - startX;
+        const shouldOpen = offset + dx < -actions.offsetWidth * .35;
+        main.style.transform = "";
+        cartBox.classList.toggle("is-swiped", shouldOpen);
+        actions.setAttribute("aria-hidden", String(!shouldOpen));
+    };
+
+    main.addEventListener("pointerup", finish);
+    main.addEventListener("pointercancel", finish);
 }
 
 
@@ -1350,7 +1476,14 @@ productModalFavorite.addEventListener("click", () => {
 function createWishlistItem(item) {
 
     const wishlistBox = document.createElement("div");
-    const productHref = `product.html?id=${encodeURIComponent(item.id)}`;
+    const productParams = new URLSearchParams({
+        id: String(item.id)
+    });
+
+    if (item.color) productParams.set("color", item.color);
+    if (item.size) productParams.set("size", item.size);
+
+    const productHref = `product.html?${productParams.toString()}`;
 
    wishlistBox.classList.add("wishlist-item");
 
@@ -1385,7 +1518,7 @@ function createWishlistItem(item) {
        <button class="wishlist-remove">
 
     <img
-        src="images/Icon Folder/Delete Icon_Black.PNG"
+        src="images/Icon Folder/Delete Icon_333.PNG"
         class="wishlist-remove-icon"
     >
 
@@ -1401,15 +1534,15 @@ function createWishlistItem(item) {
     wishlistBox.querySelector(".wishlist-add-cart");
 
     removeButton.addEventListener("pointerenter", () => {
-        removeIcon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+        removeIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     });
 
     removeButton.addEventListener("pointerleave", () => {
-        removeIcon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+        removeIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
     });
 
     removeButton.addEventListener("pointerdown", () => {
-        removeIcon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+        removeIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     });
 
     removeButton.addEventListener("click", () => {
@@ -1591,22 +1724,22 @@ function updateWishlistButtons() {
 
 clearWishlistButton.addEventListener("pointerenter", () => {
     clearWishlistButton.querySelector(".clear-wishlist-icon").src =
-        "images/Icon Folder/Delete Icon_Red.PNG";
+        "images/Icon Folder/Delete Icon_d9534f.PNG";
 });
 
 clearWishlistButton.addEventListener("pointerleave", () => {
     clearWishlistButton.querySelector(".clear-wishlist-icon").src =
-        "images/Icon Folder/Delete Icon_Black.PNG";
+        "images/Icon Folder/Delete Icon_333.PNG";
 });
 
 clearWishlistButton.addEventListener("pointerdown", () => {
     const icon = clearWishlistButton.querySelector(".clear-wishlist-icon");
 
-    icon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    icon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
 
     setTimeout(() => {
         if (!clearWishlistButton.matches(":hover")) {
-            icon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+            icon.src = "images/Icon Folder/Delete Icon_333.PNG";
         }
     }, 120);
 });
@@ -2010,10 +2143,27 @@ document.addEventListener("DOMContentLoaded", () => {
     signinView.classList.remove("hide");
 });
 
+    const openAccountModal = () => {
+        accountOverlay.classList.add("active");
+        document.body.style.overflow = "hidden";
+    };
+
     accountIcon.addEventListener("click", () => {
-    accountOverlay.classList.add("active");
-    document.body.style.overflow = "hidden";
-});
+        if (auth.currentUser) {
+            window.location.href = "Account.html";
+            return;
+        }
+
+        openAccountModal();
+    });
+
+    if (
+        !auth.currentUser &&
+        new URLSearchParams(window.location.search).get("account") === "login"
+    ) {
+        openAccountModal();
+        history.replaceState({}, "", window.location.pathname);
+    }
 
 accountClose.addEventListener("click", () => {
     accountOverlay.classList.remove("active");

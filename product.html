@@ -52,6 +52,15 @@
         >
     </div>
 
+    <!-- ACCOUNT -->
+    <div id="account-icon" aria-label="My account" role="button" tabindex="0">
+        <img
+            src="images/Account Logo 3.PNG"
+            class="account-image"
+            alt="Account"
+        >
+    </div>
+
     <!-- CART -->
     <div id="cart-icon">
         <img
@@ -339,6 +348,46 @@
             </div>
 
         </div>
+
+<section class="product-reviews" aria-labelledby="reviews-title">
+    <div class="product-reviews-inner">
+        <div class="reviews-heading">
+            <div>
+                <p class="reviews-kicker">Customer feedback</p>
+                <h2 id="reviews-title">Reviews</h2>
+            </div>
+            <div class="reviews-summary" aria-label="Product review summary">
+                <span class="reviews-summary-score rating-score">0.0</span>
+                <span class="reviews-summary-stars stars">☆☆☆☆☆</span>
+                <span class="reviews-summary-count review-count">No reviews yet</span>
+            </div>
+        </div>
+
+        <div class="review-compose">
+            <p class="review-eligibility" aria-live="polite">
+                Sign in to review this product after purchasing it.
+            </p>
+            <form id="review-form" hidden>
+                <fieldset>
+                    <legend>Your rating</legend>
+                    <div class="review-star-picker" aria-label="Select a rating">
+                        <button type="button" class="review-star" data-rating="1" aria-label="1 star" aria-pressed="false">★</button>
+                        <button type="button" class="review-star" data-rating="2" aria-label="2 stars" aria-pressed="false">★</button>
+                        <button type="button" class="review-star" data-rating="3" aria-label="3 stars" aria-pressed="false">★</button>
+                        <button type="button" class="review-star" data-rating="4" aria-label="4 stars" aria-pressed="false">★</button>
+                        <button type="button" class="review-star" data-rating="5" aria-label="5 stars" aria-pressed="false">★</button>
+                    </div>
+                </fieldset>
+                <label for="review-text">Your review</label>
+                <textarea id="review-text" maxlength="800" required placeholder="Share your experience with this product"></textarea>
+                <button type="submit" class="review-submit">Post review</button>
+            </form>
+        </div>
+
+        <p class="review-empty">No reviews yet. Verified customers can be the first.</p>
+        <div class="review-list"></div>
+    </div>
+</section>
 
     </div>
 

@@ -5,9 +5,12 @@ import {
 import {
     doc,
     getDoc,
+    getDocs,
     setDoc,
     collection,
     addDoc,
+    query,
+    where,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
@@ -136,6 +139,7 @@ const quantityPlus = document.querySelector(".quantity-plus");
 const quantityValue = document.querySelector(".quantity-value");
 
 const cartIcon = document.querySelector("#cart-icon");
+const accountIcon = document.querySelector("#account-icon");
 const cartBadge = document.querySelector(".cart-item-count");
 console.log("cartBadge element:", cartBadge);
 
@@ -180,6 +184,301 @@ const confirmOverlay = document.querySelector(".confirm-overlay");
 const confirmCancel = document.querySelector(".confirm-cancel");
 const confirmClear = document.querySelector(".confirm-clear");
 const sidePanelBackdrop = document.querySelector(".side-panel-backdrop");
+const reviewForm = document.querySelector("#review-form");
+const reviewEligibility = document.querySelector(".review-eligibility");
+const reviewList = document.querySelector(".review-list");
+const reviewEmpty = document.querySelector(".review-empty");
+const reviewText = document.querySelector("#review-text");
+const reviewSubmit = document.querySelector(".review-submit");
+const reviewStars = [...document.querySelectorAll(".review-star")];
+const ratingScores = [...document.querySelectorAll(".rating-score")];
+const reviewCounts = [...document.querySelectorAll(".review-count")];
+const productRatingStars = document.querySelector(".product-rating .stars");
+const reviewSummaryStars = document.querySelector(".reviews-summary-stars");
+const productReviews = document.querySelector(".product-reviews");
+const productGallery = document.querySelector(".product-gallery");
+const productLayout = document.querySelector(".product-layout");
+
+let selectedReviewRating = 0;
+let currentReviewExists = false;
+
+accountIcon?.addEventListener("click", () => {
+    window.location.href = auth.currentUser
+        ? "Account.html"
+        : "index.html?account=login";
+});
+
+accountIcon?.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        window.location.href = auth.currentUser
+            ? "Account.html"
+            : "index.html?account=login";
+    }
+});
+
+function positionReviews() {
+    const destination = window.matchMedia("(min-width: 601px)").matches
+        ? productGallery
+        : productLayout;
+
+    if (productReviews.parentElement !== destination) {
+        destination.appendChild(productReviews);
+    }
+}
+
+positionReviews();
+window.addEventListener("resize", positionReviews);
+
+function setReviewRating(rating) {
+    selectedReviewRating = rating;
+    reviewStars.forEach(star => {
+        const isSelected = Number(star.dataset.rating) <= rating;
+        star.classList.toggle("selected", isSelected);
+        star.setAttribute("aria-pressed", String(isSelected));
+    });
+}
+
+reviewStars.forEach(star => {
+    star.addEventListener("click", () => {
+        setReviewRating(Number(star.dataset.rating));
+    });
+});
+
+function reviewDate(value) {
+    const date = value?.toDate?.() || (value ? new Date(value) : null);
+    if (!date || Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat("en", {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    }).format(date);
+}
+
+function renderReviewList(reviews) {
+    reviewList.replaceChildren();
+    reviewEmpty.hidden = reviews.length > 0;
+
+    const average = reviews.length
+        ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
+        : 0;
+
+    ratingScores.forEach(score => {
+        score.textContent = reviews.length ? average.toFixed(1) : "0.0";
+    });
+    reviewCounts.forEach(count => {
+        count.textContent = reviews.length
+            ? `${reviews.length} ${reviews.length === 1 ? "Review" : "Reviews"}`
+            : "No reviews yet";
+    });
+    const averageStars =
+        "★".repeat(Math.round(average)) + "☆".repeat(5 - Math.round(average));
+    productRatingStars.textContent = averageStars;
+    reviewSummaryStars.textContent = averageStars;
+
+    reviews.forEach(review => {
+        const card = document.createElement("article");
+        card.className = "review-card";
+
+        const header = document.createElement("div");
+        header.className = "review-card-header";
+
+        const customer = document.createElement("strong");
+        customer.textContent = review.customerName || "MPWR customer";
+
+        const verified = document.createElement("span");
+        verified.className = "verified-purchase";
+        verified.textContent = "Verified purchase";
+
+        const stars = document.createElement("span");
+        stars.className = "review-card-stars";
+        stars.setAttribute("aria-label", `${review.rating} out of 5 stars`);
+        stars.textContent =
+            "★".repeat(Number(review.rating)) +
+            "☆".repeat(5 - Number(review.rating));
+
+        const body = document.createElement("p");
+        body.textContent = review.text;
+
+        const date = document.createElement("time");
+        date.textContent = reviewDate(review.updatedAt || review.createdAt);
+
+        header.append(customer, verified);
+        card.append(header, stars, body);
+
+        if (review.userId === auth.currentUser?.uid) {
+            const updateButton = document.createElement("button");
+            updateButton.type = "button";
+            updateButton.className = "review-update-button";
+            updateButton.textContent = "Update review";
+            updateButton.addEventListener("click", () => {
+                reviewEligibility.hidden = false;
+                reviewEligibility.textContent = "Update your verified review.";
+                reviewForm.hidden = false;
+                reviewSubmit.textContent = "Update review";
+                reviewText.focus();
+                reviewForm.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
+            card.appendChild(updateButton);
+        }
+
+        if (review.attachment?.url) {
+            if (review.attachment.type?.startsWith("image/")) {
+                const attachmentLink = document.createElement("a");
+                attachmentLink.href = review.attachment.url;
+                attachmentLink.target = "_blank";
+                attachmentLink.rel = "noopener";
+
+                const attachmentImage = document.createElement("img");
+                attachmentImage.className = "review-attachment-image";
+                attachmentImage.src = review.attachment.url;
+                attachmentImage.alt = review.attachment.name || "Review attachment";
+                attachmentLink.appendChild(attachmentImage);
+                card.appendChild(attachmentLink);
+            } else {
+                const attachmentLink = document.createElement("a");
+                attachmentLink.className = "review-attachment-file";
+                attachmentLink.href = review.attachment.url;
+                attachmentLink.target = "_blank";
+                attachmentLink.rel = "noopener";
+                attachmentLink.textContent =
+                    `View attachment: ${review.attachment.name || "File"}`;
+                card.appendChild(attachmentLink);
+            }
+        }
+
+        card.appendChild(date);
+        reviewList.appendChild(card);
+    });
+}
+
+async function loadProductReviews() {
+    try {
+        const snapshot = await getDocs(query(
+            collection(db, "reviews"),
+            where("productId", "==", String(product.id))
+        ));
+        const reviews = snapshot.docs
+            .map(reviewDoc => ({ id: reviewDoc.id, ...reviewDoc.data() }))
+            .sort((a, b) => {
+                const aTime = (a.updatedAt || a.createdAt)?.toMillis?.() || 0;
+                const bTime = (b.updatedAt || b.createdAt)?.toMillis?.() || 0;
+                return bTime - aTime;
+            });
+        renderReviewList(reviews);
+    } catch (error) {
+        console.error("Unable to load reviews:", error);
+        reviewEmpty.hidden = false;
+        reviewEmpty.textContent = "Reviews could not be loaded right now.";
+    }
+}
+
+async function customerPurchasedProduct(user) {
+    const snapshot = await getDocs(query(
+        collection(db, "orders"),
+        where("userId", "==", user.uid)
+    ));
+
+    return snapshot.docs.some(orderDoc => {
+        const order = orderDoc.data();
+        return order.status !== "Cancelled" &&
+            Array.isArray(order.items) &&
+            order.items.some(item => String(item.id) === String(product.id));
+    });
+}
+
+async function initializeReviewForm(user) {
+    reviewForm.hidden = true;
+    reviewEligibility.hidden = false;
+    setReviewRating(0);
+    reviewText.value = "";
+    currentReviewExists = false;
+
+    if (!user) {
+        reviewEligibility.textContent =
+            "Sign in to review this product after purchasing it.";
+        return;
+    }
+
+    reviewEligibility.textContent = "Checking your purchase history…";
+
+    try {
+        const eligible = await customerPurchasedProduct(user);
+        if (!eligible) {
+            reviewEligibility.textContent =
+                "Only customers who purchased this product can leave a review.";
+            return;
+        }
+
+        const reviewRef = doc(db, "reviews", `${user.uid}_${product.id}`);
+        const existing = await getDoc(reviewRef);
+
+        if (existing.exists()) {
+            const data = existing.data();
+            currentReviewExists = true;
+            reviewText.value = data.text || "";
+            setReviewRating(Number(data.rating || 0));
+            reviewSubmit.textContent = "Update review";
+            reviewEligibility.hidden = true;
+            reviewForm.hidden = true;
+        } else {
+            reviewSubmit.textContent = "Post review";
+            reviewEligibility.textContent =
+                "Verified purchase — tell us what you think.";
+        }
+
+        reviewForm.hidden = currentReviewExists;
+    } catch (error) {
+        console.error("Unable to verify purchase:", error);
+        reviewEligibility.hidden = true;
+    }
+}
+
+reviewForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const user = auth.currentUser;
+    const text = reviewText.value.trim();
+
+    if (!user || !selectedReviewRating || !text) {
+        showToast("Choose a rating and write your review.", "warning");
+        return;
+    }
+
+    reviewSubmit.disabled = true;
+    reviewSubmit.textContent = currentReviewExists ? "Updating…" : "Posting…";
+
+    try {
+        const reviewRef = doc(db, "reviews", `${user.uid}_${product.id}`);
+        const payload = {
+            productId: String(product.id),
+            userId: user.uid,
+            customerName: user.displayName || user.email?.split("@")[0] || "MPWR customer",
+            rating: selectedReviewRating,
+            text,
+            verifiedPurchase: true,
+            updatedAt: serverTimestamp()
+        };
+        if (!currentReviewExists) payload.createdAt = serverTimestamp();
+
+        await setDoc(reviewRef, payload, { merge: true });
+        currentReviewExists = true;
+        reviewSubmit.textContent = "Update review";
+        reviewEligibility.textContent =
+            "Your verified review has been published.";
+        showToast("Review published.", "success");
+        await loadProductReviews();
+        if (currentReviewExists) {
+            reviewEligibility.hidden = true;
+            reviewForm.hidden = true;
+        }
+    } catch (error) {
+        console.error("Unable to save review:", error);
+        reviewSubmit.textContent = currentReviewExists ? "Update review" : "Post review";
+        showToast("Your review could not be saved.", "warning");
+    } finally {
+        reviewSubmit.disabled = false;
+    }
+});
 
 function syncSidePanelScrollLock() {
     const panelIsOpen =
@@ -422,6 +721,17 @@ function createCartBox(cartItem) {
     cartBox.classList.add("cart-box");
 
     cartBox.innerHTML = `
+        <div class="cart-swipe-actions" aria-hidden="true">
+            <button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist">
+                <img src="images/Icon Folder/Move To Favorites Icon_333.PNG" alt="">
+                <span>Wishlist</span>
+            </button>
+            <button class="cart-swipe-action cart-share" type="button" aria-label="Share item">
+                <img src="images/Icon Folder/Share Icon V2_White.PNG" alt="">
+                <span>Share</span>
+            </button>
+        </div>
+        <div class="cart-box-main">
         <a href="${productHref}" class="cart-product-link" aria-label="View ${cartItem.title}">
             <img src="${cartItem.image}" class="cart-img">
         </a>
@@ -450,10 +760,16 @@ function createCartBox(cartItem) {
             </div>
         </div>
 
-        <img
-    src="images/Icon Folder/Delete Icon_Black.PNG"
-    class="cart-remove"
->
+        <div class="cart-item-actions">
+            <img
+                src="images/Icon Folder/Delete Icon_333.PNG"
+                class="cart-remove"
+                alt="Remove item"
+                role="button"
+                tabindex="0"
+            >
+        </div>
+        </div>
     `;
 
     attachCartEvents(cartBox, cartItem);
@@ -466,17 +782,75 @@ function attachCartEvents(cartBox, cartItem) {
     const increment = cartBox.querySelector(".increment");
     const quantityText = cartBox.querySelector(".number");
     const removeButton = cartBox.querySelector(".cart-remove");
+    const moveToWishlistButton =
+        cartBox.querySelector(".cart-move-wishlist");
+    const shareButton = cartBox.querySelector(".cart-share");
+
+    attachCartSwipe(cartBox);
+
+    shareButton.addEventListener("click", async event => {
+        event.stopPropagation();
+        const url = new URL(`product.html?id=${encodeURIComponent(cartItem.id)}`, window.location.href).href;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: cartItem.title, text: `Check out ${cartItem.title}`, url });
+            } else {
+                await navigator.clipboard.writeText(url);
+                showToast("Product link copied", "success");
+            }
+            cartBox.classList.remove("is-swiped");
+        } catch (error) {
+            if (error.name !== "AbortError") showToast("Unable to share this item", "warning");
+        }
+    });
+
+    moveToWishlistButton.addEventListener("click", event => {
+        event.stopPropagation();
+
+        let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+        const isAlreadySaved = favorites.some(item =>
+            String(item.id) === String(cartItem.id)
+        );
+
+        if (!isAlreadySaved) {
+            favorites.push({
+                id: cartItem.id,
+                title: cartItem.title,
+                price: cartItem.price,
+                image: cartItem.image,
+                color: cartItem.color || "",
+                size: cartItem.size || ""
+            });
+        }
+
+        cartItems = cartItems.filter(item =>
+            !(
+                item.id === cartItem.id &&
+                item.color === cartItem.color &&
+                item.size === cartItem.size
+            )
+        );
+
+        localStorage.setItem("favorites", JSON.stringify(favorites));
+        saveFavoritesToFirestore();
+        saveCart(cartItems);
+        renderWishlist();
+        renderSavedCart();
+        updateCartBadge();
+        cart.classList.add("active");
+        syncSidePanelScrollLock();
+    });
 
     removeButton.addEventListener("pointerdown", () => {
-        removeButton.src = "images/Icon Folder/Delete Icon_Red.PNG";
+        removeButton.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     });
 
     removeButton.addEventListener("pointerenter", () => {
-        removeButton.src = "images/Icon Folder/Delete Icon_Red.PNG";
+        removeButton.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     });
 
     removeButton.addEventListener("pointerleave", () => {
-        removeButton.src = "images/Icon Folder/Delete Icon_Black.PNG";
+        removeButton.src = "images/Icon Folder/Delete Icon_333.PNG";
     });
 
     increment.addEventListener("click", () => {
@@ -540,6 +914,45 @@ function attachCartEvents(cartBox, cartItem) {
         updateCartBadge();
         }, 120);
     });
+}
+
+function attachCartSwipe(cartBox) {
+    const main = cartBox.querySelector(".cart-box-main");
+    const actions = cartBox.querySelector(".cart-swipe-actions");
+    let startX = 0, startY = 0, offset = 0, dragging = false;
+
+    main.addEventListener("pointerdown", event => {
+        if (event.target.closest("button, a, .cart-remove")) return;
+        dragging = true;
+        startX = event.clientX;
+        startY = event.clientY;
+        offset = cartBox.classList.contains("is-swiped") ? -actions.offsetWidth : 0;
+        main.setPointerCapture(event.pointerId);
+        main.classList.add("is-dragging");
+    });
+    main.addEventListener("pointermove", event => {
+        if (!dragging) return;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+            dragging = false;
+            main.classList.remove("is-dragging");
+            main.style.transform = "";
+            return;
+        }
+        main.style.transform = `translateX(${Math.max(-actions.offsetWidth, Math.min(0, offset + dx))}px)`;
+    });
+    const finish = event => {
+        if (!dragging) return;
+        dragging = false;
+        main.classList.remove("is-dragging");
+        const shouldOpen = offset + event.clientX - startX < -actions.offsetWidth * .35;
+        main.style.transform = "";
+        cartBox.classList.toggle("is-swiped", shouldOpen);
+        actions.setAttribute("aria-hidden", String(!shouldOpen));
+    };
+    main.addEventListener("pointerup", finish);
+    main.addEventListener("pointercancel", finish);
 }
 
 function renderSavedCart() {
@@ -787,7 +1200,14 @@ wishlistContinue.addEventListener("click", () => {
 function createWishlistItem(item) {
 
     const wishlistBox = document.createElement("div");
-    const productHref = `product.html?id=${encodeURIComponent(item.id)}`;
+    const productParams = new URLSearchParams({
+        id: String(item.id)
+    });
+
+    if (item.color) productParams.set("color", item.color);
+    if (item.size) productParams.set("size", item.size);
+
+    const productHref = `product.html?${productParams.toString()}`;
 
    wishlistBox.classList.add("wishlist-item");
 
@@ -820,7 +1240,7 @@ function createWishlistItem(item) {
        <button class="wishlist-remove">
 
     <img
-        src="images/Icon Folder/Delete Icon_Black.PNG"
+        src="images/Icon Folder/Delete Icon_333.PNG"
         class="wishlist-remove-icon"
     >
 
@@ -836,15 +1256,15 @@ function createWishlistItem(item) {
     wishlistBox.querySelector(".wishlist-add-cart");
 
     removeButton.addEventListener("pointerenter", () => {
-        removeIcon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+        removeIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     });
 
     removeButton.addEventListener("pointerleave", () => {
-        removeIcon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+        removeIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
     });
 
     removeButton.addEventListener("pointerdown", () => {
-        removeIcon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+        removeIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     });
 
     removeButton.addEventListener("click", () => {
@@ -941,22 +1361,22 @@ function clearWishlist() {
 
 clearWishlistButton?.addEventListener("pointerenter", () => {
     clearWishlistButton.querySelector(".clear-wishlist-icon").src =
-        "images/Icon Folder/Delete Icon_Red.PNG";
+        "images/Icon Folder/Delete Icon_d9534f.PNG";
 });
 
 clearWishlistButton?.addEventListener("pointerleave", () => {
     clearWishlistButton.querySelector(".clear-wishlist-icon").src =
-        "images/Icon Folder/Delete Icon_Black.PNG";
+        "images/Icon Folder/Delete Icon_333.PNG";
 });
 
 clearWishlistButton?.addEventListener("pointerdown", () => {
     const icon = clearWishlistButton.querySelector(".clear-wishlist-icon");
 
-    icon.src = "images/Icon Folder/Delete Icon_Red.PNG";
+    icon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
 
     setTimeout(() => {
         if (!clearWishlistButton.matches(":hover")) {
-            icon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+            icon.src = "images/Icon Folder/Delete Icon_333.PNG";
         }
     }, 120);
 });
@@ -1131,11 +1551,14 @@ searchInput.addEventListener("keydown", (e) => {
 });
 renderSavedCart();
 updateCartBadge();
+loadProductReviews();
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         await loadCartFromFirestore();
     }
+    await initializeReviewForm(user);
+    await loadProductReviews();
     renderSavedCart();
     updateTotalPrice(JSON.parse(localStorage.getItem("cart")) || []);
     updateCartBadge();
