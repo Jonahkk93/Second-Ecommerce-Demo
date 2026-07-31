@@ -217,6 +217,15 @@ const toast = document.querySelector(".toast");
 const confirmOverlay = document.querySelector(".confirm-overlay");
 const confirmCancel = document.querySelector(".confirm-cancel");
 const confirmClear = document.querySelector(".confirm-clear");
+const moveWishlistConfirmOverlay = document.querySelector(".move-wishlist-confirm-overlay");
+const moveWishlistCancel = document.querySelector(".move-wishlist-cancel");
+const moveWishlistConfirm = document.querySelector(".move-wishlist-confirm");
+let pendingMoveToWishlist = null;
+const deleteItemConfirmOverlay = document.querySelector(".delete-item-confirm-overlay");
+const deleteItemConfirmMessage = document.querySelector(".delete-item-confirm-message");
+const deleteItemCancel = document.querySelector(".delete-item-cancel");
+const deleteItemConfirm = document.querySelector(".delete-item-confirm");
+let pendingItemDeletion = null;
 const sidePanelBackdrop = document.querySelector(".side-panel-backdrop");
 const reviewCompose = document.querySelector(".review-compose");
 const reviewForm = document.querySelector("#review-form");
@@ -600,19 +609,29 @@ sidePanelBackdrop?.addEventListener("click", () => {
 });
 
 function showToast(message, type = "success") {
+    if (!toast) return;
+
+    clearTimeout(toast.timeout);
     toast.textContent = message;
 
     toast.className = "toast";
 
     toast.classList.add(type);
 
+    // Restart the transition when notifications occur close together.
+    void toast.offsetWidth;
     toast.classList.add("show");
-
-    clearTimeout(toast.timeout);
 
     toast.timeout = setTimeout(() => {
         toast.classList.remove("show");
     }, 2500);
+}
+
+function requestItemDeletion(source, action) {
+    pendingItemDeletion = action;
+    deleteItemConfirmMessage.textContent =
+        `Are you sure you want to delete this item from your ${source}?`;
+    deleteItemConfirmOverlay.classList.add("active");
 }
 
 const flashToast = sessionStorage.getItem("flashToast");
@@ -934,46 +953,57 @@ function attachCartEvents(cartBox, cartItem) {
                 showToast("Product link copied", "success");
             }
             cartBox.classList.remove("is-swiped");
-        } catch (error) {
-            if (error.name !== "AbortError") showToast("Unable to share this item", "warning");
+        } catch {
+            // Sharing failures are intentionally silent.
         }
     });
 
     moveToWishlistButton.addEventListener("click", event => {
         event.stopPropagation();
 
-        let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
-        const isAlreadySaved = favorites.some(item =>
-            String(item.id) === String(cartItem.id)
-        );
+        pendingMoveToWishlist = () => {
+            let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+            const isAlreadySaved = favorites.some(item =>
+                String(item.id) === String(cartItem.id)
+            );
 
-        if (!isAlreadySaved) {
-            favorites.push({
-                id: cartItem.id,
-                title: cartItem.title,
-                price: cartItem.price,
-                image: cartItem.image,
-                color: cartItem.color || "",
-                size: cartItem.size || ""
-            });
-        }
+            if (!isAlreadySaved) {
+                favorites.push({
+                    id: cartItem.id,
+                    title: cartItem.title,
+                    price: cartItem.price,
+                    image: cartItem.image,
+                    color: cartItem.color || "",
+                    size: cartItem.size || ""
+                });
+            }
 
-        cartItems = cartItems.filter(item =>
-            !(
-                item.id === cartItem.id &&
-                item.color === cartItem.color &&
-                item.size === cartItem.size
-            )
-        );
+            cartItems = cartItems.filter(item =>
+                !(
+                    item.id === cartItem.id &&
+                    item.color === cartItem.color &&
+                    item.size === cartItem.size
+                )
+            );
 
-        localStorage.setItem("favorites", JSON.stringify(favorites));
-        saveFavoritesToFirestore();
-        saveCart(cartItems);
-        renderWishlist();
-        renderSavedCart();
-        updateCartBadge();
-        cart.classList.add("active");
-        syncSidePanelScrollLock();
+            localStorage.setItem("favorites", JSON.stringify(favorites));
+            saveFavoritesToFirestore();
+            saveCart(cartItems);
+            renderWishlist();
+            renderSavedCart();
+            updateCartBadge();
+            cart.classList.add("active");
+            syncSidePanelScrollLock();
+
+            showToast(
+                isAlreadySaved
+                    ? "Item removed from cart — already in wishlist"
+                    : "Moved to wishlist",
+                "success"
+            );
+        };
+
+        moveWishlistConfirmOverlay.classList.add("active");
     });
 
     removeButton.addEventListener("pointerdown", () => {
@@ -1031,24 +1061,24 @@ function attachCartEvents(cartBox, cartItem) {
     });
 
     removeButton.addEventListener("click", () => {
-        setTimeout(() => {
-        let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+        requestItemDeletion("cart", () => {
+            let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
 
-        cartItems = cartItems.filter(i =>
-            !(
-                i.id === cartItem.id &&
-                i.color === cartItem.color &&
-                i.size === cartItem.size
-            )
-        );
+            cartItems = cartItems.filter(i =>
+                !(
+                    i.id === cartItem.id &&
+                    i.color === cartItem.color &&
+                    i.size === cartItem.size
+                )
+            );
 
-        saveCart(cartItems);
+            saveCart(cartItems);
 
-        renderSavedCart();
+            renderSavedCart();
 
-        updateCartBadge();
-        showToast("Deleted", "success");
-        }, 120);
+            updateCartBadge();
+            showToast("Deleted", "success");
+        });
     });
 }
 
@@ -1429,27 +1459,22 @@ function createWishlistItem(item) {
     });
 
     removeButton.addEventListener("click", () => {
+        requestItemDeletion("wishlist", () => {
+            favorites = favorites.filter(favorite => {
+                return favorite.id !== item.id;
+            });
 
-        setTimeout(() => {
+            localStorage.setItem(
+                "favorites",
+                JSON.stringify(favorites)
+            );
 
-        favorites = favorites.filter(favorite => {
+            saveFavoritesToFirestore();
 
-            return favorite.id !== item.id;
+            renderWishlist();
 
+            showToast("Deleted", "success");
         });
-
-    localStorage.setItem(
-    "favorites",
-    JSON.stringify(favorites)
-);
-
-saveFavoritesToFirestore();    
-
-        renderWishlist();
-
-        showToast("Deleted", "success");
-
-        }, 120);
 
     });
 
@@ -1590,6 +1615,44 @@ confirmClear.addEventListener("click", () => {
 
 });
 
+moveWishlistCancel?.addEventListener("click", () => {
+    pendingMoveToWishlist = null;
+    moveWishlistConfirmOverlay.classList.remove("active");
+});
+
+moveWishlistConfirmOverlay?.addEventListener("click", event => {
+    if (event.target === moveWishlistConfirmOverlay) {
+        pendingMoveToWishlist = null;
+        moveWishlistConfirmOverlay.classList.remove("active");
+    }
+});
+
+moveWishlistConfirm?.addEventListener("click", () => {
+    const moveItem = pendingMoveToWishlist;
+    pendingMoveToWishlist = null;
+    moveWishlistConfirmOverlay.classList.remove("active");
+    moveItem?.();
+});
+
+deleteItemCancel?.addEventListener("click", () => {
+    pendingItemDeletion = null;
+    deleteItemConfirmOverlay.classList.remove("active");
+});
+
+deleteItemConfirmOverlay?.addEventListener("click", event => {
+    if (event.target === deleteItemConfirmOverlay) {
+        pendingItemDeletion = null;
+        deleteItemConfirmOverlay.classList.remove("active");
+    }
+});
+
+deleteItemConfirm?.addEventListener("click", () => {
+    const deleteItem = pendingItemDeletion;
+    pendingItemDeletion = null;
+    deleteItemConfirmOverlay.classList.remove("active");
+    deleteItem?.();
+});
+
 bottomwishlistNavIcon?.addEventListener("click", () => {
 
     const index = favorites.findIndex(
@@ -1645,10 +1708,8 @@ productShareButton?.addEventListener("click", async () => {
             await navigator.clipboard.writeText(shareData.url);
             showToast("Product link copied", "success");
         }
-    } catch (error) {
-        if (error.name !== "AbortError") {
-            showToast("Unable to share this product", "warning");
-        }
+    } catch {
+        // Sharing failures are intentionally silent.
     }
 });
    
@@ -1673,6 +1734,8 @@ continueShopping.addEventListener("click", () => {
 });
 
 document.addEventListener("click", event => {
+    if (event.target.closest(".confirm-overlay")) return;
+
     if (
         cart.classList.contains("active") &&
         !cart.contains(event.target) &&

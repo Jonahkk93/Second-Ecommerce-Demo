@@ -97,7 +97,7 @@ signinForm.addEventListener("submit", async (e) => {
     try {
         await signInWithEmailAndPassword(auth, email, password);
 
-        showAuthToast("Signed in successfully!", "success");
+        showAuthToast("Welcome Back!", "success");
 
         signinForm.reset();
 
@@ -143,6 +143,9 @@ const logoutButton = document.getElementById("logout-btn");
 logoutButton.addEventListener("click", async () => {
 
     try {
+
+        localStorage.removeItem("cart");
+        localStorage.removeItem("favorites");
 
         await signOut(auth);
 

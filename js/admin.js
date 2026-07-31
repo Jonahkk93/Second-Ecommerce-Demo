@@ -1,6 +1,7 @@
 
 import {
-    onAuthStateChanged
+    onAuthStateChanged,
+    signOut
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 import {
@@ -13,39 +14,76 @@ import {
     updateDoc
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-const auth = window.auth;
-const db = window.db;
+import { adminAuth, adminDb } from "./admin-firebase.js";
+
+const auth = adminAuth;
+const db = adminDb;
 const ordersList = document.querySelector(".orders-list");
 const orderSearch = document.getElementById("order-search");
+const adminDashboard = document.getElementById("admin-dashboard");
+const adminAccountButton = document.getElementById("admin-account-button");
+const adminAccountMenu = document.getElementById("admin-account-menu");
+const adminAccountEmail = document.getElementById("admin-account-email");
+const adminSignout = document.getElementById("admin-signout");
+let dashboardLoaded = false;
+
+function showDashboard() {
+    adminDashboard.hidden = false;
+    adminAccountEmail.textContent = auth.currentUser?.email || "Admin account";
+}
+
+adminAccountButton.addEventListener("click", event => {
+    event.stopPropagation();
+    const willOpen = adminAccountMenu.hidden;
+    adminAccountMenu.hidden = !willOpen;
+    adminAccountButton.setAttribute("aria-expanded", String(willOpen));
+});
+
+document.addEventListener("click", event => {
+    if (event.target.closest(".admin-account")) return;
+    adminAccountMenu.hidden = true;
+    adminAccountButton.setAttribute("aria-expanded", "false");
+
+    document.querySelectorAll(".status-picker-menu:not([hidden])").forEach(menu => {
+        menu.hidden = true;
+        menu.closest(".status-picker")
+            ?.querySelector(".status-picker-trigger")
+            ?.setAttribute("aria-expanded", "false");
+    });
+});
+
+adminSignout.addEventListener("click", async () => {
+    await signOut(auth);
+    window.location.replace("admin-login.html");
+});
 
 onAuthStateChanged(auth, async (user) => {
 
-    // Not signed in
     if (!user) {
-        window.location.href = "index.html";
+        window.location.replace("admin-login.html");
         return;
     }
 
-    // Get user's Firestore document
-    const userDoc = await getDoc(
-        doc(db, "users", user.uid)
-    );
+    try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const isAdmin = userDoc.exists() && userDoc.data().role === "admin";
 
-    // User document missing
-    if (!userDoc.exists()) {
-        window.location.href = "index.html";
+        if (!isAdmin) {
+            await signOut(auth);
+            window.location.replace("admin-login.html?error=unauthorized");
+            return;
+        }
+
+        showDashboard();
+    } catch (error) {
+        console.error("Unable to verify administrator access:", error);
+        await signOut(auth);
+        window.location.replace("admin-login.html?error=verification");
         return;
     }
 
-    const userData = userDoc.data();
-
-    // Not an admin
-    if (userData.role !== "admin") {
-        window.location.href = "index.html";
-        return;
-    }
-
-    console.log("Admin access granted.");
+    if (dashboardLoaded) return;
+    dashboardLoaded = true;
 
 document.getElementById("total-orders").textContent = "...";
 document.getElementById("pending-orders").textContent = "...";
@@ -168,13 +206,18 @@ orderCard.innerHTML = `
 
     ${statusBadge}
 
-    <select class="status-select" data-id="${orderDoc.id}">
-                <option value="Pending" ${order.status === "Pending" ? "selected" : ""}>Pending</option>
-                <option value="Processing" ${order.status === "Processing" ? "selected" : ""}>Processing</option>
-                <option value="Shipped" ${order.status === "Shipped" ? "selected" : ""}>Shipped</option>
-                <option value="Delivered" ${order.status === "Delivered" ? "selected" : ""}>Delivered</option>
-                <option value="Cancelled" ${order.status === "Cancelled" ? "selected" : ""}>Cancelled</option>
-            </select>
+    <div class="status-picker">
+        <button class="status-picker-trigger" type="button" aria-expanded="false">
+            ${order.status}<span aria-hidden="true">⌄</span>
+        </button>
+        <div class="status-picker-menu" hidden>
+            ${["Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map(status => `
+                <button type="button" data-status="${status}" class="${order.status === status ? "selected" : ""}">
+                    ${status}
+                </button>
+            `).join("")}
+        </div>
+    </div>
 
             </div>
 
@@ -217,26 +260,47 @@ orderCard.innerHTML = `
 });
 
         itemsContainer.style.display = "none";
-        const statusSelect = orderCard.querySelector(".status-select");
+        const statusPicker = orderCard.querySelector(".status-picker");
+        const statusTrigger = statusPicker.querySelector(".status-picker-trigger");
+        const statusMenu = statusPicker.querySelector(".status-picker-menu");
 
-statusSelect.addEventListener("change", async () => {
+statusTrigger.addEventListener("click", event => {
+    event.stopPropagation();
+    document.querySelectorAll(".status-picker-menu:not([hidden])").forEach(menu => {
+        if (menu !== statusMenu) menu.hidden = true;
+    });
+    statusMenu.hidden = !statusMenu.hidden;
+    statusTrigger.setAttribute("aria-expanded", String(!statusMenu.hidden));
+});
+
+statusMenu.querySelectorAll("button").forEach(option => {
+option.addEventListener("click", async event => {
+    event.stopPropagation();
+    const nextStatus = option.dataset.status;
     const previousStatus = order.status;
 
-    await updateDoc(
-        doc(db, "orders", orderDoc.id),
-        {
-            status: statusSelect.value
-        }
-    );
+    statusMenu.hidden = true;
+    statusTrigger.setAttribute("aria-expanded", "false");
+    statusTrigger.disabled = true;
 
-    orderCard.dataset.status = statusSelect.value;
+    try {
+        await updateDoc(doc(db, "orders", orderDoc.id), { status: nextStatus });
+    } finally {
+        statusTrigger.disabled = false;
+    }
+
+    orderCard.dataset.status = nextStatus;
+    statusTrigger.firstChild.textContent = nextStatus;
+    statusMenu.querySelectorAll("button").forEach(button =>
+        button.classList.toggle("selected", button === option)
+    );
 
     const badge = orderCard.querySelector(".status-badge");
 
-    badge.textContent = statusSelect.value;
+    badge.textContent = nextStatus;
 
     badge.className =
-        `status-badge ${statusSelect.value.toLowerCase()}`;
+        `status-badge ${nextStatus.toLowerCase()}`;
 
 const pendingOrdersElement = document.getElementById("pending-orders");
 
@@ -244,25 +308,24 @@ let pendingCount = Number(pendingOrdersElement.textContent);
 
 if (
     previousStatus === "Pending" &&
-    statusSelect.value !== "Pending"
+    nextStatus !== "Pending"
 ) {
     pendingCount--;
 }
 
 else if (
     previousStatus !== "Pending" &&
-    statusSelect.value === "Pending"
+    nextStatus === "Pending"
 ) {
     pendingCount++;
 }
 
 pendingOrdersElement.textContent = pendingCount;
-order.status = statusSelect.value;
+order.status = nextStatus;
 filterOrders();
 showAdminToast("Order status updated successfully");
 
-
-
+});
 });
     }
 

@@ -4,6 +4,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         <link rel="stylesheet" href="css/CARTNEW.css">
+        <link rel="stylesheet" href="css/password-toggle.css">
         <link rel="stylesheet" href="css/Larke.css">
 </head>
 
@@ -528,6 +529,28 @@
     </div>
 </div>
 
+<div class="confirm-overlay move-wishlist-confirm-overlay">
+    <div class="confirm-box">
+        <h2>Move to Wishlist</h2>
+        <p>Are you sure you want to move this item from your cart to your Wishlist?</p>
+        <div class="confirm-buttons">
+            <button class="confirm-cancel move-wishlist-cancel">Cancel</button>
+            <button class="confirm-clear move-wishlist-confirm">Move to Wishlist</button>
+        </div>
+    </div>
+</div>
+
+<div class="confirm-overlay delete-item-confirm-overlay">
+    <div class="confirm-box">
+        <h2>Delete Item</h2>
+        <p class="delete-item-confirm-message">Are you sure you want to delete this item?</p>
+        <div class="confirm-buttons">
+            <button class="confirm-cancel delete-item-cancel">Cancel</button>
+            <button class="confirm-clear delete-item-confirm">Delete Item</button>
+        </div>
+    </div>
+</div>
+
     <div class="product-modal-overlay">
 
     <div class="product-modal">
@@ -738,7 +761,7 @@
             <span>OR</span>
         </div>
 
-        <button class="create-account-btn">
+        <button class="create-account-btn" type="button">
             Create Account
         </button>
 
@@ -828,7 +851,7 @@
         <span>Already have an account?</span>
     </div>
 
-    <button class="back-to-signin-btn">
+    <button class="back-to-signin-btn" type="button">
         Sign In
     </button>
 
@@ -862,6 +885,7 @@
 <script src="js/products.js"></script>
 
 <script type="module" src="js/CARTNEW.js"></script>
+<script src="js/password-toggle.js"></script>
 
 </body>
 </html>

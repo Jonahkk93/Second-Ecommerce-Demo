@@ -1,6 +1,5 @@
 import {
     onAuthStateChanged,
-    signInWithEmailAndPassword,
     signOut
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import {
@@ -22,12 +21,9 @@ const auth = window.auth;
 const db = window.db;
 const storage = window.storage;
 const dashboard = document.querySelector(".account-dashboard");
-const signedOut = document.querySelector(".account-signed-out");
 const loading = document.querySelector(".account-loading");
 const customer = document.querySelector(".account-customer");
 const signoutButton = document.querySelector(".account-signout");
-const loginForm = document.querySelector("#account-login-form");
-const loginError = document.querySelector(".account-login-error");
 const reviewOverlay = document.querySelector(".account-review-overlay");
 const reviewModalClose = document.querySelector(".account-review-close");
 const reviewForm = document.querySelector("#account-review-form");
@@ -317,24 +313,6 @@ document.querySelectorAll(".account-tab").forEach(tab => {
     });
 });
 
-loginForm.addEventListener("submit", async event => {
-    event.preventDefault();
-    loginError.textContent = "";
-    const button = loginForm.querySelector("button");
-    button.disabled = true;
-    try {
-        await signInWithEmailAndPassword(
-            auth,
-            document.querySelector("#account-email").value.trim(),
-            document.querySelector("#account-password").value
-        );
-    } catch (error) {
-        loginError.textContent = "The email or password is incorrect.";
-    } finally {
-        button.disabled = false;
-    }
-});
-
 signoutButton.addEventListener("click", async () => {
     const savedUrl = sessionStorage.getItem("accountReturnUrl");
     sessionStorage.removeItem("accountReturnUrl");
@@ -350,6 +328,9 @@ signoutButton.addEventListener("click", async () => {
         }
     }
 
+    localStorage.removeItem("cart");
+    localStorage.removeItem("favorites");
+
     await signOut(auth);
     sessionStorage.setItem("flashToast", JSON.stringify({
         message: "Signed out successfully",
@@ -360,12 +341,12 @@ signoutButton.addEventListener("click", async () => {
 
 onAuthStateChanged(auth, async user => {
     loading.hidden = true;
-    signedOut.hidden = Boolean(user);
     dashboard.hidden = !user;
     signoutButton.hidden = !user;
 
     if (!user) {
-        customer.textContent = "Sign in to track orders and review your purchases.";
+        sessionStorage.setItem("openAccountSignIn", "true");
+        window.location.replace("index.html");
         return;
     }
 

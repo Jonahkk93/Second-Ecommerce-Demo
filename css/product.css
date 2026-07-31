@@ -1251,7 +1251,7 @@ align-items: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    z-index: 9999;
+    z-index: 100000;
 }
 
 .toast.show{
@@ -1289,10 +1289,10 @@ align-items: center;
 
     inset: 0;
 
-    background: rgba(0,0,0,.45);
+    background: rgba(0,0,0,.55);
 
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 
     display: flex;
     justify-content: center;
@@ -1337,6 +1337,18 @@ align-items: center;
 
     transform: scale(1);
 
+}
+
+/* Move confirmation uses the standard soft rise without a zoom effect. */
+.move-wishlist-confirm-overlay .confirm-box{
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity .3s ease, transform .3s ease;
+}
+
+.move-wishlist-confirm-overlay.active .confirm-box{
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .confirm-icon{
@@ -1577,6 +1589,10 @@ align-items: center;
     font:inherit;
     font-size:11px;
     cursor:pointer;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    transition:background-color .15s ease, opacity .15s ease;
+    transform:none;
 }
 
 .cart-swipe-action.cart-move-wishlist{ background:#e8b097; }
@@ -1586,6 +1602,11 @@ align-items: center;
 .cart-swipe-action img,
 .cart-swipe-action.cart-move-wishlist img{ width:25px; height:25px; object-fit:contain; }
 .cart-swipe-action:focus-visible{ outline:3px solid #fff; outline-offset:-4px; }
+.cart-swipe-action.cart-move-wishlist:active{
+    background:#d89a7c;
+    opacity:.86;
+    transform:none;
+}
 
 @media (prefers-reduced-motion: reduce){
     .cart-box-main{ transition:none; }
@@ -1700,7 +1721,7 @@ align-items: center;
     margin-right:12px;
 }
 
-.cart-move-wishlist{
+.cart-item-actions .cart-move-wishlist{
     display:flex;
     align-items:center;
     justify-content:center;
@@ -1713,13 +1734,13 @@ align-items: center;
     transition:.2s ease;
 }
 
-.cart-move-wishlist:hover,
-.cart-move-wishlist:focus-visible{
+.cart-item-actions .cart-move-wishlist:hover,
+.cart-item-actions .cart-move-wishlist:focus-visible{
     transform:scale(1.15);
     opacity:.7;
 }
 
-.cart-move-wishlist img{
+.cart-item-actions .cart-move-wishlist img{
     display:block;
     width:30px;
     height:30px;

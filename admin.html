@@ -11,8 +11,29 @@
 
 <body>
 
+    <div class="admin-dashboard" id="admin-dashboard" hidden>
+
+    <nav class="admin-nav" aria-label="Admin navigation">
+        <a class="admin-nav-brand" href="admin.html">MPWR</a>
+        <span class="admin-nav-section">Admin</span>
+
+        <div class="admin-account">
+            <button class="admin-account-button" id="admin-account-button" type="button" aria-label="Admin account" aria-expanded="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="8" r="4"></circle>
+                    <path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>
+                </svg>
+            </button>
+            <div class="admin-account-menu" id="admin-account-menu" hidden>
+                <p class="admin-account-label">Administrator</p>
+                <p class="admin-account-email" id="admin-account-email"></p>
+                <button type="button" id="admin-signout">Sign Out</button>
+            </div>
+        </div>
+    </nav>
+
     <header class="admin-header">
-        <h1>Admin Dashboard</h1>
+        <h1>Dashboard</h1>
         <div class="dashboard-stats">
 
     <div class="stat-card">
@@ -75,7 +96,8 @@
 
     </main>
 
-    <script type="module" src="js/firebase.js"></script>
+    </div>
+
     <script type="module" src="js/products.js"></script>
     <script type="module" src="js/admin.js"></script>
 
