@@ -8,12 +8,29 @@ import {
 
 import {
     doc,
-    setDoc,
-    getDoc
+    setDoc
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const auth = window.auth;
 const db = window.db;
+const authToast = document.querySelector(".toast");
+
+function showAuthToast(message, type = "success") {
+    if (!authToast) return;
+
+    authToast.textContent = message;
+    authToast.className = `toast ${type} show`;
+
+    clearTimeout(authToast.timeout);
+    authToast.timeout = setTimeout(() => {
+        authToast.classList.remove("show");
+    }, 2500);
+}
+
+function authErrorMessage(error) {
+    return String(error?.message || "Something went wrong.")
+        .replace(/^Firebase:\s*/i, "");
+}
 
 // Register form
 const registerForm = document.getElementById("register-form");
@@ -38,7 +55,7 @@ document.getElementById("register-phone").value.trim();
     const confirmPassword = document.getElementById("register-confirm-password").value;
 
     if (password !== confirmPassword) {
-        alert("Passwords do not match.");
+        showAuthToast("Passwords do not match.", "warning");
         return;
     }
 
@@ -62,12 +79,12 @@ await setDoc(
         createdAt: new Date().toISOString()
     }
 );
-alert("Account created successfully!");
+showAuthToast("Account created successfully!", "success");
 
 registerForm.reset();
 
     } catch (error) {
-        alert(error.message);
+        showAuthToast(authErrorMessage(error), "warning");
     }
 });
 
@@ -80,12 +97,12 @@ signinForm.addEventListener("submit", async (e) => {
     try {
         await signInWithEmailAndPassword(auth, email, password);
 
-        alert("Signed in successfully!");
+        showAuthToast("Signed in successfully!", "success");
 
         signinForm.reset();
 
     } catch (error) {
-        alert(error.message);
+        showAuthToast(authErrorMessage(error), "warning");
     }
 });
 
@@ -106,39 +123,16 @@ if (typeof loadCartFromFirestore === "function") {
     const accountPanel =
     document.getElementById("account-panel");
 
-    const userEmail =
-    document.getElementById("user-email");
-
     if (user) {
-
-        signinContainer.style.display = "none";
-
-        registerContainer.style.display = "none";
-
-        accountPanel.style.display = "block";
-
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-
-if (userDoc.exists()) {
-
-    const userData = userDoc.data();
-
-    const accountTitle = document.querySelector("#account-panel h2");
-
-    accountTitle.textContent =
-        `Welcome back, ${userData.firstName}`;
-
-    userEmail.textContent = userData.email;
-
-} else {
-
-    userEmail.textContent = user.email;
-
-}
+        document.querySelector(".account-overlay")?.classList.remove("active");
+        document.body.style.overflow = "";
+        registerContainer.classList.remove("active");
+        signinContainer.classList.remove("hide");
+        accountPanel.style.display = "none";
 
     } else {
 
-    accountPanel.style.display = "none";
+        accountPanel.style.display = "none";
 
 }
 
@@ -152,13 +146,12 @@ logoutButton.addEventListener("click", async () => {
 
         await signOut(auth);
 
-        alert("Signed out successfully!");
+        showAuthToast("Signed out successfully!", "success");
 
     } catch (error) {
 
-        alert(error.message);
+        showAuthToast(authErrorMessage(error), "warning");
 
     }
 
 });
-

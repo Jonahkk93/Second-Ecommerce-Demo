@@ -185,10 +185,14 @@ const confirmOverlay = document.querySelector(".confirm-overlay");
 const confirmCancel = document.querySelector(".confirm-cancel");
 const confirmClear = document.querySelector(".confirm-clear");
 const sidePanelBackdrop = document.querySelector(".side-panel-backdrop");
+const reviewCompose = document.querySelector(".review-compose");
 const reviewForm = document.querySelector("#review-form");
 const reviewEligibility = document.querySelector(".review-eligibility");
 const reviewList = document.querySelector(".review-list");
 const reviewEmpty = document.querySelector(".review-empty");
+const reviewsReadMore = document.querySelector(".reviews-read-more");
+const relatedProductsGrid = document.querySelector(".related-products-grid");
+const relatedProducts = document.querySelector(".related-products");
 const reviewText = document.querySelector("#review-text");
 const reviewSubmit = document.querySelector(".review-submit");
 const reviewStars = [...document.querySelectorAll(".review-star")];
@@ -199,32 +203,81 @@ const reviewSummaryStars = document.querySelector(".reviews-summary-stars");
 const productReviews = document.querySelector(".product-reviews");
 const productGallery = document.querySelector(".product-gallery");
 const productLayout = document.querySelector(".product-layout");
+const productInfo = document.querySelector(".product-info");
+const productBenefits = document.querySelector(".product-benefits");
+const productReviewsInner = document.querySelector(".product-reviews-inner");
 
 let selectedReviewRating = 0;
 let currentReviewExists = false;
+let reviewsExpanded = false;
+
+function renderRelatedProducts() {
+    if (!product || !relatedProductsGrid) return;
+
+    const currentIndex = products.findIndex(item => item.id === product.id);
+    const recommendations = [];
+
+    for (let offset = 1; recommendations.length < Math.min(3, products.length - 1); offset++) {
+        const candidate = products[(currentIndex + offset) % products.length];
+        if (candidate.id !== product.id) recommendations.push(candidate);
+    }
+
+    relatedProductsGrid.innerHTML = recommendations.map(item => `
+        <a class="related-product-card" href="product.html?id=${encodeURIComponent(item.id)}">
+            <img src="${item.image}" alt="${item.title}">
+            <span class="related-product-title">${item.title}</span>
+            <span class="related-product-price">UGX ${Number(item.price).toLocaleString()}</span>
+        </a>
+    `).join("");
+}
+
+renderRelatedProducts();
 
 accountIcon?.addEventListener("click", () => {
-    window.location.href = auth.currentUser
-        ? "Account.html"
-        : "index.html?account=login";
+    if (auth.currentUser) {
+        sessionStorage.setItem("accountReturnUrl", window.location.href);
+        window.location.href = "Account.html";
+        return;
+    }
+    window.location.href = "index.html?account=login";
 });
 
 accountIcon?.addEventListener("keydown", event => {
     if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        window.location.href = auth.currentUser
-            ? "Account.html"
-            : "index.html?account=login";
+        if (auth.currentUser) {
+            sessionStorage.setItem("accountReturnUrl", window.location.href);
+            window.location.href = "Account.html";
+            return;
+        }
+        window.location.href = "index.html?account=login";
     }
 });
 
 function positionReviews() {
-    const destination = window.matchMedia("(min-width: 601px)").matches
-        ? productGallery
-        : productLayout;
+    const isTabletOrLaptop = window.matchMedia("(min-width: 601px)").matches;
 
-    if (productReviews.parentElement !== destination) {
-        destination.appendChild(productReviews);
+    if (isTabletOrLaptop) {
+        if (productBenefits.parentElement !== productGallery) {
+            productGallery.appendChild(productBenefits);
+        }
+        if (relatedProducts.parentElement !== productGallery) {
+            productGallery.appendChild(relatedProducts);
+        }
+        if (productReviews.parentElement !== productInfo) {
+            productInfo.appendChild(productReviews);
+        }
+        return;
+    }
+
+    if (productBenefits.parentElement !== productInfo) {
+        productInfo.appendChild(productBenefits);
+    }
+    if (productReviews.parentElement !== productLayout) {
+        productLayout.appendChild(productReviews);
+    }
+    if (relatedProducts.parentElement !== productReviewsInner) {
+        productReviewsInner.appendChild(relatedProducts);
     }
 }
 
@@ -259,6 +312,9 @@ function reviewDate(value) {
 function renderReviewList(reviews) {
     reviewList.replaceChildren();
     reviewEmpty.hidden = reviews.length > 0;
+    reviewsExpanded = false;
+    reviewsReadMore.hidden = reviews.length <= 2;
+    reviewsReadMore.textContent = "Read more";
 
     const average = reviews.length
         ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
@@ -277,9 +333,10 @@ function renderReviewList(reviews) {
     productRatingStars.textContent = averageStars;
     reviewSummaryStars.textContent = averageStars;
 
-    reviews.forEach(review => {
+    reviews.forEach((review, index) => {
         const card = document.createElement("article");
         card.className = "review-card";
+        card.hidden = index >= 2;
 
         const header = document.createElement("div");
         header.className = "review-card-header";
@@ -313,6 +370,7 @@ function renderReviewList(reviews) {
             updateButton.className = "review-update-button";
             updateButton.textContent = "Update review";
             updateButton.addEventListener("click", () => {
+                reviewCompose.hidden = false;
                 reviewEligibility.hidden = false;
                 reviewEligibility.textContent = "Update your verified review.";
                 reviewForm.hidden = false;
@@ -353,6 +411,14 @@ function renderReviewList(reviews) {
     });
 }
 
+reviewsReadMore?.addEventListener("click", () => {
+    reviewsExpanded = !reviewsExpanded;
+    [...reviewList.children].forEach((card, index) => {
+        card.hidden = !reviewsExpanded && index >= 2;
+    });
+    reviewsReadMore.textContent = reviewsExpanded ? "Show less" : "Read more";
+});
+
 async function loadProductReviews() {
     try {
         const snapshot = await getDocs(query(
@@ -389,6 +455,7 @@ async function customerPurchasedProduct(user) {
 }
 
 async function initializeReviewForm(user) {
+    reviewCompose.hidden = false;
     reviewForm.hidden = true;
     reviewEligibility.hidden = false;
     setReviewRating(0);
@@ -396,8 +463,8 @@ async function initializeReviewForm(user) {
     currentReviewExists = false;
 
     if (!user) {
-        reviewEligibility.textContent =
-            "Sign in to review this product after purchasing it.";
+        reviewEligibility.hidden = true;
+        reviewCompose.hidden = true;
         return;
     }
 
@@ -406,8 +473,8 @@ async function initializeReviewForm(user) {
     try {
         const eligible = await customerPurchasedProduct(user);
         if (!eligible) {
-            reviewEligibility.textContent =
-                "Only customers who purchased this product can leave a review.";
+            reviewEligibility.hidden = true;
+            reviewCompose.hidden = true;
             return;
         }
 
@@ -422,6 +489,7 @@ async function initializeReviewForm(user) {
             reviewSubmit.textContent = "Update review";
             reviewEligibility.hidden = true;
             reviewForm.hidden = true;
+            reviewCompose.hidden = true;
         } else {
             reviewSubmit.textContent = "Post review";
             reviewEligibility.textContent =
@@ -432,6 +500,7 @@ async function initializeReviewForm(user) {
     } catch (error) {
         console.error("Unable to verify purchase:", error);
         reviewEligibility.hidden = true;
+        reviewCompose.hidden = true;
     }
 }
 
@@ -471,6 +540,7 @@ reviewForm?.addEventListener("submit", async event => {
         if (currentReviewExists) {
             reviewEligibility.hidden = true;
             reviewForm.hidden = true;
+            reviewCompose.hidden = true;
         }
     } catch (error) {
         console.error("Unable to save review:", error);
@@ -510,6 +580,17 @@ function showToast(message, type = "success") {
     toast.timeout = setTimeout(() => {
         toast.classList.remove("show");
     }, 2500);
+}
+
+const flashToast = sessionStorage.getItem("flashToast");
+if (flashToast) {
+    sessionStorage.removeItem("flashToast");
+    try {
+        const { message, type } = JSON.parse(flashToast);
+        showToast(message, type);
+    } catch (error) {
+        console.error("Unable to display saved toast:", error);
+    }
 }
 
 let quantity = 1;
@@ -949,6 +1030,7 @@ function attachCartSwipe(cartBox) {
         startX = event.clientX;
         startY = event.clientY;
         offset = cartBox.classList.contains("is-swiped") ? -actions.offsetWidth : 0;
+        actions.setAttribute("aria-hidden", "false");
         main.setPointerCapture(event.pointerId);
         main.classList.add("is-dragging");
     });
@@ -960,10 +1042,14 @@ function attachCartSwipe(cartBox) {
             dragging = false;
             main.classList.remove("is-dragging");
             main.style.transform = "";
+            actions.setAttribute(
+                "aria-hidden",
+                String(!cartBox.classList.contains("is-swiped"))
+            );
             return;
         }
         if (Math.abs(dx) > 8) didSwipe = true;
-        main.style.transform = `translateX(${Math.max(-actions.offsetWidth, Math.min(0, offset + dx))}px)`;
+        main.style.transform = `translate3d(${Math.max(-actions.offsetWidth, Math.min(0, offset + dx))}px, 0, 0)`;
     });
     const finish = event => {
         if (!dragging) return;

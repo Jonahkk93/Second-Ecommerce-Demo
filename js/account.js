@@ -335,7 +335,28 @@ loginForm.addEventListener("submit", async event => {
     }
 });
 
-signoutButton.addEventListener("click", () => signOut(auth));
+signoutButton.addEventListener("click", async () => {
+    const savedUrl = sessionStorage.getItem("accountReturnUrl");
+    sessionStorage.removeItem("accountReturnUrl");
+
+    let returnUrl = "index.html";
+    if (savedUrl) {
+        const candidate = new URL(savedUrl, window.location.href);
+        if (
+            candidate.origin === window.location.origin &&
+            !candidate.pathname.endsWith("/Account.html")
+        ) {
+            returnUrl = candidate.href;
+        }
+    }
+
+    await signOut(auth);
+    sessionStorage.setItem("flashToast", JSON.stringify({
+        message: "Signed out successfully",
+        type: "success"
+    }));
+    window.location.assign(returnUrl);
+});
 
 onAuthStateChanged(auth, async user => {
     loading.hidden = true;

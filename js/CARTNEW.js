@@ -391,6 +391,17 @@ function showToast(message, type = "success") {
 
 }
 
+const flashToast = sessionStorage.getItem("flashToast");
+if (flashToast) {
+    sessionStorage.removeItem("flashToast");
+    try {
+        const { message, type } = JSON.parse(flashToast);
+        showToast(message, type);
+    } catch (error) {
+        console.error("Unable to display saved toast:", error);
+    }
+}
+
 
 /* ============================================================
    UPDATE CART BADGE
@@ -890,6 +901,7 @@ function attachCartSwipe(cartBox) {
         startX = event.clientX;
         startY = event.clientY;
         offset = cartBox.classList.contains("is-swiped") ? -actions.offsetWidth : 0;
+        actions.setAttribute("aria-hidden", "false");
         main.setPointerCapture(event.pointerId);
         main.classList.add("is-dragging");
     });
@@ -902,10 +914,14 @@ function attachCartSwipe(cartBox) {
             dragging = false;
             main.classList.remove("is-dragging");
             main.style.transform = "";
+            actions.setAttribute(
+                "aria-hidden",
+                String(!cartBox.classList.contains("is-swiped"))
+            );
             return;
         }
         const x = Math.max(-actions.offsetWidth, Math.min(0, offset + dx));
-        main.style.transform = `translateX(${x}px)`;
+        main.style.transform = `translate3d(${x}px, 0, 0)`;
     });
 
     const finish = event => {
@@ -2182,6 +2198,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     accountIcon.addEventListener("click", () => {
         if (auth.currentUser) {
+            sessionStorage.setItem("accountReturnUrl", window.location.href);
             window.location.href = "Account.html";
             return;
         }
