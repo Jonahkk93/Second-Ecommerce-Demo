@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no,email=no,address=no,date=no">
     <title>Admin Dashboard</title>
 
     <link rel="stylesheet" href="css/Larke.css">
@@ -92,6 +93,18 @@
         <div class="orders-list">
             <!-- Orders will appear here -->
         </div>
+
+        <div class="admin-status-confirm" id="admin-status-confirm" hidden>
+            <div class="admin-status-confirm-box" role="dialog" aria-modal="true" aria-labelledby="admin-status-confirm-title">
+                <h2 id="admin-status-confirm-title">Update Order Status?</h2>
+                <p>Are you sure you want to update this order to <strong id="admin-status-confirm-name"></strong>?</p>
+                <div class="admin-status-confirm-actions">
+                    <button type="button" class="admin-status-cancel">Cancel</button>
+                    <button type="button" class="admin-status-approve">Update Status</button>
+                </div>
+            </div>
+        </div>
+
         <div id="admin-toast"></div>
 
     </main>

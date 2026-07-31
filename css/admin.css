@@ -11,6 +11,11 @@ body{
     color:#333;
 }
 
+a[x-apple-data-detectors]{
+    color:inherit !important;
+    text-decoration:none !important;
+}
+
 [hidden]{
     display:none !important;
 }
@@ -177,7 +182,7 @@ body{
 .admin-nav-brand{
     color:#333;
     font-size:25px;
-    font-weight:700;
+    font-weight:900;
     letter-spacing:.08em;
     text-decoration:none;
 }
@@ -541,6 +546,44 @@ body{
     background:#f4dfd4;
 }
 
+.status-picker-menu button[data-status="Pending"]{
+    --status-option:#b76e00;
+    --status-option-tint:#fff3d6;
+}
+
+.status-picker-menu button[data-status="Processing"]{
+    --status-option:#2563c7;
+    --status-option-tint:#e8f1ff;
+}
+
+.status-picker-menu button[data-status="Shipped"]{
+    --status-option:#7047c7;
+    --status-option-tint:#f0eaff;
+}
+
+.status-picker-menu button[data-status="Delivered"]{
+    --status-option:#07845d;
+    --status-option-tint:#def8ec;
+}
+
+.status-picker-menu button[data-status="Cancelled"]{
+    --status-option:#c43d3d;
+    --status-option-tint:#ffe8e8;
+}
+
+.status-picker-menu button[data-status]{
+    color:var(--status-option);
+}
+
+.status-picker-menu button[data-status]:hover{
+    background:var(--status-option-tint);
+}
+
+.status-picker-menu button[data-status].selected{
+    background:var(--status-option);
+    color:#fff;
+}
+
 .order-card{
     padding:24px;
     border-radius:16px;
@@ -584,6 +627,77 @@ body{
 .status-badge.cancelled{
     background:#ef4444;
 }
+
+.admin-status-confirm{
+    position:fixed;
+    inset:0;
+    z-index:10000;
+    display:grid;
+    place-items:center;
+    padding:20px;
+    background:rgba(0,0,0,.55);
+}
+
+.admin-status-confirm-box{
+    width:min(100%, 390px);
+    padding:28px;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 24px 60px rgba(0,0,0,.25);
+    text-align:center;
+}
+
+.admin-status-confirm-box h2{
+    margin-bottom:12px;
+    font-size:24px;
+}
+
+.admin-status-confirm-box p{
+    color:#666;
+    line-height:1.55;
+}
+
+#admin-status-confirm-name{
+    margin-left:3px;
+    font-size:inherit;
+}
+
+#admin-status-confirm-name.pending{color:#b76e00}
+#admin-status-confirm-name.processing{color:#2563c7}
+#admin-status-confirm-name.shipped{color:#7047c7}
+#admin-status-confirm-name.delivered{color:#07845d}
+#admin-status-confirm-name.cancelled{color:#c43d3d}
+
+.admin-status-confirm-actions{
+    display:flex;
+    gap:10px;
+    margin-top:24px;
+}
+
+.admin-status-confirm-actions button{
+    flex:1;
+    padding:12px 14px;
+    border:0;
+    border-radius:9px;
+    cursor:pointer;
+    font-weight:600;
+}
+
+.admin-status-cancel{
+    background:#eee;
+    color:#333;
+}
+
+.admin-status-approve{
+    background:#333;
+    color:#fff;
+}
+
+.admin-status-approve.pending{background:#f59e0b}
+.admin-status-approve.processing{background:#3b82f6}
+.admin-status-approve.shipped{background:#8b5cf6}
+.admin-status-approve.delivered{background:#10b981}
+.admin-status-approve.cancelled{background:#ef4444}
 
 #admin-toast{
     position:fixed;

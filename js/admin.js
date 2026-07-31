@@ -25,7 +25,36 @@ const adminAccountButton = document.getElementById("admin-account-button");
 const adminAccountMenu = document.getElementById("admin-account-menu");
 const adminAccountEmail = document.getElementById("admin-account-email");
 const adminSignout = document.getElementById("admin-signout");
+const statusConfirm = document.getElementById("admin-status-confirm");
+const statusConfirmName = document.getElementById("admin-status-confirm-name");
+const statusConfirmCancel = statusConfirm.querySelector(".admin-status-cancel");
+const statusConfirmApprove = statusConfirm.querySelector(".admin-status-approve");
 let dashboardLoaded = false;
+let resolveStatusConfirmation = null;
+
+function confirmStatusChange(status) {
+    const statusClass = status.toLowerCase();
+    statusConfirmName.textContent = status;
+    statusConfirmName.className = statusClass;
+    statusConfirmApprove.className = `admin-status-approve ${statusClass}`;
+    statusConfirm.hidden = false;
+
+    return new Promise(resolve => {
+        resolveStatusConfirmation = resolve;
+    });
+}
+
+function closeStatusConfirmation(confirmed) {
+    statusConfirm.hidden = true;
+    resolveStatusConfirmation?.(confirmed);
+    resolveStatusConfirmation = null;
+}
+
+statusConfirmCancel.addEventListener("click", () => closeStatusConfirmation(false));
+statusConfirmApprove.addEventListener("click", () => closeStatusConfirmation(true));
+statusConfirm.addEventListener("click", event => {
+    if (event.target === statusConfirm) closeStatusConfirmation(false);
+});
 
 function showDashboard() {
     adminDashboard.hidden = false;
@@ -281,6 +310,10 @@ option.addEventListener("click", async event => {
 
     statusMenu.hidden = true;
     statusTrigger.setAttribute("aria-expanded", "false");
+
+    if (nextStatus === previousStatus) return;
+    if (!await confirmStatusChange(nextStatus)) return;
+
     statusTrigger.disabled = true;
 
     try {
