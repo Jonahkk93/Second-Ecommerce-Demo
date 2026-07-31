@@ -735,6 +735,22 @@ function attachCartEvents(cartBox, cartItem) {
 
     const numberElement = cartBox.querySelector(".number");
 
+    [
+        [decrementButton, "images/Icon Folder/Minus Icon_E5A484.PNG", "images/Icon Folder/Minus Icon_333.PNG"],
+        [incrementButton, "images/Icon Folder/Plus Icon_E5A484.PNG", "images/Icon Folder/Plus Icon_333.PNG"]
+    ].forEach(([button, tappedIcon, defaultIcon]) => {
+        const icon = button.querySelector("img");
+        let resetTimer;
+
+        button.addEventListener("click", () => {
+            clearTimeout(resetTimer);
+            icon.src = tappedIcon;
+            resetTimer = setTimeout(() => {
+                icon.src = defaultIcon;
+            }, 300);
+        });
+    });
+
     moveToWishlistButton.addEventListener("click", event => {
         event.stopPropagation();
 

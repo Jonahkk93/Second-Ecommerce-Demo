@@ -392,14 +392,37 @@ align-items: center;
 
     display:flex;
 
+    flex-wrap:nowrap;
+
     justify-content:space-between;
 
-    align-items:flex-start;
+    align-items:center;
+
+    width:100%;
 
     margin-top:8px;
 
     margin-bottom:8px;
 
+}
+
+.product-title-row .product-page-title{
+    flex:1 1 auto;
+    min-width:0;
+    margin-bottom:0;
+}
+
+.product-title-row .product-bottom-share{
+    width:42px;
+    min-width:42px;
+    height:42px;
+    margin-left:18px;
+    flex:0 0 42px;
+}
+
+.product-title-row .product-bottom-share-icon{
+    width:20px;
+    height:20px;
 }
 
 
@@ -1600,7 +1623,9 @@ align-items: center;
 
 .cart-quantity{
     display: flex;
+    align-items: stretch;
     width: 100px;
+    height: 24px;
     border: 1px solid #ececec;
     border-radius: 8px;
     background: white;
@@ -1610,6 +1635,7 @@ align-items: center;
 .cart-quantity button{
     background: transparent;
     width: 30px;
+    flex: 0 0 30px;
     border: none;
     font-size: 20px;
     cursor: pointer;
@@ -1628,11 +1654,14 @@ align-items: center;
 }
 
 .number{
-    width: 40px;
+    flex: 0 0 40px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 16px;
+    padding: 0;
+    line-height: 1;
+    text-align: center;
+    font-size: 12px;
     font-weight: 500;
     border-left: 1px solid #ececec;
     border-right: 1px solid #ececec;
@@ -2231,7 +2260,15 @@ align-items: center;
     text-align:center;
 }
 
-.product-bottom-favorite{
+.product-bottom-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex:0 0 auto;
+}
+
+.product-bottom-favorite,
+.product-bottom-share{
     width:52px;
     min-width:52px;
     height:52px;
@@ -2257,7 +2294,8 @@ align-items: center;
     flex-shrink:0;
 }
 
-.product-bottom-favorite:hover{
+.product-bottom-favorite:hover,
+.product-bottom-share:hover{
     transform:translateY(-2px);
     box-shadow:0 10px 24px rgba(0,0,0,.12);
 }
@@ -2275,6 +2313,21 @@ align-items: center;
     left:50%;
     transform:translate(-50%, -50%);
     object-fit:contain;
+}
+
+.product-bottom-share-icon{
+    display:block;
+    width:24px;
+    height:24px;
+    object-fit:contain;
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+}
+
+.product-bottom-share:active{
+    transform:scale(.94);
 }
 
 @keyframes productHeartPop{

@@ -710,7 +710,9 @@ header{
 
 .cart-quantity{
     display: flex;
+    align-items: stretch;
     width: 100px;
+    height: 24px;
     border: 1px solid #ececec;
     border-radius: 8px;
     background: white;
@@ -720,6 +722,7 @@ header{
 .cart-quantity button{
     background: transparent;
     width: 30px;
+    flex: 0 0 30px;
     border: none;
     font-size: 20px;
     cursor: pointer;
@@ -738,10 +741,13 @@ header{
 }
 
 .number{
-    width: 40px;
+    flex: 0 0 40px;
     display: flex;
     justify-content: center;
     align-items: center;
+    padding: 0;
+    line-height: 1;
+    text-align: center;
     font-size: 16px;
     font-weight: 500;
     border-left: 1px solid #ececec;

@@ -160,6 +160,7 @@ const clearWishlistButton = document.querySelector(".clear-wishlist");
 const wishlistContinue = document.querySelector(".wishlist-continue");
 const bottomwishlistNavIcon = document.querySelector(".product-bottom-favorite");
 const bottomFavoriteIcon = bottomwishlistNavIcon?.querySelector("img");
+const productShareButton = document.querySelector(".product-bottom-share");
 
 const searchBar = document.querySelector(".search-bar");
 const searchClose = document.querySelector("#search-close");
@@ -791,6 +792,22 @@ function attachCartEvents(cartBox, cartItem) {
     const shareButton = cartBox.querySelector(".cart-share");
 
     attachCartSwipe(cartBox);
+
+    [
+        [decrement, "images/Icon Folder/Minus Icon_E5A484.PNG", "images/Icon Folder/Minus Icon_333.PNG"],
+        [increment, "images/Icon Folder/Plus Icon_E5A484.PNG", "images/Icon Folder/Plus Icon_333.PNG"]
+    ].forEach(([button, tappedIcon, defaultIcon]) => {
+        const icon = button.querySelector("img");
+        let resetTimer;
+
+        button.addEventListener("click", () => {
+            clearTimeout(resetTimer);
+            icon.src = tappedIcon;
+            resetTimer = setTimeout(() => {
+                icon.src = defaultIcon;
+            }, 300);
+        });
+    });
 
     shareButton.addEventListener("click", async event => {
         event.stopPropagation();
@@ -1490,6 +1507,27 @@ bottomwishlistNavIcon?.addEventListener("click", () => {
 
     renderWishlist();
 
+});
+
+productShareButton?.addEventListener("click", async () => {
+    const shareData = {
+        title: product.title,
+        text: `Check out ${product.title}`,
+        url: window.location.href
+    };
+
+    try {
+        if (navigator.share) {
+            await navigator.share(shareData);
+        } else {
+            await navigator.clipboard.writeText(shareData.url);
+            showToast("Product link copied", "success");
+        }
+    } catch (error) {
+        if (error.name !== "AbortError") {
+            showToast("Unable to share this product", "warning");
+        }
+    }
 });
    
 
