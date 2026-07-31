@@ -836,6 +836,8 @@ function attachCartEvents(cartBox, cartItem) {
 
     updateCartCount();
 
+    showToast("Deleted", "success");
+
     }, 120);
 
 });
@@ -1606,6 +1608,8 @@ function createWishlistItem(item) {
         saveWishlist();
 
         renderWishlist();
+
+        showToast("Deleted", "success");
 
         }, 120);
 

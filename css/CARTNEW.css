@@ -912,7 +912,7 @@ header{
 #cart-close{
     position: absolute;
     top: 32px;
-    right: 15px;
+    right: 30px;
     width: 25px;
     cursor: pointer;
 }

@@ -1014,6 +1014,7 @@ function attachCartEvents(cartBox, cartItem) {
         renderSavedCart();
 
         updateCartBadge();
+        showToast("Deleted", "success");
         }, 120);
     });
 }
@@ -1412,6 +1413,8 @@ function createWishlistItem(item) {
 saveFavoritesToFirestore();    
 
         renderWishlist();
+
+        showToast("Deleted", "success");
 
         }, 120);
 
