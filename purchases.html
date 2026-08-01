@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>My Purchases | MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/account.css">
+    <link rel="stylesheet" href="css/signout-confirm.css">
+</head>
+<body>
+    <header class="account-page-header">
+        <a href="Account.html" class="account-back" aria-label="Back to profile"></a>
+        <a href="index.html" class="account-logo">MPWR</a>
+        <button class="account-signout" type="button" hidden>Sign out</button>
+    </header>
+
+    <main class="account-page">
+        <section class="account-dashboard" hidden>
+            <div class="account-section-title account-purchases-title">
+                <p class="account-kicker">My Purchases</p>
+                <h1></h1>
+            </div>
+
+            <nav class="account-tabs" aria-label="Purchase categories">
+                <button class="account-tab active" type="button" data-section="shipped">Shipped <span data-count="shipped">0</span></button>
+                <button class="account-tab" type="button" data-section="pending">Pending <span data-count="pending">0</span></button>
+                <button class="account-tab" type="button" data-section="returns">Returns <span data-count="returns">0</span></button>
+                <button class="account-tab" type="button" data-section="review">To Review <span data-count="review">0</span></button>
+            </nav>
+
+            <div class="account-sections">
+                <section class="account-order-section active" data-panel="shipped">
+                    <div class="section-heading"><h2>Shipped items</h2><p>Orders currently on their way to you.</p></div>
+                    <div class="account-items" data-items="shipped"></div>
+                </section>
+                <section class="account-order-section" data-panel="pending">
+                    <div class="section-heading"><h2>Pending items</h2><p>Orders being confirmed or prepared.</p></div>
+                    <div class="account-items" data-items="pending"></div>
+                </section>
+                <section class="account-order-section" data-panel="returns">
+                    <div class="section-heading"><h2>Returns</h2><p>Cancelled or returned purchases.</p></div>
+                    <div class="account-items" data-items="returns"></div>
+                </section>
+                <section class="account-order-section" data-panel="review">
+                    <div class="section-heading"><h2>To review</h2><p>Purchased products that are waiting for your feedback.</p></div>
+                    <div class="account-items" data-items="review"></div>
+                </section>
+            </div>
+        </section>
+
+        <div class="account-loading">Loading your purchases…</div>
+    </main>
+
+    <div class="account-review-overlay" aria-hidden="true">
+        <div class="account-review-modal" role="dialog" aria-modal="true" aria-labelledby="account-review-title">
+            <button class="account-review-close" type="button" aria-label="Close review form">&times;</button>
+            <p class="account-kicker">Verified purchase</p>
+            <h2 id="account-review-title">Review item</h2>
+            <p class="account-review-product"></p>
+
+            <form id="account-review-form">
+                <fieldset>
+                    <legend>Your rating</legend>
+                    <div class="account-review-stars">
+                        <button type="button" data-rating="1" aria-label="1 star">★</button>
+                        <button type="button" data-rating="2" aria-label="2 stars">★</button>
+                        <button type="button" data-rating="3" aria-label="3 stars">★</button>
+                        <button type="button" data-rating="4" aria-label="4 stars">★</button>
+                        <button type="button" data-rating="5" aria-label="5 stars">★</button>
+                    </div>
+                </fieldset>
+
+                <label for="account-review-comment">Your review</label>
+                <textarea id="account-review-comment" maxlength="800" required placeholder="Share your experience with this product"></textarea>
+                <label for="account-review-file">Add an image or file <span>(optional)</span></label>
+                <input id="account-review-file" type="file" accept="image/*,.pdf,.doc,.docx">
+                <p class="account-review-file-name"></p>
+                <button class="account-review-submit" type="submit">Post review</button>
+                <p class="account-review-error" aria-live="polite"></p>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/account.js"></script>
+    <script src="js/signout-confirm.js"></script>
+</body>
+</html>

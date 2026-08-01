@@ -198,6 +198,8 @@ homeSignout?.addEventListener("click", async event => {
     event.stopPropagation();
     localStorage.removeItem("cart");
     localStorage.removeItem("favorites");
+    localStorage.removeItem("mpwrCartOwnerUid");
+    localStorage.removeItem("mpwrFavoritesOwnerUid");
     homeAccountMenu.hidden = true;
     await signOut(auth);
     showAuthToast("Signed out successfully!", "success");
@@ -209,6 +211,8 @@ logoutButton.addEventListener("click", async () => {
 
         localStorage.removeItem("cart");
         localStorage.removeItem("favorites");
+        localStorage.removeItem("mpwrCartOwnerUid");
+        localStorage.removeItem("mpwrFavoritesOwnerUid");
 
         await signOut(auth);
 

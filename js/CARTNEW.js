@@ -211,6 +211,44 @@ let selectedModalSize = "";
 const productsById = Object.fromEntries(
     products.map(product => [product.id, product])
 );
+
+function itemIdentity(item) {
+    return [item.id, item.color || "", item.size || ""]
+        .map(value => String(value).trim().toLowerCase())
+        .join("::");
+}
+
+function mergeCartItems(accountItems, localItems, combineQuantities) {
+    const merged = new Map();
+    accountItems.forEach(item => merged.set(itemIdentity(item), { ...item }));
+
+    localItems.forEach(item => {
+        const key = itemIdentity(item);
+        const savedItem = merged.get(key);
+        if (!savedItem) {
+            merged.set(key, { ...item });
+            return;
+        }
+
+        const savedQuantity = Number(savedItem.quantity) || 1;
+        const localQuantity = Number(item.quantity) || 1;
+        savedItem.quantity = combineQuantities
+            ? savedQuantity + localQuantity
+            : Math.max(savedQuantity, localQuantity);
+    });
+
+    return [...merged.values()];
+}
+
+function mergeFavoriteItems(accountItems, localItems) {
+    const merged = new Map();
+    [...accountItems, ...localItems].forEach(item => {
+        const key = itemIdentity(item);
+        if (!merged.has(key)) merged.set(key, { ...item });
+    });
+    return [...merged.values()];
+}
+
 async function saveCartToFirestore() {
 
     const user = auth.currentUser;
@@ -225,6 +263,8 @@ async function saveCartToFirestore() {
                 items: cartItems
             }
         );
+
+        localStorage.setItem("mpwrCartOwnerUid", user.uid);
 
         console.log("Cart saved to Firestore.");
 
@@ -251,6 +291,8 @@ async function saveFavoritesToFirestore() {
             }
         );
 
+        localStorage.setItem("mpwrFavoritesOwnerUid", user.uid);
+
         console.log("Favorites saved to Firestore.");
 
     } catch (error) {
@@ -273,27 +315,22 @@ async function loadFavoritesFromFirestore() {
             doc(db, "favorites", user.uid)
         );
 
-      onSnapshot(
-    doc(db, "favorites", user.uid),
-    (docSnap) => {
-
-        favorites = docSnap.exists()
-            ? docSnap.data().items || []
+        const accountFavorites = favoritesDoc.exists()
+            ? favoritesDoc.data().items || []
             : [];
+        const localFavorites = JSON.parse(
+            localStorage.getItem("favorites")
+        ) || [];
 
-        localStorage.setItem(
-            "favorites",
-            JSON.stringify(favorites)
-        );
+        favorites = mergeFavoriteItems(accountFavorites, localFavorites);
+        localStorage.setItem("favorites", JSON.stringify(favorites));
+        localStorage.setItem("mpwrFavoritesOwnerUid", user.uid);
+        await setDoc(doc(db, "favorites", user.uid), { items: favorites });
 
         renderWishlist();
-
         updateWishlistButtons();
 
-        console.log("Favorites synchronized.");
-
-    }
-);
+        console.log("Favorites merged and synchronized.");
 
     } catch (error) {
 
@@ -600,20 +637,25 @@ function saveCart() {
             doc(db, "carts", user.uid)
         );
 
-        if (cartDoc.exists()) {
+        const accountCart = cartDoc.exists()
+            ? cartDoc.data().items || []
+            : [];
+        const localCart = JSON.parse(localStorage.getItem("cart")) || [];
+        const localOwner = localStorage.getItem("mpwrCartOwnerUid");
 
-            cartItems = cartDoc.data().items || [];
+        cartItems = mergeCartItems(
+            accountCart,
+            localCart,
+            Boolean(localCart.length) && localOwner !== user.uid
+        );
 
-            localStorage.setItem(
-                "cart",
-                JSON.stringify(cartItems)
-            );
+        localStorage.setItem("cart", JSON.stringify(cartItems));
+        localStorage.setItem("mpwrCartOwnerUid", user.uid);
+        await setDoc(doc(db, "carts", user.uid), { items: cartItems });
 
-            renderSavedCart();
+        renderSavedCart();
 
-            console.log("Cart loaded from Firestore.");
-
-        }
+        console.log("Cart merged and synchronized.");
 
     } catch (error) {
 
@@ -1219,6 +1261,23 @@ continueShopping.addEventListener("click", () => {
    CHECKOUT
 ============================================================ */
 
+function openCheckoutSigninModal() {
+    const accountOverlay = document.querySelector(".account-overlay");
+    const signinView = document.querySelector(".signin-view");
+    const registerView = document.querySelector(".register-view");
+
+    registerView?.classList.remove("active");
+    signinView?.classList.remove("hide");
+    cart.classList.remove("active");
+    syncSidePanelScrollLock();
+    accountOverlay?.classList.add("active");
+    document.body.style.overflow = "hidden";
+    accountOverlay?.querySelector(".account-modal")?.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+        document.getElementById("signin-email")?.focus({ preventScroll: true });
+    });
+}
+
 checkoutButton.addEventListener("click", async () => {
 
     if (!auth.currentUser) {
@@ -1227,6 +1286,8 @@ checkoutButton.addEventListener("click", async () => {
             "Please sign in before checking out⚠️.",
             "warning"
         );
+
+        openCheckoutSigninModal();
 
         return;
 
@@ -1323,7 +1384,7 @@ searchClose.addEventListener("click", () => {
 
 document.addEventListener("click", event => {
     const clickedSearchControls = event.target.closest?.(
-        ".search-bar, .filter-bar, #search-icon"
+        ".search-bar, .filter-bar, #search-icon, .product-box"
     );
 
     if (!document.body.classList.contains("search-open") || clickedSearchControls) {

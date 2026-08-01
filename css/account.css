@@ -98,6 +98,273 @@ body{
     color:var(--muted);
 }
 
+.account-profile-overview{
+    display:grid;
+    gap:28px;
+    margin-bottom:68px;
+}
+
+.account-profile-picture{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:10px 0 4px;
+    text-align:center;
+}
+
+.account-profile-picture img{
+    width:144px;
+    height:144px;
+    border:5px solid #fff;
+    border-radius:50%;
+    background:var(--soft);
+    box-shadow:0 14px 38px rgba(0,0,0,.14);
+    object-fit:cover;
+}
+
+.account-profile-picture h2{
+    margin:18px 0 0;
+    font-size:26px;
+}
+
+.account-personal-info,
+.account-status-overview{
+    padding:26px;
+    border:1px solid var(--line);
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 34px rgba(0,0,0,.04);
+}
+
+.account-section-title{
+    margin-bottom:20px;
+}
+
+.account-section-title h2{
+    margin:0;
+    font-size:28px;
+}
+
+.account-info-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+}
+
+.account-info-grid > div{
+    min-width:0;
+    padding:17px;
+    border-radius:14px;
+    background:var(--soft);
+}
+
+.account-info-grid span,
+.account-status-grid span{
+    display:block;
+    margin-bottom:7px;
+    color:var(--muted);
+    font-size:12px;
+}
+
+.account-info-grid strong{
+    display:block;
+    overflow:hidden;
+    font-size:16px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.account-status-grid{
+    display:grid;
+    grid-template-columns:repeat(5, minmax(0, 1fr));
+    gap:12px;
+}
+
+.account-status-grid > div{
+    padding:17px 14px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:#fff;
+}
+
+.account-status-grid strong{
+    font-size:25px;
+}
+
+.account-status-grid [data-order-status="pending"] strong{color:#b76e00}
+.account-status-grid [data-order-status="processing"] strong{color:#2563c7}
+.account-status-grid [data-order-status="shipped"] strong{color:#7047c7}
+.account-status-grid [data-order-status="delivered"] strong{color:#07845d}
+.account-status-grid [data-order-status="cancelled"] strong{color:#c43d3d}
+
+.account-purchases-title{
+    margin-bottom:24px;
+}
+
+.account-profile-link,
+.account-order-status-link{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    min-height:68px;
+    padding:0 24px;
+    border:1px solid var(--line);
+    border-radius:18px;
+    background:#fff;
+    color:var(--ink);
+    box-shadow:0 10px 28px rgba(0,0,0,.04);
+    font-size:19px;
+    font-weight:700;
+    text-decoration:none;
+}
+
+.account-profile-link span:last-child,
+.account-order-status-link span:last-child{
+    color:var(--accent);
+    font-size:32px;
+    font-weight:400;
+    line-height:1;
+}
+
+.personal-information-page{
+    width:min(760px, calc(100% - 40px));
+    margin:0 auto;
+    padding:60px 0 100px;
+}
+
+.personal-information-heading{
+    margin-bottom:30px;
+}
+
+.personal-information-heading h1{
+    margin:0;
+    font-size:clamp(34px, 6vw, 52px);
+    letter-spacing:-1px;
+}
+
+.personal-information-heading > p:last-child{
+    margin:10px 0 0;
+    color:var(--muted);
+}
+
+.personal-information-card{
+    padding:30px;
+    border:1px solid var(--line);
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 16px 46px rgba(0,0,0,.06);
+}
+
+.personal-photo-editor{
+    display:flex;
+    align-items:center;
+    gap:22px;
+    margin-bottom:28px;
+    padding-bottom:26px;
+    border-bottom:1px solid var(--line);
+}
+
+.personal-photo-editor img{
+    width:112px;
+    height:112px;
+    flex:0 0 112px;
+    border:4px solid #fff;
+    border-radius:50%;
+    background:var(--soft);
+    box-shadow:0 10px 28px rgba(0,0,0,.14);
+    object-fit:cover;
+}
+
+.personal-photo-editor label{
+    display:inline-flex;
+    padding:10px 16px;
+    border:1px solid var(--accent);
+    border-radius:999px;
+    color:#a96040;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:700;
+}
+
+.personal-photo-editor small{
+    display:block;
+    margin-top:9px;
+    color:var(--muted);
+    font-size:11px;
+}
+
+.personal-fields-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:16px;
+}
+
+.personal-information-card > label,
+.personal-fields-grid label{
+    display:grid;
+    gap:8px;
+    margin-top:16px;
+    color:#555;
+    font-size:13px;
+    font-weight:700;
+}
+
+.personal-fields-grid label{
+    margin-top:0;
+}
+
+.personal-information-card input{
+    width:100%;
+    min-height:50px;
+    padding:12px 14px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    background:#fff;
+    color:var(--ink);
+    outline:none;
+    font:inherit;
+}
+
+.personal-information-card input:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(229,164,132,.15);
+}
+
+.personal-information-card > button{
+    width:100%;
+    min-height:50px;
+    margin-top:20px;
+    border:0;
+    border-radius:999px;
+    background:var(--accent);
+    color:#fff;
+    cursor:pointer;
+    font:inherit;
+    font-weight:700;
+}
+
+.personal-information-card > button:disabled{
+    cursor:wait;
+    opacity:.65;
+}
+
+.personal-information-message{
+    min-height:18px;
+    margin:12px 0 0;
+    color:#27835f;
+    font-size:13px;
+}
+
+.personal-information-message[data-type="error"]{
+    color:#b23a3a;
+}
+
+#personal-information-loading{
+    width:min(760px, calc(100% - 40px));
+    margin:60px auto;
+}
+
 .account-tabs{
     display:grid;
     grid-template-columns:repeat(4, 1fr);
@@ -417,6 +684,58 @@ body.review-modal-open{
     .account-page{
         width:auto;
         padding:38px 20px 80px;
+    }
+
+    .account-profile-overview{
+        gap:20px;
+        margin-bottom:52px;
+    }
+
+    .account-profile-picture img{
+        width:112px;
+        height:112px;
+    }
+
+    .account-personal-info,
+    .account-status-overview{
+        padding:20px;
+        border-radius:17px;
+    }
+
+    .account-info-grid{
+        grid-template-columns:1fr;
+    }
+
+    .account-status-grid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+
+    .account-status-grid > div:last-child{
+        grid-column:1 / -1;
+    }
+
+    .personal-information-page{
+        padding:38px 0 80px;
+    }
+
+    .personal-information-card{
+        padding:22px;
+        border-radius:18px;
+    }
+
+    .personal-photo-editor{
+        align-items:flex-start;
+        gap:16px;
+    }
+
+    .personal-photo-editor img{
+        width:86px;
+        height:86px;
+        flex-basis:86px;
+    }
+
+    .personal-fields-grid{
+        grid-template-columns:1fr;
     }
 
     .account-tabs{

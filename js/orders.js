@@ -11,13 +11,76 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 import {
-    onAuthStateChanged
+    onAuthStateChanged,
+    signOut
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 const auth = window.auth;
 const db = window.db;
 
 const ordersContent = document.querySelector(".orders-content");
+const ordersSignout = document.querySelector(".orders-signout");
+const cancelConfirmOverlay = document.getElementById("orders-cancel-confirm");
+const cancelConfirmDismiss = cancelConfirmOverlay.querySelector(".orders-confirm-dismiss");
+const cancelConfirmApprove = cancelConfirmOverlay.querySelector(".orders-confirm-approve");
+const confirmTitle = document.getElementById("orders-confirm-title");
+const confirmMessage = document.getElementById("orders-confirm-message");
+const ordersToast = document.querySelector(".orders-toast");
+let resolveCancelConfirmation = null;
+
+function showOrdersToast(message) {
+    clearTimeout(showOrdersToast.timeout);
+    ordersToast.textContent = message;
+    ordersToast.classList.remove("show");
+    void ordersToast.offsetWidth;
+    ordersToast.classList.add("show");
+    showOrdersToast.timeout = setTimeout(() => {
+        ordersToast.classList.remove("show");
+    }, 2500);
+}
+
+function closeCancelConfirmation(confirmed) {
+    cancelConfirmOverlay.classList.remove("active");
+    cancelConfirmOverlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("orders-confirm-open");
+    resolveCancelConfirmation?.(confirmed);
+    resolveCancelConfirmation = null;
+}
+
+function showOrderConfirmation({ title, message, dismissLabel, approveLabel }) {
+    confirmTitle.textContent = title;
+    confirmMessage.textContent = message;
+    cancelConfirmDismiss.textContent = dismissLabel;
+    cancelConfirmApprove.textContent = approveLabel;
+    cancelConfirmOverlay.classList.add("active");
+    cancelConfirmOverlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("orders-confirm-open");
+    requestAnimationFrame(() => cancelConfirmDismiss.focus());
+    return new Promise(resolve => {
+        resolveCancelConfirmation = resolve;
+    });
+}
+
+cancelConfirmDismiss.addEventListener("click", () => closeCancelConfirmation(false));
+cancelConfirmApprove.addEventListener("click", () => closeCancelConfirmation(true));
+cancelConfirmOverlay.addEventListener("click", event => {
+    if (event.target === cancelConfirmOverlay) closeCancelConfirmation(false);
+});
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && cancelConfirmOverlay.classList.contains("active")) {
+        closeCancelConfirmation(false);
+    }
+});
+
+ordersSignout.addEventListener("click", async () => {
+    localStorage.removeItem("cart");
+    localStorage.removeItem("favorites");
+    localStorage.removeItem("mpwrCartOwnerUid");
+    localStorage.removeItem("mpwrFavoritesOwnerUid");
+    await signOut(auth);
+    window.location.assign("index.html");
+});
+
 async function reorderItems(orderItems) {
 
     const user = auth.currentUser;
@@ -65,7 +128,7 @@ async function reorderItems(orderItems) {
         JSON.stringify(cart)
     );
 
-    alert("Items added to your cart!");
+    showOrdersToast("Items added to your cart");
 
 }
 
@@ -211,8 +274,18 @@ itemsContainer.style.display = "none";
 const toggleButton = orderCard.querySelector(".toggle-order-btn");
 const reorderButton = orderCard.querySelector(".reorder-btn");
 const cancelButton = orderCard.querySelector(".cancel-order-btn");
+reorderButton.hidden = true;
 
 reorderButton.addEventListener("click", async () => {
+
+    const confirmed = await showOrderConfirmation({
+        title: "Reorder Items?",
+        message: "Add all the items from this order to your cart?",
+        dismissLabel: "Not Now",
+        approveLabel: "Reorder"
+    });
+
+    if (!confirmed) return;
 
     await reorderItems(order.items);
 
@@ -222,9 +295,12 @@ if (cancelButton) {
 
     cancelButton.addEventListener("click", async () => {
 
-        const confirmed = confirm(
-            "Are you sure you want to cancel this order?"
-        );
+        const confirmed = await showOrderConfirmation({
+            title: "Cancel Order?",
+            message: "Are you sure you want to cancel this order?",
+            dismissLabel: "Keep Order",
+            approveLabel: "Cancel Order"
+        });
 
         if (!confirmed) return;
 
@@ -246,6 +322,8 @@ toggleButton.addEventListener("click", () => {
     const isHidden = itemsContainer.style.display === "none";
 
     itemsContainer.style.display = isHidden ? "block" : "none";
+    reorderButton.hidden = !isHidden;
+    toggleButton.classList.toggle("details-open", isHidden);
 
     toggleButton.textContent = isHidden
         ? "Hide Details "
@@ -267,6 +345,8 @@ toggleButton.addEventListener("click", () => {
 
 
 onAuthStateChanged(auth, user => {
+
+    ordersSignout.hidden = !user;
 
     if (user) {
 

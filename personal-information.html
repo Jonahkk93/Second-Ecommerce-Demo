@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Personal Information | MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/account.css">
+</head>
+<body>
+    <header class="account-page-header">
+        <a href="Account.html" class="account-back" aria-label="Back to profile"></a>
+        <a href="index.html" class="account-logo">MPWR</a>
+        <span></span>
+    </header>
+
+    <main class="personal-information-page" id="personal-information-page" hidden>
+        <header class="personal-information-heading">
+            <p class="account-kicker">Your profile</p>
+            <h1>Personal Information</h1>
+            <p>Update the details used across your MPWR account.</p>
+        </header>
+
+        <form class="personal-information-card" id="personal-information-form">
+            <div class="personal-photo-editor">
+                <img id="personal-profile-image" alt="Profile picture">
+                <div>
+                    <label for="personal-profile-file">Change profile picture</label>
+                    <input id="personal-profile-file" type="file" accept="image/*" hidden>
+                    <small>JPG, PNG or WebP. Maximum 5 MB.</small>
+                </div>
+            </div>
+
+            <div class="personal-fields-grid">
+                <label>First name
+                    <input id="personal-first-name" type="text" autocomplete="given-name" required>
+                </label>
+                <label>Last name
+                    <input id="personal-last-name" type="text" autocomplete="family-name" required>
+                </label>
+            </div>
+
+            <label>Email address
+                <input id="personal-email" type="email" autocomplete="email" required>
+            </label>
+
+            <p class="personal-information-message" id="personal-information-message" role="status"></p>
+            <button type="submit" id="personal-information-save">Save Changes</button>
+        </form>
+    </main>
+
+    <div class="account-loading" id="personal-information-loading">Loading your profile…</div>
+
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/personal-information.js"></script>
+</body>
+</html>

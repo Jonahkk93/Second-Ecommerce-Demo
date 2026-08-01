@@ -1,0 +1,85 @@
+.signout-confirm-overlay{
+    position:fixed;
+    inset:0;
+    z-index:120000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(0,0,0,.58);
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .22s ease, visibility .22s ease;
+}
+
+.signout-confirm-overlay.active{
+    opacity:1;
+    visibility:visible;
+}
+
+.signout-confirm-box{
+    width:min(440px, 100%);
+    padding:30px;
+    border:1px solid #eadbd4;
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 22px 55px rgba(0,0,0,.2);
+    color:#333;
+    font-family:Larke, sans-serif;
+    text-align:center;
+    transform:translateY(18px);
+    transition:transform .3s cubic-bezier(.22,1,.36,1);
+}
+
+.signout-confirm-overlay.active .signout-confirm-box{
+    transform:translateY(0);
+}
+
+.signout-confirm-box h2{
+    margin:0 0 10px;
+    font-size:25px;
+}
+
+.signout-confirm-box p{
+    margin:0;
+    color:#6f6f6f;
+    line-height:1.5;
+}
+
+.signout-confirm-actions{
+    display:flex;
+    gap:12px;
+    margin-top:26px;
+}
+
+.signout-confirm-actions button{
+    flex:1;
+    min-height:48px;
+    padding:11px 15px;
+    border:0;
+    border-radius:12px;
+    font:inherit;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.signout-confirm-cancel{
+    background:#eee;
+    color:#333;
+}
+
+.signout-confirm-approve{
+    background:#E5A484;
+    color:#fff;
+}
+
+body.signout-confirm-open{
+    overflow:hidden;
+}
+
+@media (max-width:600px){
+    .signout-confirm-overlay{padding:18px}
+    .signout-confirm-box{padding:24px 20px 20px}
+    .signout-confirm-actions{gap:9px}
+    .signout-confirm-actions button{padding-inline:10px;font-size:14px}
+}

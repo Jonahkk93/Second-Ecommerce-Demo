@@ -716,7 +716,7 @@ a[x-apple-data-detectors]{
 }
 
 .status-picker-menu button[data-status="Delivered"]{
-    --status-option:#07845d;
+    --status-option:#10b981;
     --status-option-tint:#def8ec;
 }
 
@@ -738,6 +738,7 @@ a[x-apple-data-detectors]{
     background:var(--status-option);
     color:#fff;
     -webkit-text-fill-color:#fff;
+    border-radius:0 20px 20px 0;
 }
 
 .order-card{

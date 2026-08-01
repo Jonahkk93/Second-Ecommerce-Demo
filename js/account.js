@@ -5,6 +5,7 @@ import {
 import {
     collection,
     doc,
+    getDoc,
     getDocs,
     query,
     serverTimestamp,
@@ -21,8 +22,8 @@ const auth = window.auth;
 const db = window.db;
 const storage = window.storage;
 const dashboard = document.querySelector(".account-dashboard");
+const profileOverview = document.querySelector(".account-profile-overview");
 const loading = document.querySelector(".account-loading");
-const customer = document.querySelector(".account-customer");
 const signoutButton = document.querySelector(".account-signout");
 const reviewOverlay = document.querySelector(".account-review-overlay");
 const reviewModalClose = document.querySelector(".account-review-close");
@@ -37,6 +38,32 @@ const reviewStars = [...document.querySelectorAll(".account-review-stars button"
 
 let currentReviewItem = null;
 let currentReviewRating = 0;
+
+function initialsPicture(firstName, lastName, email = "") {
+    const initials = `${firstName?.[0] || ""}${lastName?.[0] || ""}` || email[0] || "M";
+    const safeInitials = initials.toUpperCase().replace(/[^A-Z0-9]/g, "") || "M";
+    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="100%" height="100%" fill="#E5A484"/><text x="50%" y="53%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="82" font-weight="700" fill="white">${safeInitials}</text></svg>`)}`;
+}
+
+async function loadProfileOverview(user) {
+    let data = {};
+    try {
+        const snapshot = await getDoc(doc(db, "users", user.uid));
+        if (snapshot.exists()) data = snapshot.data();
+    } catch (error) {
+        console.warn("Profile details could not be loaded:", error);
+    }
+
+    const displayParts = String(user.displayName || "").trim().split(/\s+/).filter(Boolean);
+    const firstName = data.firstName || displayParts[0] || "";
+    const lastName = data.lastName || displayParts.slice(1).join(" ") || "";
+    const fullName = `${firstName} ${lastName}`.trim() || user.displayName || "MPWR Customer";
+    const email = user.email || data.email || "—";
+    const photo = data.profileImage || user.photoURL || initialsPicture(firstName, lastName, email);
+
+    document.querySelector("#account-profile-picture").src = photo;
+    document.querySelector("#account-profile-name").textContent = fullName;
+}
 
 function productLink(item) {
     const params = new URLSearchParams({ id: item.id });
@@ -330,6 +357,8 @@ signoutButton.addEventListener("click", async () => {
 
     localStorage.removeItem("cart");
     localStorage.removeItem("favorites");
+    localStorage.removeItem("mpwrCartOwnerUid");
+    localStorage.removeItem("mpwrFavoritesOwnerUid");
 
     await signOut(auth);
     sessionStorage.setItem("flashToast", JSON.stringify({
@@ -342,6 +371,7 @@ signoutButton.addEventListener("click", async () => {
 onAuthStateChanged(auth, async user => {
     loading.hidden = true;
     dashboard.hidden = !user;
+    if (profileOverview) profileOverview.hidden = !user;
     signoutButton.hidden = !user;
 
     if (!user) {
@@ -350,9 +380,11 @@ onAuthStateChanged(auth, async user => {
         return;
     }
 
-    customer.textContent = user.email || "MPWR customer";
     try {
-        await loadAccount(user);
+        await Promise.all([
+            profileOverview ? loadProfileOverview(user) : Promise.resolve(),
+            loadAccount(user)
+        ]);
     } catch (error) {
         console.error("Unable to load account:", error);
         dashboard.replaceChildren(emptyState("Your account could not be loaded right now."));
