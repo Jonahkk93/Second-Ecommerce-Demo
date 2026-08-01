@@ -3423,3 +3423,42 @@ align-items: center;
     }
 
 }
+/* Compact, consistent cart and wishlist headers on phones. */
+@media screen and (max-width:600px){
+    .cart-title,
+    .wishlist-title{
+        flex:0 0 auto;
+        min-height:64px;
+        margin:0;
+        padding:max(15px, env(safe-area-inset-top, 0px)) 68px 15px 20px;
+        display:flex;
+        align-items:center;
+        gap:7px;
+        background:#fff;
+        border:0;
+        border-bottom:1px solid #ece8e5;
+        color:#333;
+        font-size:24px;
+        line-height:1.15;
+        font-weight:600;
+        letter-spacing:-.3px;
+    }
+
+    .cart-title-count{
+        color:#8a817d;
+        font-size:14px;
+        font-weight:500;
+    }
+
+    #cart-close,
+    #wishlist-close{
+        top:max(7px, calc(env(safe-area-inset-top, 0px) + 7px));
+        right:12px;
+        width:21px;
+        height:21px;
+        padding:11px;
+        box-sizing:content-box;
+        object-fit:contain;
+        opacity:.88;
+    }
+}
