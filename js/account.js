@@ -92,7 +92,7 @@ function createItemCard(item, order, reviewAction = false) {
     imageLink.className = "account-item-image";
 
     const image = document.createElement("img");
-    image.src = item.image || "";
+    image.src = window.normalizeMPWRImagePath?.(item.image, item.id) || item.image || "";
     image.alt = item.title || "Purchased product";
     imageLink.appendChild(image);
 

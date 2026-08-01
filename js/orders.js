@@ -94,7 +94,7 @@ async function reorderItems(orderItems) {
     let cart = [];
 
     if (cartDoc.exists()) {
-        cart = cartDoc.data().items || [];
+        cart = window.normalizeMPWRItems?.(cartDoc.data().items || []) || cartDoc.data().items || [];
     }
 
     orderItems.forEach(orderItem => {
@@ -158,7 +158,7 @@ async function loadOrders() {
     <div class="order-item">
 
         <img
-            src="${item.image}"
+            src="${window.normalizeMPWRImagePath?.(item.image, item.id) || item.image}"
             class="order-item-image"
         >
 

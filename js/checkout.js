@@ -15,6 +15,8 @@ const networkTrigger = document.querySelector(".network-picker-trigger");
 const networkMenu = document.querySelector(".network-picker-menu");
 const visibleItemLimit = 3;
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
+cart = window.normalizeMPWRItems?.(cart) || cart;
+localStorage.setItem("cart", JSON.stringify(cart));
 let currentUser = null;
 
 checkoutBack.addEventListener("click", () => {

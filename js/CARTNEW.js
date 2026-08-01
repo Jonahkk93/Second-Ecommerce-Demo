@@ -368,6 +368,7 @@ async function loadFavoritesFromFirestore() {
         ) || [];
 
         favorites = mergeFavoriteItems(accountFavorites, localFavorites);
+        favorites = window.normalizeMPWRItems?.(favorites) || favorites;
         localStorage.setItem("favorites", JSON.stringify(favorites));
         localStorage.setItem("mpwrFavoritesOwnerUid", user.uid);
         await setDoc(doc(db, "favorites", user.uid), { items: favorites });
@@ -476,6 +477,11 @@ let cartItems = JSON.parse(
 let favorites = JSON.parse(
     localStorage.getItem("favorites")
 ) || [];
+
+cartItems = window.normalizeMPWRItems?.(cartItems) || cartItems;
+favorites = window.normalizeMPWRItems?.(favorites) || favorites;
+localStorage.setItem("cart", JSON.stringify(cartItems));
+localStorage.setItem("favorites", JSON.stringify(favorites));
 
 
 /* ============================================================
@@ -661,6 +667,8 @@ function updateWishlistUI() {
 
 function saveCart() {
 
+    cartItems = window.normalizeMPWRItems?.(cartItems) || cartItems;
+
     localStorage.setItem(
         "cart",
         JSON.stringify(cartItems)
@@ -693,6 +701,7 @@ function saveCart() {
             localCart,
             Boolean(localCart.length) && localOwner !== user.uid
         );
+        cartItems = window.normalizeMPWRItems?.(cartItems) || cartItems;
 
         localStorage.setItem("cart", JSON.stringify(cartItems));
         localStorage.setItem("mpwrCartOwnerUid", user.uid);
@@ -717,6 +726,8 @@ function saveCart() {
 ============================================================ */
 
 function saveWishlist() {
+
+    favorites = window.normalizeMPWRItems?.(favorites) || favorites;
 
     localStorage.setItem(
         "favorites",
@@ -1696,7 +1707,7 @@ function createWishlistItem(item) {
 
         <a href="${productHref}" class="wishlist-product-link" aria-label="View ${item.title}">
             <img
-                src="${item.image}"
+                src="${window.normalizeMPWRImagePath?.(item.image, item.id) || item.image}"
                 class="wishlist-img"
             >
         </a>

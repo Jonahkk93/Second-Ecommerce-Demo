@@ -730,6 +730,8 @@ let selectedPrice = product?.price || "0";
 let favorites = JSON.parse(
     localStorage.getItem("favorites")
 ) || [];
+favorites = window.normalizeMPWRItems?.(favorites) || favorites;
+localStorage.setItem("favorites", JSON.stringify(favorites));
 
 function updateCartBadge() {
     const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
@@ -761,6 +763,7 @@ function updateCartBadge() {
 }
 
 function saveCart(cartItems) {
+    cartItems = window.normalizeMPWRItems?.(cartItems) || cartItems;
     localStorage.setItem("cart", JSON.stringify(cartItems));
     saveCartToFirestore();
 }
@@ -824,6 +827,9 @@ async function saveOrderToFirestore(cartItems) {
 
 async function saveFavoritesToFirestore() {
 
+    favorites = window.normalizeMPWRItems?.(favorites) || favorites;
+    localStorage.setItem("favorites", JSON.stringify(favorites));
+
     const user = auth.currentUser;
 
     if (!user) return;
@@ -863,7 +869,7 @@ async function saveFavoritesToFirestore() {
 
             const data = cartDoc.data();
 
-            const cartItems = data.items || [];
+            const cartItems = window.normalizeMPWRItems?.(data.items || []) || data.items || [];
 
             localStorage.setItem(
                 "cart",
@@ -1402,7 +1408,7 @@ function createWishlistItem(item) {
 
         <a href="${productHref}" class="wishlist-product-link" aria-label="View ${item.title}">
             <img
-                src="${item.image}"
+                src="${window.normalizeMPWRImagePath?.(item.image, item.id) || item.image}"
                 class="wishlist-img"
             >
         </a>

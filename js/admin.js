@@ -177,7 +177,7 @@ for (const orderDoc of snapshot.docs) {
     <div class="admin-order-item">
 
         <img
-            src="${item.image}"
+            src="${window.normalizeMPWRImagePath?.(item.image, item.id) || item.image}"
             class="admin-order-image"
         >
 

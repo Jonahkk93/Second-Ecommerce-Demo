@@ -276,3 +276,29 @@ options: [
 
 ];
 window.products = products;
+
+/* Keep catalogue image paths portable between localhost and the deployed site. */
+function normalizeMPWRImagePath(source, productId) {
+    const fallback = products.find(product => String(product.id) === String(productId))?.image || "";
+    if (!source) return fallback;
+
+    const value = String(source).trim();
+    try {
+        const url = new URL(value, window.location.href);
+        const pathname = decodeURIComponent(url.pathname);
+        if (pathname.startsWith("/images/")) return pathname.slice(1);
+    } catch (error) {
+        console.warn("Could not normalize image path", value, error);
+    }
+    return value;
+}
+
+function normalizeMPWRItems(items = []) {
+    return items.map(item => ({
+        ...item,
+        image: normalizeMPWRImagePath(item.image, item.id)
+    }));
+}
+
+window.normalizeMPWRImagePath = normalizeMPWRImagePath;
+window.normalizeMPWRItems = normalizeMPWRItems;
