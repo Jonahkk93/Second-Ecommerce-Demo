@@ -9,6 +9,13 @@ body {
     color: #333;
 }
 
+html,
+body{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+}
+
 html.side-panel-open,
 body.side-panel-open{
     overflow: hidden;
@@ -2995,6 +3002,28 @@ margin-top:50px;
 
 @media screen and (max-width:600px) {
 
+/* Keep the catalogue inside the phone viewport, including narrow devices. */
+.shop{
+    width:100%;
+    padding-right:9%;
+    padding-left:9%;
+}
+
+.product-content{
+    width:100%;
+    min-width:0;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+}
+
+.product-box,
+.product-box .img-box,
+.product-box .price-and-cart{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+}
+
 /* Compact the add-to-cart modal while preserving vertical scrolling. */
 .product-modal-overlay{
     padding:
@@ -3028,6 +3057,10 @@ margin-top:50px;
     flex-wrap:wrap;
     gap:10px;
     width:100%;
+}
+
+.product-modal-option-values.has-one-option{
+    width:auto;
 }
 
 .product-modal-option-btn{

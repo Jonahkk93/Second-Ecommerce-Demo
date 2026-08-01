@@ -3,10 +3,13 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <title>MPWR</title>
         <link rel="stylesheet" href="css/CARTNEW.css">
         <link rel="stylesheet" href="css/password-toggle.css">
         <link rel="stylesheet" href="css/signout-confirm.css">
         <link rel="stylesheet" href="css/Larke.css">
+        <link rel="stylesheet" href="css/touch-interactions.css">
+        <script src="js/touch-interactions.js" defer></script>
 </head>
 
 
@@ -87,25 +90,25 @@
         <p class="sidebar-section-title">Categories</p>
         <ul>
             <li>
-                <a href="login.html">
+                <a href="#products">
                     <img src="images/Icon Folder/Nails Icon_E5A484.PNG" class="sidebar-item-icon" alt="">
                     <span>Press-On Nails</span>
                 </a>
             </li>
             <li>
-                <a href="login.html">
+                <a href="#products">
                     <img src="images/Icon Folder/Wigs Icon_E5A484.PNG" class="sidebar-item-icon" alt="">
                     <span>Wigs</span>
                 </a>
             </li>
             <li>
-                <a href="login.html">
+                <a href="#products">
                     <img src="images/Icon Folder/Products Icon_E5A484.PNG" class="sidebar-item-icon" alt="">
                     <span>Products</span>
                 </a>
             </li>
             <li>
-                <a href="login.html">
+                <a href="#products">
                     <img src="images/Icon Folder/Lashes Icon_E5A484.PNG" class="sidebar-item-icon" alt="">
                     <span>Lashes</span>
                 </a>
@@ -147,15 +150,15 @@
         Press-ons
     </button>
 
-    <button class="filter-btn" data-filter="polish">
+    <button class="filter-btn" data-filter="wigs">
         Wigs
     </button>
 
-    <button class="filter-btn" data-filter="care">
+    <button class="filter-btn" data-filter="products">
         Products
     </button>
 
-    <button class="filter-btn" data-filter="Lashes">
+    <button class="filter-btn" data-filter="lashes">
         Lashes
     </button>
 
@@ -245,13 +248,13 @@
 
 <!--CATALOG-->
 </div>
-    <section class="shop">
+    <section class="shop" id="products">
         <h1 class="section-title">Products</h1>
         <div class="product-content">
             
 <!--PRODUCT ONE!-->
             <div class="product-box"
-     data-category="polish"
+     data-category="press-ons"
      data-id="1">
     <div class="img-box">
 
@@ -302,7 +305,7 @@
 
 <!--PRODUCT THREE!-->
              <div class="product-box"
-     data-category="care"
+     data-category="products"
      data-id="3">
     <div class="img-box">
 
@@ -349,9 +352,10 @@
                     <i class=""><img src="images/Plus.PNG" class="addie"></i>
                 </div>
             </div>
+            
 <!--PRODUCT FIVE!-->
               <div class="product-box"
-     data-category="polish"
+     data-category="press-ons"
      data-id="5">
     <div class="img-box">
 
@@ -401,7 +405,7 @@
 
 <!--PRODUCT SEVEN!-->                
               <div class="product-box"
-     data-category="Products"
+     data-category="products"
      data-id="7">
     <div class="img-box">
 
@@ -477,7 +481,7 @@
 
 <!--PRODUCT TEN!-->
               <div class="product-box"
-     data-category="Wigs"
+     data-category="wigs"
      data-id="10">
     <div class="img-box">
 
@@ -505,7 +509,7 @@
 
             <!--PRODUCT ELLEVEN!-->
               <div class="product-box"
-     data-category="Lashes"
+     data-category="lashes"
      data-id="11">
     <div class="img-box">
 
@@ -529,7 +533,7 @@
                 
             </div>
 
-        </div></div></div> 
+        </div>
 
         <div class="no-results">
     <h2>No products found</h2>
@@ -675,9 +679,9 @@
                 <h4>Online Shop</h4>
                 <ul>
                     <li><a href="#">Wigs</a></li>
-                    <li><a href="#">Press-on nails</a></li>
-                    <li><a href="#">Hair Accessories</a></li>
-                    <li><a href="#">Merch</a></li>
+                    <li><a href="#">Press-on Nails</a></li>
+                    <li><a href="#">Wigs</a></li>
+                    <li><a href="#">Products</a></li>
                     <li><a href="admin.html">Admin</a></li>
                     <li><a href="admin-products.html">Admin Products</a></li>
 
@@ -687,10 +691,10 @@
             <div class="footer-col">
                 <h4>Follow Us</h4>
                 <div class="social-links">
-                    <a href="Forgot Psswrd.html"><img src="images/FacebookLogo.PNG" width="19px"></a>
-                    <a href="Forgot Psswrd.html"><img src="images/XLogo.PNG" width="19px"></a>
-                    <a href="Forgot Psswrd.html"><img src="images/InstagramLogo.PNG" width="19px"></a>
-                    <a href="Forgot Psswrd.html"><img src="images/LinkedInLogo2.PNG" width="19px"></a>
+                    <a href="#" aria-label="Facebook"><img src="images/FacebookLogo.PNG" width="19" alt=""></a>
+                    <a href="#" aria-label="X"><img src="images/XLogo.PNG" width="19" alt=""></a>
+                    <a href="#" aria-label="Instagram"><img src="images/InstagramLogo.PNG" width="19" alt=""></a>
+                    <a href="#" aria-label="LinkedIn"><img src="images/LinkedInLogo2.PNG" width="19" alt=""></a>
                 </div>	
                 
         </div>
@@ -713,6 +717,7 @@
 
     </div>
 
+</div>
 </div>
 </footer>
 
@@ -879,6 +884,7 @@
         Sign In
     </button>
 
+</div>
 </div>
 </div>
 <div id="account-panel" style="display:none;">

@@ -1,0 +1,62 @@
+/* Prevent mouse-only hover movement from sticking after taps on touchscreens. */
+button,
+a,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+select,
+summary{
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+}
+
+@media (hover:none), (pointer:coarse){
+    button:hover,
+    a:hover,
+    [role="button"]:hover,
+    input[type="button"]:hover,
+    input[type="submit"]:hover,
+    input[type="reset"]:hover,
+    select:hover,
+    summary:hover,
+    .cart-remove:hover,
+    .wishlist-remove:hover,
+    .cart-swipe-action:hover,
+    .wishlist-add-cart:hover,
+    .product-box:hover,
+    .product-box:hover img,
+    .product-card:hover,
+    .order-card:hover,
+    .related-product-card:hover{
+        transform:none !important;
+        filter:none !important;
+        transition:none !important;
+    }
+
+    button:active,
+    a:active,
+    [role="button"]:active,
+    input[type="button"]:active,
+    input[type="submit"]:active,
+    input[type="reset"]:active,
+    select:active,
+    summary:active{
+        transform:none !important;
+    }
+}
+
+.using-touch button:hover,
+.using-touch a:hover,
+.using-touch [role="button"]:hover,
+.using-touch input:hover,
+.using-touch select:hover,
+.using-touch summary:hover,
+.using-touch .cart-remove:hover,
+.using-touch .wishlist-remove:hover,
+.using-touch .cart-swipe-action:hover,
+.using-touch .wishlist-add-cart:hover{
+    transform:none !important;
+    filter:none !important;
+    transition:none !important;
+}

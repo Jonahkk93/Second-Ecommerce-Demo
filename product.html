@@ -18,6 +18,8 @@
         <link rel="stylesheet" href="css/Larke.css">
     
 
+    <link rel="stylesheet" href="css/touch-interactions.css">
+    <script src="js/touch-interactions.js" defer></script>
 </head>
 
 <body>
@@ -62,6 +64,7 @@
         <span class="cart-item-count"></span>
     </div>
 
+</div>
 </div>
 </header>
 
@@ -353,8 +356,7 @@
             </div>
         </div>
 
-        <div class="review-compose">
-            <p class="review-eligibility" aria-live="polite"></p>
+        <div class="review-compose" hidden>
             <form id="review-form" hidden>
                 <fieldset>
                     <legend>Your rating</legend>
@@ -372,7 +374,6 @@
             </form>
         </div>
 
-        <p class="review-empty">No reviews yet</p>
         <div class="review-list"></div>
         <button class="reviews-read-more" type="button" hidden>Read more</button>
 

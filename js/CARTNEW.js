@@ -223,6 +223,34 @@ function itemIdentity(item) {
         .join("::");
 }
 
+/* Recalculate the homepage when it is restored from browser history. */
+function restoreHomepageLayout() {
+    document.documentElement.style.removeProperty("width");
+    document.documentElement.style.removeProperty("max-width");
+    document.body.style.removeProperty("width");
+    document.body.style.removeProperty("max-width");
+
+    const panelIsOpen =
+        cart.classList.contains("active") ||
+        wishlist.classList.contains("active");
+
+    if (!panelIsOpen) {
+        document.documentElement.classList.remove("side-panel-open");
+        document.body.classList.remove("side-panel-open");
+        document.body.style.removeProperty("overflow");
+    }
+
+    document.documentElement.classList.add("layout-refreshing");
+    void document.documentElement.offsetWidth;
+
+    requestAnimationFrame(() => {
+        document.documentElement.classList.remove("layout-refreshing");
+        window.dispatchEvent(new Event("resize"));
+    });
+}
+
+window.addEventListener("pageshow", restoreHomepageLayout);
+
 function itemOptionEntries(item) {
     if (item.selectedOptions && Object.keys(item.selectedOptions).length) {
         return Object.entries(item.selectedOptions).filter(([, value]) => value);
@@ -1280,7 +1308,7 @@ function openCheckoutSigninModal() {
     });
 }
 
-checkoutButton.addEventListener("click", async () => {
+checkoutButton.addEventListener("click", () => {
 
     if (!auth.currentUser) {
 
@@ -1306,18 +1334,7 @@ checkoutButton.addEventListener("click", async () => {
 
     }
 
-   await saveOrderToFirestore();
-
-showToast(
-    "Thank you for your order ❤️",
-    "success"
-);
-
-cartItems = [];
-
-saveCart();
-
-renderSavedCart();
+    window.location.href = "checkout.html";
 
 });
 
@@ -2142,6 +2159,9 @@ function openProductModal(productBox) {
         section.className = "product-modal-option-group";
         section.innerHTML = `<h3>${group.label}</h3><div class="product-modal-option-values"></div>`;
         const values = section.querySelector(".product-modal-option-values");
+        if (group.values.length === 1) {
+            values.classList.add("has-one-option");
+        }
 
         group.values.forEach((value, index) => {
             const button = document.createElement("button");
@@ -2467,6 +2487,12 @@ accountOverlay.addEventListener("click", (event) => {
 
 });
 
+
+if (sessionStorage.getItem("mpwrOpenCartOnReturn") === "true") {
+    sessionStorage.removeItem("mpwrOpenCartOnReturn");
+    cart.classList.add("active");
+    syncSidePanelScrollLock();
+}
 
 onAuthStateChanged(auth, async (user) => {
 

@@ -224,9 +224,25 @@ a[x-apple-data-detectors]{
 }
 
 @media (max-width:800px){
-    .admin-login{padding:20px}
+    .admin-login{
+        width:100%;
+        padding:20px;
+        overflow-x:hidden;
+    }
     .admin-login-intro{display:none}
-    .admin-login-card{padding:30px 22px;border-radius:20px}
+    .admin-login-card{
+        width:100%;
+        min-width:0;
+        max-width:460px;
+        padding:30px 22px;
+        border-radius:20px;
+    }
+
+    .admin-login-card input,
+    .admin-login-card button{
+        min-width:0;
+        max-width:100%;
+    }
 }
 
 .admin-nav{
@@ -918,7 +934,7 @@ a[x-apple-data-detectors]{
 
     .admin-nav{
         min-height:62px;
-        padding:0 16px;
+        padding:0 9%;
     }
 
     .admin-dashboard{
@@ -943,12 +959,12 @@ a[x-apple-data-detectors]{
     .admin-account-menu{
         position:fixed;
         top:70px;
-        right:12px;
-        width:min(280px, calc(100vw - 24px));
+        right:9%;
+        width:min(280px, 82vw);
     }
 
     .admin-header{
-        padding:24px 16px 20px;
+        padding:24px 9% 20px;
     }
 
     .admin-header h1{
@@ -982,7 +998,7 @@ a[x-apple-data-detectors]{
     .admin-container{
         width:100%;
         margin:24px auto;
-        padding:0 14px;
+        padding:0 9%;
     }
 
     .admin-container h2{
@@ -1004,9 +1020,9 @@ a[x-apple-data-detectors]{
     .status-filters{
         flex-wrap:nowrap;
         gap:8px;
-        width:calc(100% + 14px);
-        margin-right:-14px;
-        padding:0 14px 5px 0;
+        width:100%;
+        margin-right:0;
+        padding:0 0 5px;
         overflow-x:auto;
         overscroll-behavior-inline:contain;
         scrollbar-width:none;

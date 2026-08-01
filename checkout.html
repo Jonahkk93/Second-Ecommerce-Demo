@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Checkout | MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/checkout.css">
+</head>
+<body>
+    <header class="checkout-header">
+        <a class="back-link" id="checkout-back" href="index.html" aria-label="Back to open cart"></a>
+        <a class="brand" href="index.html">MPWR</a>
+        <span class="secure-label">Secure checkout</span>
+    </header>
+
+    <main class="checkout-shell">
+        <section class="checkout-form-panel">
+            <div class="eyebrow">Almost there</div>
+            <h1>Checkout</h1>
+            <p class="intro">Enter your delivery details and choose how you would like to pay.</p>
+
+            <form id="checkout-form" novalidate>
+                <fieldset>
+                    <legend><span>1</span> Contact information</legend>
+                    <div class="field-grid two-columns">
+                        <label>First name<input name="firstName" autocomplete="given-name" required></label>
+                        <label>Last name<input name="lastName" autocomplete="family-name" required></label>
+                    </div>
+                    <div class="field-grid two-columns">
+                        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+                        <label>Phone number<input name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="e.g. 0772 123 456" required></label>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend><span>2</span> Delivery address</legend>
+                    <label>Address or building<input name="address" autocomplete="street-address" placeholder="Street, building or landmark" required></label>
+                    <div class="field-grid two-columns">
+                        <label>City / town<input name="city" autocomplete="address-level2" required></label>
+                        <label>District<input name="district" autocomplete="address-level1" required></label>
+                    </div>
+                    <label>Delivery notes <small>(optional)</small><textarea name="notes" rows="3" placeholder="Directions, preferred delivery time, etc."></textarea></label>
+                </fieldset>
+
+                <fieldset>
+                    <legend><span>3</span> Payment</legend>
+                    <div class="payment-options">
+                        <label class="payment-card">
+                            <input type="radio" name="paymentMethod" value="cash_on_delivery" checked>
+                            <span><strong>Pay on delivery</strong><small>Pay when your order arrives</small></span>
+                        </label>
+                        <label class="payment-card">
+                            <input type="radio" name="paymentMethod" value="mobile_money">
+                            <span><strong>Mobile money</strong><small>We’ll contact you with a payment prompt</small></span>
+                        </label>
+                    </div>
+                    <div id="mobile-money-fields" class="mobile-money-fields" hidden>
+                        <div class="network-field">
+                            <span class="network-label">Network</span>
+                            <input type="hidden" name="mobileNetwork" value="MTN">
+                            <div class="network-picker">
+                                <button class="network-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+                                    <span>MTN MoMo</span><span class="network-picker-arrow" aria-hidden="true"></span>
+                                </button>
+                                <div class="network-picker-menu" role="listbox" hidden>
+                                    <button type="button" role="option" data-value="MTN" aria-selected="true" class="selected">MTN MoMo</button>
+                                    <button type="button" role="option" data-value="Airtel" aria-selected="false">Airtel Money</button>
+                                </div>
+                            </div>
+                        </div>
+                        <label>Mobile money number<input name="mobileNumber" type="tel" inputmode="tel" placeholder="07XX XXX XXX"></label>
+                    </div>
+                </fieldset>
+
+                <p class="form-error" id="form-error" role="alert"></p>
+                <button class="place-order" id="place-order" type="submit">Place order</button>
+            </form>
+        </section>
+
+        <aside class="order-summary" aria-labelledby="summary-title">
+            <div class="summary-heading"><h2 id="summary-title">Your order</h2><a href="index.html">Edit cart</a></div>
+            <div id="checkout-items"></div>
+            <button class="order-items-toggle" id="order-items-toggle" type="button" hidden aria-expanded="false" aria-controls="checkout-items">
+                <span class="order-items-toggle-label">Show more items</span>
+                <span class="order-items-toggle-arrow" aria-hidden="true"></span>
+            </button>
+            <div class="summary-row"><span>Subtotal</span><strong id="subtotal">UGX 0</strong></div>
+            <div class="summary-row"><span>Delivery</span><strong>Confirmed by phone</strong></div>
+            <div class="summary-total"><span>Total</span><strong id="order-total">UGX 0</strong></div>
+        </aside>
+
+        <section class="order-success" id="order-success" hidden>
+            <div class="success-mark">&#10003;</div>
+            <div class="eyebrow">Order received</div>
+            <h1>Thank you for shopping with MPWR.</h1>
+            <p>Your order <strong id="order-number"></strong> has been placed. We’ll contact you to confirm delivery and payment.</p>
+            <div class="success-actions"><a href="orders.html">View my orders</a><a class="secondary" href="index.html">Continue shopping</a></div>
+        </section>
+    </main>
+
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/checkout.js"></script>
+</body>
+</html>

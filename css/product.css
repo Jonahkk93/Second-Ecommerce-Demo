@@ -10,6 +10,47 @@
     font-family:Larke;
 }
 
+/* High-specificity option-panel constraints that resist later generic rules. */
+.product-options-panel .product-options-dynamic > .product-option-divider{
+    display:block;
+    align-self:center;
+    width:calc(100% - 48px);
+    max-width:calc(100% - 48px);
+    margin:28px auto;
+    box-sizing:border-box;
+}
+
+.product-options-panel .product-option-values.has-few-options{
+    display:grid;
+    grid-template-columns:repeat(var(--option-count), minmax(0, 1fr));
+    flex-wrap:nowrap;
+    width:100%;
+}
+
+.product-options-panel .product-option-values.has-few-options .product-option-btn{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+}
+
+/* A single choice is a compact pill, not a full-width selection bar. */
+.product-options-panel .product-option-values.has-few-options.has-one-option{
+    display:flex;
+    width:auto;
+}
+
+.product-options-panel .product-option-values.has-few-options.has-one-option .product-option-btn{
+    width:auto;
+    min-width:58px;
+    max-width:none;
+}
+
+@media (max-width:600px){
+    .product-options-panel .product-options-dynamic > .product-option-divider{
+        margin:20px auto;
+    }
+}
+
 body{
     background:#ffffff;
     color:#333;
@@ -429,12 +470,31 @@ align-items: center;
 .product-layout{
     display:grid;
     grid-template-columns:620px 460px;
-    justify-content:center;
+    justify-content:space-between;
     gap:80px;
     align-items:start;
 
-    max-width:1200px;
-    margin:0 auto;
+    width:100%;
+    max-width:none;
+    margin:0;
+}
+
+/* Preserve the shared 9% gutter without overflowing smaller laptops. */
+@media (min-width:901px) and (max-width:1200px){
+    .product-layout{
+        grid-template-columns:minmax(0, 1.3fr) minmax(320px, .9fr);
+        gap:40px;
+    }
+
+    .product-gallery-wrapper{
+        grid-template-columns:70px minmax(0, 1fr);
+        gap:18px;
+    }
+
+    .product-thumbnail{
+        width:70px;
+        height:70px;
+    }
 }
 
 .product-info{
@@ -451,7 +511,7 @@ align-items: center;
 
 .product-title-section{
 
-    margin-bottom:30px;
+    margin-bottom:8px;
 
 }
 
@@ -633,7 +693,7 @@ flex-shrink:0;
 
 .product-options-panel{
     width:100%;
-    margin:18px 0;
+    margin:6px 0 18px;
     padding:28px 0;
     border:1px solid #e8e8e8;
     border-radius:20px;
@@ -647,6 +707,14 @@ flex-shrink:0;
     width:auto;
     margin:28px 24px;
     background:#ededed;
+}
+
+.product-options-panel .product-option-divider{
+    width:auto;
+    max-width:calc(100% - 48px);
+    margin-left:24px;
+    margin-right:24px;
+    box-sizing:border-box;
 }
 
 .product-colors,
@@ -779,7 +847,12 @@ align-items: center;
     cursor:pointer;
 
     transition:
-        all .25s ease;
+        background-color .2s ease,
+        border-color .2s ease,
+        color .2s ease,
+        box-shadow .2s ease;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
 
 }
 
@@ -798,16 +871,17 @@ align-items: center;
 
 }
 
-.color-btn:hover,
-.size-btn:hover,
-.product-option-btn:hover{
+@media (hover:hover) and (pointer:fine){
+    .color-btn:hover,
+    .size-btn:hover,
+    .product-option-btn:hover{
+        border-color:#E5A484;
+        box-shadow:0 3px 8px rgba(0,0,0,.035);
+    }
+}
 
-    transform:translateY(-2px);
-
-    border-color:#E5A484;
-
-    box-shadow:0 3px 8px rgba(0,0,0,.035);
-
+.product-option-btn:active{
+    transform:none;
 }
 
 /* ==========================================================
@@ -1389,7 +1463,6 @@ align-items: center;
         text-overflow:ellipsis;
     }
 }
-
 
 /* ---------- CONFIRM POPUP ---------- */
 
@@ -2163,13 +2236,8 @@ align-items: center;
     display:none;
 }
 
-.review-eligibility{
-    margin:0;
-    color:#666;
-}
-
 #review-form{
-    margin-top:20px;
+    margin-top:0;
 }
 
 #review-form fieldset{
@@ -2243,11 +2311,6 @@ align-items: center;
 .review-submit:disabled{
     cursor:wait;
     opacity:.6;
-}
-
-.review-empty{
-    color:#888;
-    text-align:center;
 }
 
 .review-list{
@@ -2446,7 +2509,12 @@ align-items: center;
 
     .review-compose{
         padding:18px;
+        margin-bottom:14px;
         border-radius:14px;
+    }
+
+    .related-products{
+        margin-top:22px;
     }
 
     .review-list{
@@ -2857,7 +2925,7 @@ align-items: center;
 
 @media (max-width:600px){
     .product-options-panel{
-        margin:14px 24px;
+        margin:4px 24px 14px;
         width:auto;
         padding:20px 0;
         border-radius:16px;
@@ -2871,7 +2939,10 @@ align-items: center;
 
     .product-options-panel > .section-divider,
     .product-option-divider{
-        margin:20px 16px;
+        width:auto;
+        max-width:calc(100% - 48px);
+        margin:20px 24px;
+        box-sizing:border-box;
     }
 
     .cart,
@@ -2880,7 +2951,7 @@ align-items: center;
 }
     .product-title-section{
         margin-top:12px;
-        margin-bottom:18px;
+        margin-bottom:8px;
     }
 
     .product-layout{
@@ -3020,7 +3091,11 @@ align-items: center;
         border-radius:999px;
         border:1px solid #ececec;
         background:#fff;
-        transition:.25s ease;
+        transition:
+            background-color .2s ease,
+            border-color .2s ease,
+            color .2s ease,
+            box-shadow .2s ease;
     }
 
     .product-bottom-bar{

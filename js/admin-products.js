@@ -19,11 +19,21 @@ import {
 const auth = window.auth;
 const db = window.db;
 const storage = window.storage;
+const toast = document.querySelector(".admin-products-toast");
+let toastTimer;
+
+function showToast(message) {
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+}
 
 onAuthStateChanged(auth, async (user) => {
 
     if (!user) {
-        window.location.href = "index.html";
+        window.location.href = "admin-login.html";
         return;
     }
 
@@ -32,14 +42,14 @@ onAuthStateChanged(auth, async (user) => {
     );
 
     if (!userDoc.exists()) {
-        window.location.href = "index.html";
+        window.location.href = "admin-login.html";
         return;
     }
 
     const userData = userDoc.data();
 
     if (userData.role !== "admin") {
-        window.location.href = "index.html";
+        window.location.href = "admin-login.html";
         return;
     }
 
@@ -108,11 +118,16 @@ function renderProducts(products) {
 
 }
 
-const products = await loadProducts();
-console.log(products);
-console.log(products.length);
-
+let products = await loadProducts();
 renderProducts(products);
+const productSearch = document.querySelector("#product-search");
+
+productSearch?.addEventListener("input", () => {
+    const query = productSearch.value.trim().toLowerCase();
+    renderProducts(products.filter(product =>
+        String(product.title || "").toLowerCase().includes(query)
+    ));
+});
 const modal = document.querySelector(".product-modal");
 
 const addProductBtn = document.querySelector("#add-product-btn");
@@ -156,7 +171,7 @@ productForm.addEventListener("submit", async (e) => {
 const imageFile = document.querySelector("#product-image").files[0];
 
 if (!imageFile) {
-    alert("Please select an image.");
+    showToast("Please select an image.");
     return;
 }
 
@@ -186,13 +201,13 @@ const image = await getDownloadURL(imageRef);
     });
     
 
-    alert("Product added successfully!");
+    showToast("Product added successfully!");
 
     modal.classList.add("hidden");
 
     productForm.reset();
 
-    const products = await loadProducts();
+    products = await loadProducts();
 
     renderProducts(products);
 

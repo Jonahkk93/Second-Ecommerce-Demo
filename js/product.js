@@ -336,9 +336,7 @@ let pendingItemDeletion = null;
 const sidePanelBackdrop = document.querySelector(".side-panel-backdrop");
 const reviewCompose = document.querySelector(".review-compose");
 const reviewForm = document.querySelector("#review-form");
-const reviewEligibility = document.querySelector(".review-eligibility");
 const reviewList = document.querySelector(".review-list");
-const reviewEmpty = document.querySelector(".review-empty");
 const reviewsReadMore = document.querySelector(".reviews-read-more");
 const relatedProductsGrid = document.querySelector(".related-products-grid");
 const relatedProducts = document.querySelector(".related-products");
@@ -439,7 +437,6 @@ function reviewDate(value) {
 
 function renderReviewList(reviews) {
     reviewList.replaceChildren();
-    reviewEmpty.hidden = reviews.length > 0;
     reviewsExpanded = false;
     reviewsReadMore.hidden = reviews.length <= 2;
     reviewsReadMore.textContent = "Read more";
@@ -499,8 +496,6 @@ function renderReviewList(reviews) {
             updateButton.textContent = "Update review";
             updateButton.addEventListener("click", () => {
                 reviewCompose.hidden = false;
-                reviewEligibility.hidden = false;
-                reviewEligibility.textContent = "Update your verified review.";
                 reviewForm.hidden = false;
                 reviewSubmit.textContent = "Update review";
                 reviewText.focus();
@@ -563,8 +558,6 @@ async function loadProductReviews() {
         renderReviewList(reviews);
     } catch (error) {
         console.error("Unable to load reviews:", error);
-        reviewEmpty.hidden = false;
-        reviewEmpty.textContent = "Reviews could not be loaded right now.";
     }
 }
 
@@ -583,26 +576,19 @@ async function customerPurchasedProduct(user) {
 }
 
 async function initializeReviewForm(user) {
-    reviewCompose.hidden = false;
+    reviewCompose.hidden = true;
     reviewForm.hidden = true;
-    reviewEligibility.hidden = false;
     setReviewRating(0);
     reviewText.value = "";
     currentReviewExists = false;
 
     if (!user) {
-        reviewEligibility.hidden = true;
-        reviewCompose.hidden = true;
         return;
     }
-
-    reviewEligibility.textContent = "Checking your purchase history…";
 
     try {
         const eligible = await customerPurchasedProduct(user);
         if (!eligible) {
-            reviewEligibility.hidden = true;
-            reviewCompose.hidden = true;
             return;
         }
 
@@ -615,19 +601,16 @@ async function initializeReviewForm(user) {
             reviewText.value = data.text || "";
             setReviewRating(Number(data.rating || 0));
             reviewSubmit.textContent = "Update review";
-            reviewEligibility.hidden = true;
             reviewForm.hidden = true;
             reviewCompose.hidden = true;
         } else {
             reviewSubmit.textContent = "Post review";
-            reviewEligibility.textContent =
-                "Verified purchase — tell us what you think.";
+            reviewCompose.hidden = false;
         }
 
         reviewForm.hidden = currentReviewExists;
     } catch (error) {
         console.error("Unable to verify purchase:", error);
-        reviewEligibility.hidden = true;
         reviewCompose.hidden = true;
     }
 }
@@ -661,12 +644,9 @@ reviewForm?.addEventListener("submit", async event => {
         await setDoc(reviewRef, payload, { merge: true });
         currentReviewExists = true;
         reviewSubmit.textContent = "Update review";
-        reviewEligibility.textContent =
-            "Your verified review has been published.";
         showToast("Review published.", "success");
         await loadProductReviews();
         if (currentReviewExists) {
-            reviewEligibility.hidden = true;
             reviewForm.hidden = true;
             reviewCompose.hidden = true;
         }
@@ -1280,6 +1260,13 @@ if (product) {
         section.className = "product-option-group";
         section.innerHTML = `<h3>${group.label}</h3><div class="product-option-values"></div>`;
         const values = section.querySelector(".product-option-values");
+        if (group.values.length === 1) {
+            values.classList.add("has-one-option");
+        }
+        if (group.values.length <= 2) {
+            values.classList.add("has-few-options");
+            values.style.setProperty("--option-count", group.values.length);
+        }
 
         group.values.forEach(value => {
             const button = document.createElement("button");
@@ -1764,7 +1751,7 @@ document.addEventListener("click", event => {
     syncSidePanelScrollLock();
 });
 
-checkoutButton.addEventListener("click", async () => {
+checkoutButton.addEventListener("click", () => {
     if (!auth.currentUser) {
         showToast("Please sign in before checking out⚠️.", "warning");
         return;
@@ -1777,13 +1764,7 @@ checkoutButton.addEventListener("click", async () => {
         return;
     }
 
-    await saveOrderToFirestore(cartItems);
-
-    showToast("Thank you for your order ❤️", "success");
-
-    saveCart([]);
-    renderSavedCart();
-    updateCartBadge();
+    window.location.href = "checkout.html";
 });
 
 function syncProductSearchClearButton() {
