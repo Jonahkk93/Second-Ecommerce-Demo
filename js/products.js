@@ -23,25 +23,34 @@ sizes: [
     "S",
     "M",
     "L"
+],
+options: [
+    { key: "color", label: "Color", values: ["Pink", "Nude", "White"] },
+    { key: "size", label: "Size", values: ["XS", "S", "M", "L"] }
 ]
 },
 
 {
     id: 2,
-    title: "Pink Explosion",
-    price: "40000",
-    image: "images/IMG_3899.JPG",
+    title: "Press Explosion",
+    price: "25000",
+    image: "images/PressOn Nails_Pink.JPG",
     gallery: [
-        "images/IMG_3899.JPG",
-        "images/IMG_3899.JPG",
-        "images/IMG_3899.JPG"
+        "images/PressOn Nails_Pink.JPG",
+        "images/PressOn Nails_Purple.PNG",
+        "images/PressOn Nails_BabyBlue.PNG"
 
     ],
-    description: "Pink Explosion is a vibrant, high-impact press-on nail set designed for anyone who loves a playful burst of colour. Featuring bright pink tones, delicate French-inspired details, and a touch of glitter, each nail creates a polished statement look with minimal effort. The lightweight set is comfortable for everyday wear, easy to apply at home, and ideal for parties, weekends, photos, and special occasions. Mix the sizes for your most natural fit, then pair Pink Explosion with your favourite rings and accessories for a cheerful finish that stands out beautifully from every angle.",
+    galleries: {
+        "Pink": ["images/PressOn Nails_Pink.JPG"],
+        "Purple": ["images/PressOn Nails_Purple.PNG"],
+        "Baby Blue": ["images/PressOn Nails_BabyBlue.PNG"]
+    },
+    description: " Press Explosion is a vibrant, high-impact press-on nail set designed for anyone who loves a playful burst of colour. Featuring bright pink tones, delicate French-inspired details, and a touch of glitter, each nail creates a polished statement look with minimal effort. The lightweight set is comfortable for everyday wear, easy to apply at home, and ideal for parties, weekends, photos, and special occasions. Mix the sizes for your most natural fit, then pair Pink Explosion with your favourite rings and accessories for a cheerful finish that stands out beautifully from every angle.",
    colors: [
     "Pink",
-    "French",
-    "Glitter"
+    "Purple",
+    "Baby Blue"
 ],
 
 sizes: [
@@ -49,6 +58,10 @@ sizes: [
     "S",
     "M",
     "L"
+],
+options: [
+    { key: "color", label: "Color", values: ["Pink", "Purple", "Baby Blue"] },
+    { key: "size", label: "Size", values: ["XS", "S", "M", "L"] }
 ]
 },
 
@@ -62,7 +75,11 @@ sizes: [
     ],
     description: "Product description coming soon.",
     colors: ["Clear"],
-    sizes: ["100ml"]
+    sizes: ["100ml"],
+    options: [
+        { key: "color", label: "Color", values: ["Clear"] },
+        { key: "size", label: "Size", values: ["100ml"] }
+    ]
 },
 
 {
@@ -75,7 +92,11 @@ sizes: [
     ],
     description: "Product description coming soon.",
     colors: ["White"],
-    sizes: ["Medium"]
+    sizes: ["Medium"],
+    options: [
+        { key: "color", label: "Color", values: ["White"] },
+        { key: "size", label: "Size", values: ["Medium"] }
+    ]
 },
 
 {
@@ -88,7 +109,11 @@ sizes: [
     ],
     description: "Product description coming soon.",
     colors: ["Pink"],
-    sizes: ["15ml"]
+    sizes: ["15ml"],
+    options: [
+        { key: "color", label: "Color", values: ["Pink"] },
+        { key: "size", label: "Size", values: ["15ml"] }
+    ]
 },
 
 {
@@ -101,7 +126,11 @@ sizes: [
     ],
     description: "Product description coming soon.",
     colors: ["Black"],
-    sizes: ["Medium"]
+    sizes: ["Medium"],
+    options: [
+        { key: "color", label: "Color", values: ["Black"] },
+        { key: "size", label: "Size", values: ["Medium"] }
+    ]
 },
 
 {
@@ -114,7 +143,11 @@ sizes: [
     ],
     description: "Product description coming soon.",
     colors: ["Purple"],
-    sizes: ["15ml"]
+    sizes: ["15ml"],
+    options: [
+        { key: "color", label: "Color", values: ["Purple"] },
+        { key: "size", label: "Size", values: ["15ml"] }
+    ]
 },
 
 {
@@ -139,8 +172,8 @@ sizes: [
 
    gallery: [
        "images/Snow White.jpg",
-       "images/IMG_3899.JPG",
-       "images/IMG_3899.JPG"
+       "images/Pearl.PNG",
+       "images/Silver.PNG"
    ],
 
     description: "Product description coming soon.",
@@ -156,6 +189,10 @@ sizes: [
     "M",
     "L",
     "XL"
+],
+options: [
+    { key: "color", label: "Color", values: ["Snow White", "Pearl", "Silver"] },
+    { key: "size", label: "Size", values: ["XS", "S", "M", "L", "XL"] }
 ]
 },
 
@@ -169,20 +206,72 @@ sizes: [
     ],
     description: "Product description coming soon.",
     colors: ["Purple"],
-    sizes: ["15ml"]
+    sizes: ["15ml"],
+    options: [
+        { key: "color", label: "Color", values: ["Purple"] },
+        { key: "size", label: "Size", values: ["15ml"] }
+    ]
 },
 
 {
     id: 10,
-    title: "Black Wedges",
-    price: "31000",
-    image: "images/Shop3.jpg",
+    title: "Human-Hair Wig",
+    price: "800000",
+    image: "images/Human Wig_Shoulder.PNG",
     gallery: [
-        "images/Shop3.jpg"
+        "images/Human Wig_Shoulder.PNG",
+         "images/Human Wig_MidBack.webp",
+          "images/Human Wig_Waist.PNG",
+    ],
+    sizeGalleries: {
+        "Shoulder": ["images/Human Wig_Shoulder.PNG"],
+        "Mid-Back": ["images/Human Wig_MidBack.webp"],
+        "Waist": ["images/Human Wig_Waist.PNG"]
+    },
+    sizePrices: {
+        "Shoulder": "400000",
+        "Mid-Back": "800000",
+        "Waist": "1200000"
+    },
+    description: "Product description coming soon.",
+    colors: ["Black"],
+    sizeLabel: "Lengths",
+    sizes: ["Shoulder", "Mid-Back", "Waist"],
+    options: [
+        { key: "color", label: "Color", values: ["Black"] },
+        { key: "length", label: "Length", values: ["Shoulder", "Mid-Back", "Waist"] }
+    ],
+    variants: {
+        "Black|Shoulder": {
+            price: "400000",
+            images: ["images/Human Wig_Shoulder.PNG"]
+        },
+        "Black|Mid-Back": {
+            price: "800000",
+            images: ["images/Human Wig_MidBack.webp"]
+        },
+        "Black|Waist": {
+            price: "1200000",
+            images: ["images/Human Wig_Waist.PNG"]
+        }
+    }
+},
+
+{
+    id: 11,
+    title: "Clip-On Lashes",
+    price: "40000",
+    image: "images/Lashes.webp",
+    gallery: [
+        "images/Lashes.webp"
     ],
     description: "Product description coming soon.",
     colors: ["Black"],
-    sizes: ["Large"]
+    sizes: ["Short", "Medium","Long"],
+    options: [
+        { key: "color", label: "Color", values: ["Black"] },
+        { key: "size", label: "Size", values: ["Short", "Medium", "Long"] }
+    ]
 }
 
 ];

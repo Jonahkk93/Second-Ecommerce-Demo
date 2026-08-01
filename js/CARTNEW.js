@@ -176,7 +176,8 @@ const productModalReadMore = document.querySelector(".product-modal-read-more");
 
 const productModalCart = document.querySelector(".product-modal-cart");
 
-const productModalColorOptions = document.querySelector(".product-modal-color-options");
+const productModalOptions = document.querySelector(".product-modal-options-dynamic");
+const productModalOptionsGroup = document.querySelector(".product-modal-options-group");
 
 
 /* ============================================================
@@ -206,16 +207,32 @@ const toast = document.querySelector(".toast");
 let currentFilter = "all";
 
 let selectedProduct = null;
-let selectedModalColor = "";
-let selectedModalSize = "";
+let selectedModalProduct = null;
+let selectedModalOptions = {};
+let selectedModalPrice = "0";
 const productsById = Object.fromEntries(
     products.map(product => [product.id, product])
 );
 
 function itemIdentity(item) {
-    return [item.id, item.color || "", item.size || ""]
+    const selections = item.selectedOptions && Object.keys(item.selectedOptions).length
+        ? Object.entries(item.selectedOptions).sort(([a], [b]) => a.localeCompare(b))
+        : [["color", item.color || ""], ["size", item.size || ""]];
+    return [item.id, JSON.stringify(selections)]
         .map(value => String(value).trim().toLowerCase())
         .join("::");
+}
+
+function itemOptionEntries(item) {
+    if (item.selectedOptions && Object.keys(item.selectedOptions).length) {
+        return Object.entries(item.selectedOptions).filter(([, value]) => value);
+    }
+    return [["color", item.color || ""], ["size", item.size || ""]]
+        .filter(([, value]) => value);
+}
+
+function itemOptionSummary(item) {
+    return itemOptionEntries(item).map(([, value]) => value).join(" • ");
 }
 
 function mergeCartItems(accountItems, localItems, combineQuantities) {
@@ -687,7 +704,7 @@ function saveWishlist() {
    Creates a JavaScript object from a product card.
 ============================================================ */
 
-function createCartItem(productBox, selectedColor, selectedSize) {
+function createCartItem(productBox, selections = {}, overrides = {}) {
 
     return {
 
@@ -695,12 +712,13 @@ function createCartItem(productBox, selectedColor, selectedSize) {
 
         title: productBox.querySelector(".product-title").textContent,
 
-        price: productBox.querySelector(".price").textContent,
+        price: overrides.price || productBox.querySelector(".price").textContent,
 
-        image: productBox.querySelector(".img-box > img").src,
+        image: overrides.image || productBox.querySelector(".img-box > img").src,
 
-       color: selectedColor || "",
-size: selectedSize || "",
+        selectedOptions: { ...selections },
+        color: selections.color || "",
+        size: selections.size || selections.length || "",
 
         quantity: 1
 
@@ -721,8 +739,9 @@ function createCartBox(cartItem) {
         id: String(cartItem.id)
     });
 
-    if (cartItem.color) productParams.set("color", cartItem.color);
-    if (cartItem.size) productParams.set("size", cartItem.size);
+    itemOptionEntries(cartItem).forEach(([key, value]) =>
+        productParams.set(key, value)
+    );
 
     const productHref = `product.html?${productParams.toString()}`;
 
@@ -755,9 +774,7 @@ function createCartBox(cartItem) {
             </h2>
 
 <div class="cart-variants">
-    ${cartItem.color}
-    ${cartItem.color && cartItem.size ? " • " : ""}
-    ${cartItem.size}
+    ${itemOptionSummary(cartItem)}
 </div>
 
 <span class="cart-price">
@@ -864,6 +881,7 @@ function attachCartEvents(cartBox, cartItem) {
                     title: cartItem.title,
                     price: cartItem.price,
                     image: cartItem.image,
+                    selectedOptions: { ...cartItem.selectedOptions },
                     color: cartItem.color || "",
                     size: cartItem.size || ""
                 });
@@ -871,9 +889,7 @@ function attachCartEvents(cartBox, cartItem) {
 
             cartItems = cartItems.filter(item =>
                 !(
-                    item.id === cartItem.id &&
-                    item.color === cartItem.color &&
-                    item.size === cartItem.size
+                    itemIdentity(item) === itemIdentity(cartItem)
                 )
             );
 
@@ -912,9 +928,7 @@ function attachCartEvents(cartBox, cartItem) {
         requestItemDeletion("cart", () => {
             cartItems = cartItems.filter(item => {
                 return !(
-                    item.id === cartItem.id &&
-                    item.color === cartItem.color &&
-                    item.size === cartItem.size
+                    itemIdentity(item) === itemIdentity(cartItem)
                 );
             });
 
@@ -927,11 +941,7 @@ function attachCartEvents(cartBox, cartItem) {
 
 incrementButton.addEventListener("click", () => {
 
-   const item = cartItems.find(i =>
-    i.id === cartItem.id &&
-    i.color === cartItem.color &&
-    i.size === cartItem.size
-);
+   const item = cartItems.find(i => itemIdentity(i) === itemIdentity(cartItem));
 
     if (!item) return;
 
@@ -947,11 +957,7 @@ incrementButton.addEventListener("click", () => {
 
 decrementButton.addEventListener("click", () => {
 
-    const item = cartItems.find(i =>
-    i.id === cartItem.id &&
-    i.color === cartItem.color &&
-    i.size === cartItem.size
-);
+    const item = cartItems.find(i => itemIdentity(i) === itemIdentity(cartItem));
 
     if (!item) return;
 
@@ -1069,11 +1075,11 @@ cartContent.innerHTML = "";
    ADD PRODUCT TO CART
 ============================================================ */
 
-function addToCart(productBox, selectedColor, selectedSize) {
+function addToCart(productBox, selections = {}, overrides = {}) {
     const cartItem = createCartItem(
-    productBox,
-    selectedColor,
-    selectedSize
+        productBox,
+        selections,
+        overrides
 );
 
     /* --------------------------------------------------------
@@ -1082,11 +1088,7 @@ function addToCart(productBox, selectedColor, selectedSize) {
 
     const existingItem = cartItems.find(item => {
 
-    return (
-        item.title === cartItem.title &&
-        item.color === cartItem.color &&
-        item.size === cartItem.size
-    );
+    return item.title === cartItem.title && itemIdentity(item) === itemIdentity(cartItem);
 
 });
 
@@ -2067,82 +2069,101 @@ function openProductModal(productBox) {
     const product = productsById[id];
 
     if (!product) return;
+    selectedModalProduct = product;
+    selectedModalOptions = {};
 
-productModalImage.src = product.image;
-productModalTitle.textContent = product.title;
+    const optionGroups = Array.isArray(product.options) && product.options.length
+        ? product.options
+        : [
+            product.colors?.length
+                ? { key: "color", label: "Color", values: product.colors }
+                : null,
+            product.sizes?.length
+                ? { key: "size", label: product.sizeLabel || "Size", values: product.sizes }
+                : null
+        ].filter(Boolean);
+
+    const variantKey = () => optionGroups
+        .map(group => selectedModalOptions[group.key] || "")
+        .join("|");
+
+    const updateModalVariant = () => {
+        const color = selectedModalOptions.color || "";
+        const size = selectedModalOptions.size || selectedModalOptions.length || "";
+        const key = variantKey();
+        const variant = product.variants?.[key];
+        const images = variant?.images || variant?.gallery ||
+            product.variantGalleries?.[key] ||
+            product.variantGalleries?.[color]?.[size] ||
+            product.sizeGalleries?.[size] ||
+            product.galleries?.[color] ||
+            product.gallery || [product.image];
+
+        selectedModalPrice = variant?.price ||
+            product.variantPrices?.[key] ||
+            product.variantPrices?.[color]?.[size] ||
+            product.sizePrices?.[size] ||
+            product.colorPrices?.[color] ||
+            product.price;
+
+        productModalImage.src = images[0] || product.image;
+        productModalPrice.textContent =
+            `UGX ${Number(selectedModalPrice).toLocaleString()}`;
+
+        const detailParams = new URLSearchParams({ id: String(product.id) });
+        Object.entries(selectedModalOptions).forEach(([optionKey, value]) => {
+            if (value) detailParams.set(optionKey, value);
+        });
+        const detailHref = `product.html?${detailParams.toString()}`;
+        productModalReadMore.href = detailHref;
+        productModalImageLink.href = detailHref;
+        productModalTitleLink.href = detailHref;
+    };
 
     productModalImage.src = product.image;
     productModalTitle.textContent = product.title;
-    productModalPrice.textContent =
-        `UGX ${Number(product.price).toLocaleString()}`;
     const previewWords = product.description.trim().split(/\s+/).slice(0, 6);
 
     productModalDescription.textContent = `${previewWords.join(" ")}...`;
-    productModalReadMore.href = `product.html?id=${product.id}`;
-    productModalImageLink.href = `product.html?id=${product.id}`;
-    productModalTitleLink.href = `product.html?id=${product.id}`;
-   productModalColorOptions.innerHTML = "";
-   selectedModalColor = product.colors[0];
-   selectedModalSize = product.sizes[0];
+    productModalOptions.replaceChildren();
+    productModalOptionsGroup.hidden = optionGroups.length === 0;
 
-product.colors.forEach((color, index) => {
+    optionGroups.forEach((group, groupIndex) => {
+        selectedModalOptions[group.key] = group.values[0];
 
-    const button = document.createElement("button");
+        if (groupIndex > 0) {
+            const divider = document.createElement("div");
+            divider.className = "product-modal-section-divider";
+            divider.setAttribute("aria-hidden", "true");
+            productModalOptions.appendChild(divider);
+        }
 
-    button.textContent = color;
+        const section = document.createElement("section");
+        section.className = "product-modal-option-group";
+        section.innerHTML = `<h3>${group.label}</h3><div class="product-modal-option-values"></div>`;
+        const values = section.querySelector(".product-modal-option-values");
 
-    button.classList.add("product-modal-color-btn");
+        group.values.forEach((value, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = value;
+            button.className = "product-modal-option-btn";
+            button.classList.toggle("active", index === 0);
+            button.addEventListener("click", () => {
+                values.querySelectorAll(".product-modal-option-btn").forEach(item =>
+                    item.classList.remove("active")
+                );
+                button.classList.add("active");
+                selectedModalOptions[group.key] = value;
+                updateModalVariant();
+            });
+            values.appendChild(button);
+        });
 
-    if (index === 0) {
-        button.classList.add("active");
-    }
-
-    button.addEventListener("click", () => {
-
-        productModalColorOptions
-            .querySelectorAll(".product-modal-color-btn")
-            .forEach(btn => btn.classList.remove("active"));
-
-        button.classList.add("active");
-        selectedModalColor = color;
-        
-
+        productModalOptions.appendChild(section);
     });
 
-    productModalColorOptions.appendChild(button);
-
-});
-const sizeOptions = document.querySelector(".product-modal-size-options");
-
-sizeOptions.innerHTML = "";
-
-product.sizes.forEach((size, index) => {
-
-    const button = document.createElement("button");
-
-    button.textContent = size;
-
-    button.classList.add("product-modal-size-btn");
-
-    if (index === 0) {
-        button.classList.add("active");
-    }
-
-    button.addEventListener("click", () => {
-
-        sizeOptions
-            .querySelectorAll(".product-modal-size-btn")
-            .forEach(btn => btn.classList.remove("active"));
-
-        button.classList.add("active");
-
-        selectedModalSize = size;
-
-    });
-
-    sizeOptions.appendChild(button);
-
-});
+    updateModalVariant();
     productModalOverlay.classList.add("active");
 }
 
@@ -2156,6 +2177,7 @@ function closeProductModal() {
     productModalOverlay.classList.remove("active");
 
     selectedProduct = null;
+    selectedModalProduct = null;
 
 }
 
@@ -2245,8 +2267,11 @@ productModalCart.addEventListener("click", () => {
 
     addToCart(
         selectedProduct,
-        selectedModalColor,
-        selectedModalSize
+        selectedModalOptions,
+        {
+            price: selectedModalPrice,
+            image: productModalImage.src
+        }
     );
 
 });

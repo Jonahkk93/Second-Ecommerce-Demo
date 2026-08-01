@@ -20,9 +20,59 @@ const db = window.db;
 const params = new URLSearchParams(window.location.search);
 
 const productId = Number(params.get("id"));
-const requestedColor = params.get("color");
-const requestedSize = params.get("size");
 const product = products.find(item => item.id === productId);
+
+function getProductOptions(item) {
+    if (Array.isArray(item?.options) && item.options.length) {
+        return item.options.filter(group =>
+            group?.key && Array.isArray(group.values) && group.values.length
+        );
+    }
+
+    const legacyOptions = [];
+    if (item?.colors?.length) {
+        legacyOptions.push({ key: "color", label: "Color", values: item.colors });
+    }
+    if (item?.sizes?.length) {
+        legacyOptions.push({
+            key: "size",
+            label: item.sizeLabel || "Size",
+            values: item.sizes
+        });
+    }
+    return legacyOptions;
+}
+
+const optionGroups = getProductOptions(product);
+let selectedOptions = {};
+
+function selectionKey(selections = selectedOptions) {
+    return optionGroups.map(group => selections[group.key] || "").join("|");
+}
+
+function itemSelections(item) {
+    if (item?.selectedOptions && Object.keys(item.selectedOptions).length) {
+        return item.selectedOptions;
+    }
+    return { color: item?.color || "", size: item?.size || "" };
+}
+
+function sameCartSelection(first, second) {
+    const normalized = item => Object.entries(itemSelections(item))
+        .filter(([, value]) => value)
+        .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey));
+    return JSON.stringify(normalized(first)) === JSON.stringify(normalized(second));
+}
+
+function appendSelectionParams(searchParams, item) {
+    Object.entries(itemSelections(item)).forEach(([key, value]) => {
+        if (value) searchParams.set(key, value);
+    });
+}
+
+function selectionSummary(item) {
+    return Object.values(itemSelections(item)).filter(Boolean).join(" • ");
+}
 const sliderTrack = document.querySelector(".product-slider-track");
 const sliderContainer = document.querySelector(".product-image-container");
 
@@ -52,6 +102,68 @@ function updateSlider(animate = true) {
 function goToSlide(index) {
     currentSlide = Math.max(0, Math.min(index, galleryImages.length - 1));
     updateSlider(true);
+}
+
+function renderProductGallery(images) {
+    const validImages = Array.isArray(images) && images.length
+        ? images
+        : [product.image];
+
+    galleryImages = [...validImages];
+    sliderTrack.innerHTML = galleryImages.map(src => `
+        <div class="product-slide">
+            <img src="${src}" alt="${product.title} variation">
+        </div>
+    `).join("");
+
+    thumbnailsContainer.replaceChildren();
+    galleryImages.forEach((src, index) => {
+        const thumbnail = document.createElement("img");
+        thumbnail.src = src;
+        thumbnail.alt = `${product.title} thumbnail ${index + 1}`;
+        thumbnail.className = "product-thumbnail";
+        thumbnail.addEventListener("click", () => goToSlide(index));
+        thumbnailsContainer.appendChild(thumbnail);
+    });
+
+    currentSlide = 0;
+    updateSlider(false);
+}
+
+function variationGallery(selections = selectedOptions) {
+    const color = selections.color || "";
+    const size = selections.size || selections.length || "";
+    const combinedKey = selectionKey(selections);
+    const variant = product.variants?.[combinedKey];
+    const combinedGallery =
+        variant?.images || variant?.gallery ||
+        product.variantGalleries?.[combinedKey] ||
+        product.variantGalleries?.[color]?.[size];
+    const selectedGallery = combinedGallery ||
+        product.sizeGalleries?.[size] ||
+        product.galleries?.[color];
+    const baseGallery = product.gallery || [product.image];
+
+    if (!selectedGallery) return baseGallery;
+
+    return [...new Set([...selectedGallery, ...baseGallery])];
+}
+
+function variationPrice(selections = selectedOptions) {
+    const color = selections.color || "";
+    const size = selections.size || selections.length || "";
+    const combinedKey = selectionKey(selections);
+    return product.variants?.[combinedKey]?.price ||
+        product.variantPrices?.[combinedKey] ||
+        product.variantPrices?.[color]?.[size] ||
+        product.sizePrices?.[size] ||
+        product.colorPrices?.[color] ||
+        product.price;
+}
+
+function updateVariationPrice() {
+    selectedPrice = variationPrice();
+    productPrice.textContent = `UGX ${Number(selectedPrice).toLocaleString()}`;
 }
 
 let touchStartX = 0;
@@ -128,9 +240,8 @@ const productDescriptionReadMore = document.querySelector(
     ".product-description-read-more"
 );
 
-const colorOptions = document.querySelector(".color-options");
-
-const sizeOptions = document.querySelector(".size-options");
+const dynamicOptions = document.querySelector(".product-options-dynamic");
+const optionsPanel = document.querySelector(".product-options-panel");
 const addTocartIcon = document.querySelector(".product-bottom-cart");
 const quantityMinus = document.querySelector(".quantity-minus");
 
@@ -634,9 +745,7 @@ quantityMinus.addEventListener("click", () => {
         quantityValue.textContent = quantity;
     }
 });
-let selectedColor = "";
-
-let selectedSize = "";
+let selectedPrice = product?.price || "0";
 
 let favorites = JSON.parse(
     localStorage.getItem("favorites")
@@ -823,8 +932,7 @@ function createCartBox(cartItem) {
         id: String(cartItem.id)
     });
 
-    if (cartItem.color) productParams.set("color", cartItem.color);
-    if (cartItem.size) productParams.set("size", cartItem.size);
+    appendSelectionParams(productParams, cartItem);
 
     const productHref = `product.html?${productParams.toString()}`;
     cartBox.classList.add("cart-box");
@@ -851,9 +959,7 @@ function createCartBox(cartItem) {
             </h2>
 
 <div class="cart-variants">
-    ${cartItem.color}
-    ${cartItem.color && cartItem.size ? " • " : ""}
-    ${cartItem.size}
+    ${selectionSummary(cartItem)}
 </div>
 
 <span class="cart-price">
@@ -948,6 +1054,7 @@ function attachCartEvents(cartBox, cartItem) {
                     title: cartItem.title,
                     price: cartItem.price,
                     image: cartItem.image,
+                    selectedOptions: { ...itemSelections(cartItem) },
                     color: cartItem.color || "",
                     size: cartItem.size || ""
                 });
@@ -955,9 +1062,7 @@ function attachCartEvents(cartBox, cartItem) {
 
             cartItems = cartItems.filter(item =>
                 !(
-                    item.id === cartItem.id &&
-                    item.color === cartItem.color &&
-                    item.size === cartItem.size
+                    item.id === cartItem.id && sameCartSelection(item, cartItem)
                 )
             );
 
@@ -997,9 +1102,7 @@ function attachCartEvents(cartBox, cartItem) {
         let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
 
         const item = cartItems.find(i =>
-            i.id === cartItem.id &&
-            i.color === cartItem.color &&
-            i.size === cartItem.size
+            i.id === cartItem.id && sameCartSelection(i, cartItem)
         );
 
         if (!item) return;
@@ -1017,9 +1120,7 @@ function attachCartEvents(cartBox, cartItem) {
         let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
 
         const item = cartItems.find(i =>
-            i.id === cartItem.id &&
-            i.color === cartItem.color &&
-            i.size === cartItem.size
+            i.id === cartItem.id && sameCartSelection(i, cartItem)
         );
 
         if (!item) return;
@@ -1041,9 +1142,7 @@ function attachCartEvents(cartBox, cartItem) {
 
             cartItems = cartItems.filter(i =>
                 !(
-                    i.id === cartItem.id &&
-                    i.color === cartItem.color &&
-                    i.size === cartItem.size
+                    i.id === cartItem.id && sameCartSelection(i, cartItem)
                 )
             );
 
@@ -1148,25 +1247,8 @@ function updateFavoriteIcon() {
 }
 
 if (product) {
-    galleryImages = product.gallery || [product.image];
-
-    sliderTrack.innerHTML = galleryImages.map(src => `
-        <div class="product-slide">
-            <img src="${src}" alt="Product image">
-        </div>
-    `).join("");
-
-    thumbnailsContainer.innerHTML = "";
-
-    galleryImages.forEach((src, index) => {
-        const thumbnail = document.createElement("img");
-        thumbnail.src = src;
-        thumbnail.className = "product-thumbnail";
-        thumbnail.addEventListener("click", () => {
-            goToSlide(index);
-        });
-        thumbnailsContainer.appendChild(thumbnail);
-    });
+    renderProductGallery(product.gallery || [product.image]);
+    optionsPanel.hidden = optionGroups.length === 0;
 
     productTitle.textContent = product.title;
     productPrice.textContent =
@@ -1181,53 +1263,47 @@ if (product) {
             productDescription.scrollHeight <= productDescription.clientHeight + 1;
     });
 
-    colorOptions.innerHTML = "";
-    product.colors.forEach(color => {
-        colorOptions.innerHTML += `
-            <button class="color-btn">${color}</button>
-        `;
-    });
+    dynamicOptions.replaceChildren();
+    optionGroups.forEach((group, index) => {
+        const requestedValue = params.get(group.key);
+        selectedOptions[group.key] = group.values.includes(requestedValue)
+            ? requestedValue
+            : group.values[0];
 
-    sizeOptions.innerHTML = "";
-    product.sizes.forEach(size => {
-        sizeOptions.innerHTML += `
-                <button class="size-btn">${size}</button>
-            `;
-    });
+        if (index > 0) {
+            const divider = document.createElement("div");
+            divider.className = "section-divider product-option-divider";
+            dynamicOptions.appendChild(divider);
+        }
 
-    goToSlide(0);
+        const section = document.createElement("section");
+        section.className = "product-option-group";
+        section.innerHTML = `<h3>${group.label}</h3><div class="product-option-values"></div>`;
+        const values = section.querySelector(".product-option-values");
 
-    const colorButtons = document.querySelectorAll(".color-btn");
-
-    colorButtons.forEach(button => {
-        button.addEventListener("click", () => {
-            colorButtons.forEach(btn =>
-                btn.classList.remove("active")
-            );
-            button.classList.add("active");
-            selectedColor = button.textContent;
-            if (!product.galleries || !product.galleries[selectedColor]) return;
-            galleryImages = [...product.galleries[selectedColor]];
-
-            sliderTrack.innerHTML = galleryImages.map(src => `
-                <div class="product-slide">
-                    <img src="${src}" alt="Product image">
-                </div>
-            `).join("");
-
-            thumbnailsContainer.innerHTML = "";
-            galleryImages.forEach((src, index) => {
-                const thumbnail = document.createElement("img");
-                thumbnail.src = src;
-                thumbnail.className = "product-thumbnail";
-                thumbnail.addEventListener("click", () => {
-                    goToSlide(index);
-                });
-                thumbnailsContainer.appendChild(thumbnail);
+        group.values.forEach(value => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "product-option-btn";
+            button.textContent = value;
+            button.classList.toggle("active", value === selectedOptions[group.key]);
+            button.addEventListener("click", () => {
+                values.querySelectorAll(".product-option-btn").forEach(item =>
+                    item.classList.remove("active")
+                );
+                button.classList.add("active");
+                selectedOptions[group.key] = value;
+                renderProductGallery(variationGallery());
+                updateVariationPrice();
             });
-            goToSlide(0);
+            values.appendChild(button);
         });
+
+        dynamicOptions.appendChild(section);
     });
+
+    renderProductGallery(variationGallery());
+    updateVariationPrice();
 }
 
 productDescriptionReadMore.addEventListener("click", () => {
@@ -1238,65 +1314,24 @@ productDescriptionReadMore.addEventListener("click", () => {
         : "Read less";
 });
 
-selectedColor = product.colors.includes(requestedColor)
-    ? requestedColor
-    : product.colors[0];
-
-selectedSize = product.sizes.includes(requestedSize)
-    ? requestedSize
-    : product.sizes[0];
-
-const initialColorButton = [...document.querySelectorAll(".color-btn")]
-    .find(button => button.textContent.trim() === selectedColor);
-
-const initialSizeButton = [...document.querySelectorAll(".size-btn")]
-    .find(button => button.textContent.trim() === selectedSize);
-
-initialColorButton?.click();
-initialSizeButton?.classList.add("active");
-
-const sizeButtons = document.querySelectorAll(".size-btn");
-
-sizeButtons.forEach(button => {
-
-    button.addEventListener("click", () => {
-
-        sizeButtons.forEach(btn => {
-
-            btn.classList.remove("active");
-
-        });
-
-        button.classList.add("active");
-        selectedSize = button.textContent;
-
-    });
-
-});
-
 addTocartIcon.addEventListener("click", () => {
 
     const cartItem = {
 
         id: product.id,
         title: product.title,
-        price: product.price,
-        image: product.images
-            ? product.images[selectedColor]
-            : product.image,
-        color: selectedColor,
-        size: selectedSize,
+        price: selectedPrice,
+        image: galleryImages[0] || product.image,
+        selectedOptions: { ...selectedOptions },
+        color: selectedOptions.color || "",
+        size: selectedOptions.size || selectedOptions.length || "",
         quantity: quantity
     };
 
     let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
 
     const existingItem = cartItems.find(item => {
-        return (
-            item.id === cartItem.id &&
-            item.color === cartItem.color &&
-            item.size === cartItem.size
-        );
+        return item.id === cartItem.id && sameCartSelection(item, cartItem);
     });
 
     if (existingItem) {
@@ -1370,8 +1405,7 @@ function createWishlistItem(item) {
         id: String(item.id)
     });
 
-    if (item.color) productParams.set("color", item.color);
-    if (item.size) productParams.set("size", item.size);
+    appendSelectionParams(productParams, item);
 
     const productHref = `product.html?${productParams.toString()}`;
 

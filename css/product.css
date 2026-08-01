@@ -642,13 +642,15 @@ flex-shrink:0;
     box-sizing:border-box;
 }
 
-.product-options-panel > .section-divider{
+.product-options-panel > .section-divider,
+.product-option-divider{
     width:auto;
     margin:28px 24px;
     background:#ededed;
 }
 
-.product-colors{
+.product-colors,
+.product-option-group{
 
     margin-bottom:0;
 
@@ -661,7 +663,8 @@ flex-shrink:0;
 }
 
 .product-colors h3,
-.product-sizes h3{
+.product-sizes h3,
+.product-option-group h3{
 
     font-size:14px;
 
@@ -678,7 +681,8 @@ flex-shrink:0;
 }
 
 .color-options,
-.size-options{
+.size-options,
+.product-option-values{
 
     display:flex;
 
@@ -751,7 +755,8 @@ align-items: center;
 }
 
 .color-btn,
-.size-btn{
+.size-btn,
+.product-option-btn{
 
     min-width:58px;
 
@@ -779,7 +784,8 @@ align-items: center;
 }
 
 .color-btn.active,
-.size-btn.active{
+.size-btn.active,
+.product-option-btn.active{
 
     background:#E5A484;
 
@@ -793,7 +799,8 @@ align-items: center;
 }
 
 .color-btn:hover,
-.size-btn:hover{
+.size-btn:hover,
+.product-option-btn:hover{
 
     transform:translateY(-2px);
 
@@ -2838,7 +2845,8 @@ align-items: center;
 .product-title-section,
 .product-description-section,
 .product-colors,
-.product-sizes{
+.product-sizes,
+.product-option-group{
     padding:0 24px;
 }
 
@@ -2856,11 +2864,13 @@ align-items: center;
     }
 
     .product-options-panel .product-colors,
-    .product-options-panel .product-sizes{
+    .product-options-panel .product-sizes,
+    .product-options-panel .product-option-group{
         padding:0 16px;
     }
 
-    .product-options-panel > .section-divider{
+    .product-options-panel > .section-divider,
+    .product-option-divider{
         margin:20px 16px;
     }
 
@@ -2995,12 +3005,14 @@ align-items: center;
     }
 
     .color-options,
-    .size-options{
+    .size-options,
+    .product-option-values{
         gap:10px;
     }
 
     .color-btn,
-    .size-btn{
+    .size-btn,
+    .product-option-btn{
         min-width:54px;
         height:42px;
         font-size:16px;
@@ -3092,7 +3104,8 @@ align-items: center;
     .product-title-section,
     .product-description-section,
     .product-colors,
-    .product-sizes{
+    .product-sizes,
+    .product-option-group{
         padding:0 24px;
     }
 
