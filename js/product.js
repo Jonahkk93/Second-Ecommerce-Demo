@@ -19,6 +19,14 @@ const db = window.db;
 
 const params = new URLSearchParams(window.location.search);
 
+const productPageHeader = document.querySelector(".product-page-header");
+const updateProductHeaderMode = () => {
+    productPageHeader?.classList.toggle("is-scrolled", window.scrollY > 64);
+};
+
+window.addEventListener("scroll", updateProductHeaderMode, { passive: true });
+updateProductHeaderMode();
+
 const productId = Number(params.get("id"));
 const product = products.find(item => item.id === productId);
 
@@ -927,11 +935,15 @@ function createCartBox(cartItem) {
         <div class="cart-swipe-actions" aria-hidden="true">
             <button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist">
                 <img src="images/Icon Folder/Move To Favorites Icon_333.PNG" alt="">
-                <span>Move</span>
+                <span>Wishlist</span>
             </button>
             <button class="cart-swipe-action cart-share" type="button" aria-label="Share item">
                 <img src="images/Icon Folder/Share Icon V2_White.PNG" alt="">
                 <span>Share</span>
+            </button>
+            <button class="cart-swipe-action cart-delete" type="button" aria-label="Delete item">
+                <img src="images/Icon Folder/Delete Icon_White.PNG" alt="">
+                <span>Delete</span>
             </button>
         </div>
         <div class="cart-box-main">
@@ -990,6 +1002,22 @@ function attachCartEvents(cartBox, cartItem) {
     const moveToWishlistButton =
         cartBox.querySelector(".cart-move-wishlist");
     const shareButton = cartBox.querySelector(".cart-share");
+    const swipeDeleteButton = cartBox.querySelector(".cart-delete");
+
+    const confirmCartItemDeletion = () => {
+        requestItemDeletion("cart", () => {
+            let savedCartItems = JSON.parse(localStorage.getItem("cart")) || [];
+
+            savedCartItems = savedCartItems.filter(item => !(
+                item.id === cartItem.id && sameCartSelection(item, cartItem)
+            ));
+
+            saveCart(savedCartItems);
+            renderSavedCart();
+            updateCartBadge();
+            showToast("Deleted", "success");
+        });
+    };
 
     attachCartSwipe(cartBox);
 
@@ -1023,6 +1051,14 @@ function attachCartEvents(cartBox, cartItem) {
         } catch {
             // Sharing failures are intentionally silent.
         }
+    });
+
+    swipeDeleteButton.addEventListener("click", event => {
+        event.stopPropagation();
+        cartBox.classList.remove("is-swiped");
+        cartBox.querySelector(".cart-swipe-actions")
+            ?.setAttribute("aria-hidden", "true");
+        confirmCartItemDeletion();
     });
 
     moveToWishlistButton.addEventListener("click", event => {
@@ -1122,29 +1158,13 @@ function attachCartEvents(cartBox, cartItem) {
         }
     });
 
-    removeButton.addEventListener("click", () => {
-        requestItemDeletion("cart", () => {
-            let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
-
-            cartItems = cartItems.filter(i =>
-                !(
-                    i.id === cartItem.id && sameCartSelection(i, cartItem)
-                )
-            );
-
-            saveCart(cartItems);
-
-            renderSavedCart();
-
-            updateCartBadge();
-            showToast("Deleted", "success");
-        });
-    });
+    removeButton.addEventListener("click", confirmCartItemDeletion);
 }
 
 function attachCartSwipe(cartBox) {
     const main = cartBox.querySelector(".cart-box-main");
     const actions = cartBox.querySelector(".cart-swipe-actions");
+    const deleteAction = cartBox.querySelector(".cart-delete");
     let startX = 0, startY = 0, offset = 0, dragging = false, didSwipe = false;
 
     main.addEventListener("pointerdown", event => {
@@ -1157,6 +1177,7 @@ function attachCartSwipe(cartBox) {
         actions.setAttribute("aria-hidden", "false");
         main.setPointerCapture(event.pointerId);
         main.classList.add("is-dragging");
+        cartBox.classList.add("swipe-dragging");
     });
     main.addEventListener("pointermove", event => {
         if (!dragging) return;
@@ -1166,6 +1187,7 @@ function attachCartSwipe(cartBox) {
             dragging = false;
             main.classList.remove("is-dragging");
             main.style.transform = "";
+            cartBox.classList.remove("delete-armed", "swipe-dragging");
             actions.setAttribute(
                 "aria-hidden",
                 String(!cartBox.classList.contains("is-swiped"))
@@ -1173,14 +1195,32 @@ function attachCartSwipe(cartBox) {
             return;
         }
         if (Math.abs(dx) > 8) didSwipe = true;
-        main.style.transform = `translate3d(${Math.max(-actions.offsetWidth, Math.min(0, offset + dx))}px, 0, 0)`;
+        const rawX = Math.min(0, offset + dx);
+        const overswipe = Math.max(0, -actions.offsetWidth - rawX);
+        const deleteDistance = Math.min(72, main.offsetWidth * .2);
+        const x = rawX < -actions.offsetWidth
+            ? -actions.offsetWidth - Math.min(48, overswipe * .55)
+            : rawX;
+        cartBox.classList.toggle("delete-armed", overswipe >= deleteDistance);
+        main.style.transform = `translate3d(${x}px, 0, 0)`;
     });
-    const finish = event => {
+    const finish = (event, cancelled = false) => {
         if (!dragging) return;
         dragging = false;
         main.classList.remove("is-dragging");
+        const dx = event.clientX - startX;
+        const deleteThreshold = -(actions.offsetWidth + Math.min(72, main.offsetWidth * .2));
+        const shouldDelete = !cancelled && offset + dx <= deleteThreshold;
         const shouldOpen = offset + event.clientX - startX < -actions.offsetWidth * .35;
         main.style.transform = "";
+        cartBox.classList.remove("delete-armed", "swipe-dragging");
+
+        if (shouldDelete) {
+            cartBox.classList.remove("is-swiped");
+            actions.setAttribute("aria-hidden", "true");
+            deleteAction.click();
+            return;
+        }
 
         if (shouldOpen) {
             cartBox.closest(".cart-content")
@@ -1196,8 +1236,8 @@ function attachCartSwipe(cartBox) {
         cartBox.classList.toggle("is-swiped", shouldOpen);
         actions.setAttribute("aria-hidden", String(!shouldOpen));
     };
-    main.addEventListener("pointerup", finish);
-    main.addEventListener("pointercancel", finish);
+    main.addEventListener("pointerup", event => finish(event));
+    main.addEventListener("pointercancel", event => finish(event, true));
     main.addEventListener("click", event => {
         if (!didSwipe) return;
         event.preventDefault();
@@ -1757,9 +1797,49 @@ document.addEventListener("click", event => {
     syncSidePanelScrollLock();
 });
 
+function openCheckoutSigninModal() {
+    const accountOverlay = document.querySelector(".account-overlay");
+    const signinView = document.querySelector(".signin-view");
+    const registerView = document.querySelector(".register-view");
+
+    cart.classList.remove("active");
+    registerView?.classList.remove("active");
+    signinView?.classList.remove("hide");
+    accountOverlay?.classList.add("active");
+    accountOverlay?.setAttribute("aria-hidden", "false");
+    syncSidePanelScrollLock();
+    document.body.style.overflow = "hidden";
+    accountOverlay?.querySelector(".account-modal")?.scrollTo(0, 0);
+
+    requestAnimationFrame(() => {
+        document.getElementById("signin-email")?.focus({ preventScroll: true });
+    });
+}
+
+function closeCheckoutSigninModal() {
+    const accountOverlay = document.querySelector(".account-overlay");
+    accountOverlay?.classList.remove("active");
+    accountOverlay?.setAttribute("aria-hidden", "true");
+    document.querySelector(".register-view")?.classList.remove("active");
+    document.querySelector(".signin-view")?.classList.remove("hide");
+    document.body.style.overflow = "";
+}
+
+document.querySelector(".account-close")?.addEventListener("click", closeCheckoutSigninModal);
+document.querySelector(".account-overlay")?.addEventListener("click", event => {
+    if (event.target === event.currentTarget) closeCheckoutSigninModal();
+});
+document.querySelector(".create-account-btn")?.addEventListener("click", () => {
+    document.querySelector(".signin-view")?.classList.add("hide");
+    document.querySelector(".register-view")?.classList.add("active");
+    document.querySelector(".account-modal")?.scrollTo(0, 0);
+});
+document.querySelector(".back-to-signin-btn")?.addEventListener("click", openCheckoutSigninModal);
+
 checkoutButton.addEventListener("click", () => {
     if (!auth.currentUser) {
         showToast("Please sign in before checking out⚠️.", "warning");
+        openCheckoutSigninModal();
         return;
     }
 

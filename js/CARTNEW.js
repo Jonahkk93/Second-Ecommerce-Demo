@@ -797,6 +797,10 @@ function createCartBox(cartItem) {
                 <img src="images/Icon Folder/Share Icon V2_White.PNG" alt="">
                 <span>Share</span>
             </button>
+            <button class="cart-swipe-action cart-delete" type="button" aria-label="Delete item">
+                <img src="images/Icon Folder/Delete Icon_White.PNG" alt="">
+                <span>Delete</span>
+            </button>
         </div>
         <div class="cart-box-main">
         <a href="${productHref}" class="cart-product-link" aria-label="View ${cartItem.title}">
@@ -865,6 +869,7 @@ function attachCartEvents(cartBox, cartItem) {
     const moveToWishlistButton =
         cartBox.querySelector(".cart-move-wishlist");
     const shareButton = cartBox.querySelector(".cart-share");
+    const swipeDeleteButton = cartBox.querySelector(".cart-delete");
 
     attachCartSwipe(cartBox);
 
@@ -882,6 +887,11 @@ function attachCartEvents(cartBox, cartItem) {
         } catch {
             // Sharing failures are intentionally silent.
         }
+    });
+
+    swipeDeleteButton.addEventListener("click", event => {
+        event.stopPropagation();
+        removeButton.click();
     });
 
     const incrementButton = cartBox.querySelector(".increment");
@@ -1020,6 +1030,7 @@ decrementButton.addEventListener("click", () => {
 function attachCartSwipe(cartBox) {
     const main = cartBox.querySelector(".cart-box-main");
     const actions = cartBox.querySelector(".cart-swipe-actions");
+    const deleteAction = cartBox.querySelector(".cart-delete");
     let startX = 0;
     let startY = 0;
     let offset = 0;
@@ -1034,6 +1045,7 @@ function attachCartSwipe(cartBox) {
         actions.setAttribute("aria-hidden", "false");
         main.setPointerCapture(event.pointerId);
         main.classList.add("is-dragging");
+        cartBox.classList.add("swipe-dragging");
     });
 
     main.addEventListener("pointermove", event => {
@@ -1044,23 +1056,40 @@ function attachCartSwipe(cartBox) {
             dragging = false;
             main.classList.remove("is-dragging");
             main.style.transform = "";
+            cartBox.classList.remove("delete-armed", "swipe-dragging");
             actions.setAttribute(
                 "aria-hidden",
                 String(!cartBox.classList.contains("is-swiped"))
             );
             return;
         }
-        const x = Math.max(-actions.offsetWidth, Math.min(0, offset + dx));
+        const rawX = Math.min(0, offset + dx);
+        const overswipe = Math.max(0, -actions.offsetWidth - rawX);
+        const deleteDistance = Math.min(72, main.offsetWidth * .2);
+        const x = rawX < -actions.offsetWidth
+            ? -actions.offsetWidth - Math.min(48, overswipe * .55)
+            : rawX;
+        cartBox.classList.toggle("delete-armed", overswipe >= deleteDistance);
         main.style.transform = `translate3d(${x}px, 0, 0)`;
     });
 
-    const finish = event => {
+    const finish = (event, cancelled = false) => {
         if (!dragging) return;
         dragging = false;
         main.classList.remove("is-dragging");
         const dx = event.clientX - startX;
+        const deleteThreshold = -(actions.offsetWidth + Math.min(72, main.offsetWidth * .2));
+        const shouldDelete = !cancelled && offset + dx <= deleteThreshold;
         const shouldOpen = offset + dx < -actions.offsetWidth * .35;
         main.style.transform = "";
+        cartBox.classList.remove("delete-armed", "swipe-dragging");
+
+        if (shouldDelete) {
+            cartBox.classList.remove("is-swiped");
+            actions.setAttribute("aria-hidden", "true");
+            deleteAction.click();
+            return;
+        }
 
         if (shouldOpen) {
             cartBox.closest(".cart-content")
@@ -1077,11 +1106,9 @@ function attachCartSwipe(cartBox) {
         actions.setAttribute("aria-hidden", String(!shouldOpen));
     };
 
-    main.addEventListener("pointerup", finish);
-    main.addEventListener("pointercancel", finish);
+    main.addEventListener("pointerup", event => finish(event));
+    main.addEventListener("pointercancel", event => finish(event, true));
 }
-
-
 
 /* ============================================================
    RENDER SAVED CART
@@ -2362,6 +2389,14 @@ function initializeApp() {
     ----------------------------------------- */
 
     searchInput.value = "";
+    const categoryPages = {
+        "/nails.html": { filter: "press-ons", title: "Press-On Nails" },
+        "/lashes.html": { filter: "lashes", title: "Lashes" },
+        "/productspage.html": { filter: "products", title: "Products" },
+        "/wigs.html": { filter: "wigs", title: "Wigs" }
+    };
+    const pageName = `/${window.location.pathname.split("/").pop().toLowerCase()}`;
+    const categoryPage = categoryPages[pageName];
     const params = new URLSearchParams(window.location.search);
 const search = params.get("search");
 
@@ -2374,7 +2409,7 @@ if (search) {
     searchInput.value = search;
     applyCategoryFilter(currentFilter);
 
-    window.history.replaceState({}, "", "index.html");
+    window.history.replaceState({}, "", window.location.pathname);
 }
 
 
@@ -2385,7 +2420,17 @@ if (search) {
        Default Filter
     ----------------------------------------- */
 
-    currentFilter = "all";
+    currentFilter = categoryPage?.filter || "all";
+
+    if (categoryPage) {
+        document.title = `${categoryPage.title} | MPWR`;
+        const sectionTitle = document.querySelector(".section-title");
+        if (sectionTitle) sectionTitle.textContent = categoryPage.title;
+
+        filterButtons.forEach(button => {
+            button.classList.toggle("active", button.dataset.filter === currentFilter);
+        });
+    }
 
     if (!search) {
     applyCategoryFilter(currentFilter);

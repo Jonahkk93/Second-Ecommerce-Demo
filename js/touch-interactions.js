@@ -38,4 +38,16 @@
 
     document.addEventListener("pointerup", finishTouch, true);
     document.addEventListener("pointercancel", finishTouch, true);
+
+    // Close swipe actions in any cart when the surrounding background is touched.
+    document.addEventListener("pointerdown", event => {
+        if (event.target.closest?.(".cart-box.is-swiped")) return;
+
+        document.querySelectorAll(".cart-box.is-swiped").forEach(cartBox => {
+            cartBox.classList.remove("is-swiped", "delete-armed", "swipe-dragging");
+            cartBox.querySelector(".cart-box-main")?.style.removeProperty("transform");
+            cartBox.querySelector(".cart-swipe-actions")
+                ?.setAttribute("aria-hidden", "true");
+        });
+    }, true);
 })();
