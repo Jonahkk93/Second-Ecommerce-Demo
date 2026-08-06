@@ -790,7 +790,7 @@ function createCartBox(cartItem) {
     cartBox.innerHTML = `
         <div class="cart-swipe-actions" aria-hidden="true">
             <button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist">
-                <img src="images/Icon Folder/Move To Favorites Icon_333.PNG" alt="">
+                <img src="images/Icon Folder/Move To Favorites Outline Icon_White.PNG" alt="">
                 <span>Wishlist</span>
             </button>
             <button class="cart-swipe-action cart-share" type="button" aria-label="Share item">

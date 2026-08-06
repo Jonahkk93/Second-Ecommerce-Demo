@@ -263,7 +263,7 @@ options: [
     price: "40000",
     image: "images/Lashes.webp",
     gallery: [
-        "images/Lashes.webp"
+        "images/Human Wig_Shoulder.PNG"
     ],
     description: "Product description coming soon.",
     colors: ["Black"],
@@ -272,6 +272,149 @@ options: [
         { key: "color", label: "Color", values: ["Black"] },
         { key: "size", label: "Size", values: ["Short", "Medium", "Long"] }
     ]
+},
+
+{
+    id: 12,
+    title: "Human-Curly Wig",
+    price: "700000",
+    image: "images/Wigs/Human Curly Wig.PNG",
+    gallery: [
+        "images/Wigs/Human Curly Wig.PNG",
+         "images/Wigs/Human Curly Wig.PNG",
+          "images/Wigs/Human Curly Wig.PNG",
+    ],
+    sizeGalleries: {
+        "Shoulder": ["images/Wigs/Human Curly Wig.PNG"],
+    },
+    sizePrices: {
+        "Shoulder": "700000",
+    },
+    description: "Product description coming soon.",
+    colors: ["Black"],
+    sizeLabel: "Lengths",
+    sizes: ["Shoulder"],
+    options: [
+        { key: "color", label: "Color", values: ["Black"] },
+        { key: "length", label: "Length", values: ["Shoulder"] }
+    ],
+    variants: {
+        "Black|Shoulder": {
+            price: "700000",
+            images: ["images/Wigs/Human Curly Wig.PNG"]
+        }
+    }
+},
+
+{
+    id: 13,
+    title: "Human-Curly Wig",
+    price: "700000",
+    image: "images/Wigs/Human Hair Wig 2_Shoulder.PNG",
+    gallery: [
+        "images/Wigs/Human Hair Wig 2_Shoulder.PNG",
+        "images/Wigs/Human Hair Wig 2_Waist.JPG",
+    ],
+    sizeGalleries: {
+        "Shoulder": ["images/Wigs/Human Hair Wig 2_Shoulder.PNG"],
+         "Waist": ["images/Wigs/Human Hair Wig 2_Waist.JPG"],
+    },
+    sizePrices: {
+        "Shoulder": "600000",
+        "Waist": "1000000",
+    },
+    description: "Pblah blah blah blah description words and stuff.",
+    colors: ["Black"],
+    sizeLabel: "Lengths",
+    sizes: ["Shoulder", "Waist"],
+    options: [
+        { key: "color", label: "Color", values: ["Black"] },
+        { key: "length", label: "Length", values: ["Shoulder", "Waist"] }
+    ],
+    variants: {
+        "Black|Shoulder": {
+            price: "600000",
+            images: ["images/Wigs/Human Hair Wig 2_Shoulder.PNG"]
+        },
+         "Black|Waist": {
+            price: "1000000",
+            images: ["images/Wigs/Human Hair Wig 2_Waist.JPG"]
+        }
+    }
+},
+
+
+{
+    id: 14,
+    title: "Synthetic Wig",
+    price: "600000",
+    image: "images/Wigs/Synthetic Wig_Waist.JPG",
+    gallery: [
+        "images/Wigs/Synthetic Wig_Waist.JPG",
+        "images/Wigs/Synthetic Wig_Shoulder.PNG",
+        
+    ],
+    sizeGalleries: {
+        "Shoulder": ["images/Wigs/Synthetic Wig_Shoulder.PNG"],
+        "Waist": ["images/Wigs/Synthetic Wig_Waist.JPG"]
+         
+    },
+    sizePrices: {
+        "Shoulder": "600000",
+        "Waist": "1000000",
+    },
+    description: "blah blah blah blah description words and stuff.",
+    colors: ["Black"],
+    sizeLabel: "Lengths",
+    sizes: ["Shoulder", "Waist"],
+    options: [
+        { key: "color", label: "Color", values: ["Black"] },
+        { key: "length", label: "Length", values: ["Shoulder", "Waist"] }
+    ],
+    variants: {
+         "Black|Shoulder": {
+            price: "600000",
+            images: ["images/Wigs/Synthetic Wig_Shoulder.PNG"]
+        },
+         "Black|Waist": {
+            price: "1000000",
+            images: ["images/Wigs/Synthetic Wig_Waist.JPG"]
+        }
+        
+    }
+},
+
+{
+    id: 15,
+    title: "Synthetic-Curly Wig",
+    price: "200000",
+    image: "images/Wigs/Synthetic Curly Wig.JPG",
+    gallery: [
+        "images/Wigs/Synthetic Curly Wig.JPG",
+        
+    ],
+    sizeGalleries: {
+        "Shoulder": ["images/Wigs/Synthetic Curly Wig.JPG"],
+         
+    },
+    sizePrices: {
+        "Shoulder": "200000",
+    },
+    description: "blah blah blah blah description words and stuff.",
+    colors: ["Black"],
+    sizeLabel: "Lengths",
+    sizes: ["Shoulder"],
+    options: [
+        { key: "color", label: "Color", values: ["Black"] },
+        { key: "length", label: "Length", values: ["Shoulder"] }
+    ],
+    variants: {
+         "Black|Shoulder": {
+            price: "200000",
+            images: ["images/Wigs/Synthetic Curly Wig.JPG"]
+        }
+        
+    }
 }
 
 ];

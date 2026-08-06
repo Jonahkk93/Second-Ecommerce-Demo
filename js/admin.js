@@ -11,7 +11,9 @@ import {
     getDocs,
     query,
     orderBy,
-    updateDoc
+    updateDoc,
+    setDoc,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 import { adminAuth, adminDb } from "./admin-firebase.js";
@@ -30,6 +32,35 @@ const adminSignout = document.getElementById("admin-signout");
 const statusConfirm = document.getElementById("admin-status-confirm");
 const statusConfirmName = document.getElementById("admin-status-confirm-name");
 const statusConfirmCancel = statusConfirm.querySelector(".admin-status-cancel");
+
+const BESTSELLER_WINDOW_DAYS = 30;
+
+async function publishBestsellers(orders) {
+    const cutoff = Date.now() - BESTSELLER_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    const totals = new Map();
+
+    orders.forEach(order => {
+        const createdAt = order.createdAt?.toDate?.();
+        if (order.status !== "Delivered" || !createdAt || createdAt.getTime() < cutoff) return;
+
+        (Array.isArray(order.items) ? order.items : []).forEach(item => {
+            const id = String(item.id ?? "").trim();
+            if (!id) return;
+            totals.set(id, (totals.get(id) || 0) + Math.max(Number(item.quantity) || 1, 1));
+        });
+    });
+
+    const products = [...totals.entries()]
+        .map(([id, unitsSold]) => ({ id, unitsSold }))
+        .sort((a, b) => b.unitsSold - a.unitsSold || a.id.localeCompare(b.id))
+        .slice(0, 6);
+
+    await setDoc(doc(db, "storefront", "popular"), {
+        products,
+        windowDays: BESTSELLER_WINDOW_DAYS,
+        updatedAt: serverTimestamp()
+    });
+}
 const statusConfirmApprove = statusConfirm.querySelector(".admin-status-approve");
 let dashboardLoaded = false;
 let resolveStatusConfirmation = null;
@@ -156,6 +187,12 @@ ordersList.innerHTML = `
             orderBy("createdAt", "desc")
         )
     );
+
+    try {
+        await publishBestsellers(snapshot.docs.map(orderDoc => orderDoc.data()));
+    } catch (error) {
+        console.error("Could not refresh the popular-products summary", error);
+    }
 
     ordersList.innerHTML = "";
     let totalOrders = 0;
@@ -336,6 +373,16 @@ option.addEventListener("click", async event => {
 
     try {
         await updateDoc(doc(db, "orders", orderDoc.id), { status: nextStatus });
+        order.status = nextStatus;
+        try {
+            await publishBestsellers(snapshot.docs.map(item =>
+                item.id === orderDoc.id
+                    ? { ...item.data(), status: nextStatus }
+                    : item.data()
+            ));
+        } catch (error) {
+            console.error("Could not refresh the popular-products summary", error);
+        }
     } finally {
         statusTrigger.disabled = false;
     }
