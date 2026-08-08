@@ -16,7 +16,7 @@ export function mountMPWRDrawers(target = document.body) {
                 <button class="cart-menu-toggle" type="button" aria-label="Cart options" aria-expanded="false" aria-controls="cart-actions-menu"><img src="images/Icon Folder/3 Dots Icon_Black.PNG" alt=""></button>
                 <div class="cart-actions-menu" id="cart-actions-menu" role="menu" hidden>
                     <button class="cart-delete-all" type="button" role="menuitem">Delete all</button>
-                    <button class="cart-share-all" type="button" role="menuitem">Share cart</button>
+                    <button class="cart-share-all" type="button" role="menuitem">Share Cart</button>
                 </div>
                 <button class="cart-close-button" type="button" aria-label="Close cart"><img src="images/Icon Folder/Close Icon_333.PNG" class="ri-close-line" id="cart-close" alt=""></button>
             </div>
