@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Search | MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/search-page.css">
+    <script src="js/products.js" defer></script>
+    <script src="js/search-page.js" defer></script>
+</head>
+<body>
+    <header class="search-page-header">
+        <button class="search-back" type="button" aria-label="Go back">
+            <img src="images/Icon Folder/Back Icon Left_Gray.PNG" alt="">
+        </button>
+        <form class="search-form" role="search">
+            <label class="visually-hidden" for="page-search-input">Search products</label>
+            <button class="search-submit" type="submit" aria-label="Search">
+                <img src="images/Search icon black .png" alt="">
+            </button>
+            <input id="page-search-input" type="search" placeholder="Search products..." autocomplete="off" enterkeyhint="search" aria-autocomplete="list" aria-expanded="false">
+            <div class="live-search-suggestions" role="listbox" aria-label="Search suggestions" hidden></div>
+        </form>
+    </header>
+
+    <main class="search-page-main">
+        <section class="search-discovery" aria-label="Search suggestions">
+            <div class="search-section-heading">
+                <h1>Recently searched</h1>
+                <button class="clear-recent" type="button" aria-label="Clear recent searches">Clear</button>
+            </div>
+            <div class="search-chips recent-searches"></div>
+
+            <section class="suggested-searches-section">
+                <h2>Suggested searches</h2>
+                <div class="search-chips suggested-searches"></div>
+            </section>
+        </section>
+
+        <section class="search-results-section" aria-labelledby="search-results-title">
+            <div class="results-heading">
+                <div>
+                    <p class="results-kicker">Explore MPWR</p>
+                    <h2 id="search-results-title">Popular picks</h2>
+                </div>
+                <span class="results-count" aria-live="polite"></span>
+            </div>
+            <div class="search-results product-content"></div>
+            <div class="search-empty" hidden>
+                <h2>No products found</h2>
+                <p>Try another product name, color, size, or category.</p>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

@@ -60,3 +60,12 @@ summary{
     filter:none !important;
     transition:none !important;
 }
+
+/* Gallery arrows rely on this transform for vertical centering. */
+.gallery-arrow:hover,
+.gallery-arrow:focus,
+.gallery-arrow:active,
+.using-touch .gallery-arrow:hover{
+    transform:translateY(-50%) !important;
+    transition:none !important;
+}

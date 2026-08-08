@@ -20,6 +20,10 @@
    NAVIGATION
 ============================================================ */
 
+import { mountMPWRDrawers } from "./drawer-component.js";
+
+mountMPWRDrawers(document.body);
+
 import {
     doc,
     getDoc,
@@ -520,8 +524,10 @@ function showToast(message, type = "success") {
 
 function requestItemDeletion(source, action) {
     pendingItemDeletion = action;
-    deleteItemConfirmMessage.textContent =
-        `Are you sure you want to delete this item from your ${source}?`;
+    const deletingWholeCart = source === "cart-all";
+    deleteItemConfirmOverlay.querySelector("h2").textContent = deletingWholeCart ? "Delete All Items" : "Delete Item";
+    deleteItemConfirmMessage.textContent = deletingWholeCart ? "Are you sure you want to delete all items from your cart?" : `Are you sure you want to delete this item from your ${source}?`;
+    deleteItemConfirm.textContent = deletingWholeCart ? "Delete All" : "Delete Item";
     deleteItemConfirmOverlay.classList.add("active");
 }
 
@@ -807,6 +813,9 @@ function createCartBox(cartItem) {
             <img
                 src="${cartItem.image}"
                 class="cart-img"
+                alt="${cartItem.title}"
+                loading="lazy"
+                decoding="async"
             >
         </a>
 
@@ -1299,8 +1308,65 @@ cartIcon.addEventListener("click", () => {
 
 });
 
+const cartMenuToggle = document.querySelector(".cart-menu-toggle");
+const cartActionsMenu = document.querySelector(".cart-actions-menu");
+const cartMenuIcon = cartMenuToggle.querySelector("img");
+let cartMenuIconResetTimer;
+
+function resetCartMenuIcon() {
+    cartMenuIconResetTimer = setTimeout(() => {
+        cartMenuIcon.src = "images/Icon Folder/3 Dots Icon_Black.PNG";
+    }, 220);
+}
+
+cartMenuToggle.addEventListener("pointerdown", () => {
+    clearTimeout(cartMenuIconResetTimer);
+    cartMenuIcon.src = "images/Icon Folder/3 Dots Icon_Light Gray.PNG";
+});
+cartMenuToggle.addEventListener("pointerup", resetCartMenuIcon);
+cartMenuToggle.addEventListener("pointercancel", resetCartMenuIcon);
+
+function closeCartActionsMenu() {
+    cartActionsMenu.hidden = true;
+    cartMenuToggle.setAttribute("aria-expanded", "false");
+}
+
+cartMenuToggle.addEventListener("click", event => {
+    event.stopPropagation();
+    const willOpen = cartActionsMenu.hidden;
+    cartActionsMenu.hidden = !willOpen;
+    cartMenuToggle.setAttribute("aria-expanded", String(willOpen));
+});
+
+document.querySelector(".cart-delete-all").addEventListener("click", () => {
+    closeCartActionsMenu();
+    requestItemDeletion("cart-all", () => {
+        cartItems = [];
+        saveCart();
+        renderSavedCart();
+        showToast("Cart cleared", "success");
+    });
+});
+
+document.querySelector(".cart-share-all").addEventListener("click", async () => {
+    const items = JSON.parse(localStorage.getItem("cart")) || [];
+    if (!items.length) { closeCartActionsMenu(); showToast("Your cart is empty 🛒", "warning"); return; }
+    const text = items.map(item => `${item.quantity || 1} × ${item.title}`).join("\n");
+    try {
+        if (navigator.share) await navigator.share({ title: "My MPWR cart", text });
+        else { await navigator.clipboard.writeText(text); showToast("Cart copied", "success"); }
+    } catch {
+        // Sharing failures are intentionally silent.
+    }
+    closeCartActionsMenu();
+});
+
+document.addEventListener("click", event => { if (!event.target.closest(".cart-header-actions")) closeCartActionsMenu(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape" && !cartActionsMenu.hidden) closeCartActionsMenu(); });
+
 cartClose.addEventListener("click", () => {
 
+    closeCartActionsMenu();
     cart.classList.remove("active");
     syncSidePanelScrollLock();
 
@@ -1387,32 +1453,7 @@ checkoutButton.addEventListener("click", () => {
 ============================================================ */
 
 searchIcon.addEventListener("click", () => {
-
-    if (searchBar.classList.contains("active")) {
-
-        if (productSearchReturnUrl) {
-            window.location.href = productSearchReturnUrl;
-            return;
-        }
-
-        searchBar.classList.remove("active");
-        filterBar.classList.remove("active");
-        document.body.classList.remove("search-open");
-        searchInput.value = "";
-        filterProducts("");
-
-        return;
-
-    }
-
-    searchBar.classList.add("active");
-
-    filterBar.classList.add("active");
-
-    document.body.classList.add("search-open");
-
-    searchInput.focus();
-
+    window.location.href = "search.html";
 });
 
 
@@ -1736,6 +1777,9 @@ function createWishlistItem(item) {
             <img
                 src="${window.normalizeMPWRImagePath?.(item.image, item.id) || item.image}"
                 class="wishlist-img"
+                alt="${item.title}"
+                loading="lazy"
+                decoding="async"
             >
         </a>
 
@@ -2575,5 +2619,23 @@ onAuthStateChanged(auth, async (user) => {
 
     }
 
+});
+
+/* Keep open MPWR pages, drawers, and navigation badges synchronized. */
+window.addEventListener("storage", event => {
+    if (event.storageArea !== localStorage) return;
+    if (event.key === "cart") {
+        cartItems = JSON.parse(event.newValue || "[]");
+        cartItems = window.normalizeMPWRItems?.(cartItems) || cartItems;
+        renderSavedCart();
+        updateCartCount();
+        updateTotalPrice();
+    }
+    if (event.key === "favorites") {
+        favorites = JSON.parse(event.newValue || "[]");
+        favorites = window.normalizeMPWRItems?.(favorites) || favorites;
+        renderWishlist();
+        updateWishlistButtons();
+    }
 });
 

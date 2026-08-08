@@ -2,8 +2,10 @@ import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-
 
 const POPULAR_PRODUCT_LIMIT = 6;
 const grid = document.querySelector("#products > .product-content");
+const pageName = window.location.pathname.split("/").pop().toLowerCase();
+const isHomepage = pageName === "" || pageName === "index.html";
 
-if (grid) {
+if (grid && isHomepage) {
     const cards = [...grid.querySelectorAll(":scope > .product-box")];
     const cardsById = new Map(cards.map(card => [String(card.dataset.id), card]));
 

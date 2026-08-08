@@ -5,6 +5,11 @@
             return response.text();
         })
         .then(markup => {
+            markup = markup.replace(
+                '<a href="index.html" class="logo">MPWR</a>',
+                '<a href="index.html" class="category-back-button" aria-label="Back to home"></a>'
+            );
+
             document.open();
             document.write(markup);
             document.close();

@@ -25,7 +25,7 @@ body {
     display:flex;
     align-items:center;
     justify-content:center;
-    margin-bottom:24px;
+    margin-bottom:30px;
     padding-bottom:0;
     border-bottom:0;
 }
@@ -70,6 +70,7 @@ body {
     .home-category-heading{
         margin-bottom:16px;
         padding-bottom:0;
+        margin-bottom:30px;
     }
 
     .home-category-heading h2{
@@ -145,6 +146,55 @@ header{
     gap: 18px;
 }
 
+.category-back-button{
+    display:block;
+    width:42px;
+    height:42px;
+    flex:0 0 42px;
+    background-image:url("../images/Icon Folder/Back Icon_Black.PNG");
+    background-position:center;
+    background-repeat:no-repeat;
+    background-size:24px 24px;
+    transition:transform .2s ease,opacity .2s ease;
+}
+
+.category-back-button:hover{transform:translateX(-2px);opacity:.8;}
+.category-back-button:active{
+    transform:scale(.92);
+    background-image:url("../images/Icon Folder/Back Icon_Gray.PNG");
+}
+
+.category-page header{
+    height:78px;
+    padding-top:0;
+    padding-bottom:0;
+    flex-wrap:nowrap;
+    align-items:center;
+}
+
+.category-page .header-brand-controls,
+.category-page .nav-icons{
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:center;
+}
+
+.category-page .category-back-button,
+.category-page .main_box,
+.category-page .nav-icons > *{
+    flex-shrink:0;
+}
+
+@media screen and (max-width:600px){
+    .category-page header{height:70px;padding:0 14px;}
+    .category-page .nav-icons{gap:10px;}
+    .category-page .search-image{width:20px;height:20px;}
+    .category-page .wishlist-nav-image,
+    .category-page .account-image{width:21px;height:21px;}
+    .category-page #cart-icon,
+    .category-page .cart-image{width:23px;}
+}
+
 /* Heading Cart icon*/
 #cart-icon {
     position: relative;
@@ -174,6 +224,10 @@ header{
     background: #E5A484;
     border-radius: 50%;
     font-size: 12px;
+    line-height: 1;
+    padding-top: 1px;
+    box-sizing: border-box;
+    font-variant-numeric: tabular-nums;
     color: #fff;
     display: flex;
     justify-content: center;
@@ -690,6 +744,18 @@ header{
     font-weight: 500;
 }
 
+@media screen and (min-width:601px) and (max-width:1440px){
+    .cart-title{
+        display:flex;
+        align-items:center;
+        gap:7px;
+        padding-right:125px;
+        white-space:nowrap;
+    }
+
+    .cart-title-count{flex:0 0 auto;}
+}
+
 /*scroll bar for cart*/
 .cart-content{
     flex: 1;
@@ -784,11 +850,11 @@ header{
 
 /*Image in cart*/
 .cart-img{
-    width:90px;
-    height:90px;
+    display:block;
+    width:100%;
+    height:100%;
     border-radius:10px;
     object-fit:cover;
-    margin-right:18px;
 }
 
 .cart-detail{
@@ -1001,16 +1067,42 @@ header{
 
 /*CLOSE IMAGE*/
 #cart-close{
-    position: absolute;
-    top: 32px;
-    right: 30px;
-    width: 25px;
+    width: 22px;
+
+    height: 22px;
+
+    object-fit: contain;
+    display:block;
     cursor: pointer;
+}
+
+.cart-header-actions{position:absolute;top:25px;right:24px;z-index:4;display:flex;align-items:center;gap:10px;}
+.cart-menu-toggle,.cart-close-button{display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;background:transparent;cursor:pointer;}
+.cart-menu-toggle img{width:25px;height:25px;display:block;object-fit:contain;transform:translateY(1px);}
+.cart-menu-toggle img{transition:transform .25s ease,opacity .25s ease;}
+.cart-menu-toggle:hover img{transform:translateY(-2px) scale(1.08);opacity:.8;}
+.cart-menu-toggle:active img{transform:translateY(1px) scale(.92);}
+.cart-close-button #cart-close{width:22px;height:22px;padding:0;box-sizing:border-box;object-fit:contain;opacity:1;}
+.cart-actions-menu{position:absolute;top:42px;right:38px;width:150px;padding:6px;border:1px solid #ececec;border-radius:10px;background:#fff;box-shadow:0 10px 28px rgba(51,51,51,.16);}
+.cart-actions-menu[hidden]{display:none;}
+.cart-actions-menu button{width:100%;padding:11px 12px;border:0;border-radius:7px;background:transparent;color:#333;font:inherit;text-align:left;cursor:pointer;}
+.cart-actions-menu button:hover,.cart-actions-menu button:focus-visible{background:#f5f5f5;outline:none;}
+.cart-actions-menu .cart-delete-all{color:#b33939;}
+
+@media screen and (min-width:601px) and (max-width:1440px){
+    .cart-header-actions{right:27px;}
 }
 
 .continue-shopping:hover{
     background:#d99273;
     transform:translateY(-2px);
+}
+
+@media screen and (max-width:600px){
+    .cart-header-actions{top:13px;right:27px;gap:9px;}
+    .cart-menu-toggle,.cart-close-button{width:36px;height:36px;padding:0;}
+    .cart-menu-toggle img{width:25px;height:25px;}
+    .cart-close-button #cart-close{width:22px;height:22px;padding:0;box-sizing:border-box;opacity:1;}
 }
 
 .continue-shopping:active{
@@ -1317,9 +1409,13 @@ header{
 
     top: 32px;
 
-    right: 15px;
+    right: 25px;
 
-    width: 25px;
+    width: 22px;
+
+    height: 22px;
+
+    object-fit: contain;
 
     cursor: pointer;
 
@@ -1351,7 +1447,7 @@ header{
 
     align-items: center;
 
-    gap: 15px;
+    gap: 0;
 
     padding: 18px;
 
@@ -3529,11 +3625,28 @@ margin-top:50px;
     flex: 0 0 auto;
 }
 
+.cart-product-link{
+    width:92px;
+    height:112px;
+    min-height:112px;
+    align-self:center;
+    overflow:hidden;
+    margin-right:18px;
+    border-radius:14px;
+}
+
+@media screen and (max-width:600px){
+    .cart-product-link,
+    .wishlist-product-link{margin-right:14px;}
+}
+
 .wishlist-product-link{
-    width: 82px;
-    height: 82px;
+    width: 92px;
+    height: 112px;
+    min-height: 112px;
     overflow: hidden;
-    border-radius: 10px;
+    margin-right: 18px;
+    border-radius: 14px;
 }
 
 .wishlist-product-link .wishlist-img{
@@ -4297,7 +4410,7 @@ body.search-open::before{
         margin:0;
         padding:
             max(15px, env(safe-area-inset-top, 0px))
-            68px
+            125px
             15px
             20px;
         display:flex;
@@ -4311,6 +4424,8 @@ body.search-open::before{
         line-height:1.15;
         font-weight:600;
         letter-spacing:-.3px;
+        white-space:nowrap;
+        flex-wrap:nowrap;
     }
 
     .cart-title-count{
@@ -4446,7 +4561,7 @@ body.search-open::before{
         display:flex;
         align-items:center;
         gap:7px;
-        padding:0 68px 0 18px;
+        padding:0 125px 0 18px;
         font-size:27px;
         line-height:1;
     }
@@ -4457,6 +4572,36 @@ body.search-open::before{
         width:25px;
         height:25px;
         object-fit:contain;
+    }
+}
+
+/*
+ * Keep the homepage attached to the browser viewport after returning from
+ * another page or changing responsive modes. Percentage widths can otherwise
+ * be resolved against a stale, phone-sized containing block in Chromium.
+ */
+html{
+    width:100vw;
+    max-width:none;
+    overflow-x:hidden;
+}
+
+body{
+    width:100%;
+    max-width:none;
+    overflow-x:hidden;
+}
+
+header{
+    width:100vw;
+    max-width:none;
+}
+
+/* Full-size shared drawers on tablet and laptop viewports. */
+@media screen and (min-width:601px){
+    .cart,
+    .wishlist{
+        width:clamp(420px, 32vw, 480px);
     }
 }
 

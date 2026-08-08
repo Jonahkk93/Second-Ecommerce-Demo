@@ -10,6 +10,9 @@ const submitButton = document.getElementById("place-order");
 const mobileFields = document.getElementById("mobile-money-fields");
 const itemsToggle = document.getElementById("order-items-toggle");
 const checkoutBack = document.getElementById("checkout-back");
+const exitOverlay = document.getElementById("checkout-exit-overlay");
+const stayAtCheckout = document.getElementById("checkout-stay");
+const leaveCheckout = document.getElementById("checkout-leave");
 const networkPicker = document.querySelector(".network-picker");
 const networkTrigger = document.querySelector(".network-picker-trigger");
 const networkMenu = document.querySelector(".network-picker-menu");
@@ -18,10 +21,55 @@ let cart = JSON.parse(localStorage.getItem("cart")) || [];
 cart = window.normalizeMPWRItems?.(cart) || cart;
 localStorage.setItem("cart", JSON.stringify(cart));
 let currentUser = null;
+let pendingExitUrl = "index.html";
+let checkoutComplete = false;
 
-checkoutBack.addEventListener("click", () => {
-    sessionStorage.setItem("mpwrOpenCartOnReturn", "true");
+function closeExitConfirmation() {
+    exitOverlay.classList.remove("active");
+    exitOverlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("checkout-exit-open");
+}
+
+function showExitConfirmation(url = "index.html") {
+    pendingExitUrl = url;
+    closeNetworkPicker();
+    exitOverlay.classList.add("active");
+    exitOverlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("checkout-exit-open");
+    stayAtCheckout.focus();
+}
+
+document.addEventListener("click", event => {
+    const link = event.target.closest('a[href]');
+    if (!link || checkoutComplete || link.target === "_blank") return;
+    event.preventDefault();
+    showExitConfirmation(link.href);
 });
+
+stayAtCheckout.addEventListener("click", closeExitConfirmation);
+
+leaveCheckout.addEventListener("click", () => {
+    if (new URL(pendingExitUrl, window.location.href).pathname.endsWith("index.html")) {
+        sessionStorage.setItem("mpwrOpenCartOnReturn", "true");
+    }
+    window.location.href = pendingExitUrl;
+});
+
+exitOverlay.addEventListener("click", event => {
+    if (event.target === exitOverlay) closeExitConfirmation();
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && exitOverlay.classList.contains("active")) closeExitConfirmation();
+});
+
+history.pushState({ checkoutExitGuard: true }, "", window.location.href);
+window.addEventListener("popstate", () => {
+    if (checkoutComplete) return;
+    history.pushState({ checkoutExitGuard: true }, "", window.location.href);
+    showExitConfirmation("index.html");
+});
+
 
 function closeNetworkPicker() {
     networkMenu.hidden = true;
@@ -168,6 +216,7 @@ form.addEventListener("submit", async event => {
         document.querySelector(".order-summary").hidden = true;
         document.getElementById("order-number").textContent = `#${order.id.slice(0, 8).toUpperCase()}`;
         document.getElementById("order-success").hidden = false;
+        checkoutComplete = true;
         window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
         console.error("Checkout failed", error);

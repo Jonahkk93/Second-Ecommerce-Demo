@@ -263,7 +263,7 @@ options: [
     price: "40000",
     image: "images/Lashes.webp",
     gallery: [
-        "images/Human Wig_Shoulder.PNG"
+        "images/Lashes.webp"
     ],
     description: "Product description coming soon.",
     colors: ["Black"],
@@ -391,7 +391,7 @@ options: [
     image: "images/Wigs/Synthetic Curly Wig.JPG",
     gallery: [
         "images/Wigs/Synthetic Curly Wig.JPG",
-        
+        "images/Wigs/Synthetic Curly Wig 2.JPG"
     ],
     sizeGalleries: {
         "Shoulder": ["images/Wigs/Synthetic Curly Wig.JPG"],
@@ -411,7 +411,10 @@ options: [
     variants: {
          "Black|Shoulder": {
             price: "200000",
-            images: ["images/Wigs/Synthetic Curly Wig.JPG"]
+            images: [
+                "images/Wigs/Synthetic Curly Wig.JPG",
+                "images/Wigs/Synthetic Curly Wig 2.JPG"
+            ]
         }
         
     }
@@ -423,6 +426,9 @@ window.products = products;
 /* Keep catalogue image paths portable between localhost and the deployed site. */
 function normalizeMPWRImagePath(source, productId) {
     const fallback = products.find(product => String(product.id) === String(productId))?.image || "";
+    // Clip-On Lashes previously referenced a wig gallery image. Repair any
+    // already-saved cart or order item that still carries that stale thumbnail.
+    if (String(productId) === "11") return fallback;
     if (!source) return fallback;
 
     const value = String(source).trim();

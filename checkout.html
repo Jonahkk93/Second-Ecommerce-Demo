@@ -99,6 +99,17 @@
         </section>
     </main>
 
+    <div class="checkout-exit-overlay" id="checkout-exit-overlay" aria-hidden="true">
+        <section class="checkout-exit-dialog" role="dialog" aria-modal="true" aria-labelledby="checkout-exit-title" aria-describedby="checkout-exit-message">
+            <h2 id="checkout-exit-title">Leaving checkout now?</h2>
+            <p id="checkout-exit-message">Your items are still waiting in your cart. Continue checkout to complete your order.</p>
+            <div class="checkout-exit-actions">
+                <button class="checkout-stay" id="checkout-stay" type="button">Continue to checkout</button>
+                <button class="checkout-leave" id="checkout-leave" type="button">Leave anyway</button>
+            </div>
+        </section>
+    </div>
+
     <script src="js/products.js"></script>
     <script type="module" src="js/firebase.js"></script>
     <script type="module" src="js/checkout.js"></script>

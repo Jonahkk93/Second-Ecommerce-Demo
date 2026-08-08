@@ -83,6 +83,14 @@ function selectionSummary(item) {
 }
 const sliderTrack = document.querySelector(".product-slider-track");
 const sliderContainer = document.querySelector(".product-image-container");
+const galleryPrevious = document.querySelector(".gallery-arrow-prev");
+const galleryNext = document.querySelector(".gallery-arrow-next");
+const galleryStatus = document.querySelector(".gallery-status");
+
+sliderContainer?.classList.toggle(
+    "show-full-gallery-image",
+    optionGroups.some(group => group.key === "length")
+);
 
 const thumbnailsContainer =
     document.querySelector(".product-thumbnails");
@@ -104,23 +112,84 @@ function updateSlider(animate = true) {
 
     document.querySelectorAll(".product-thumbnail").forEach((thumb, i) => {
         thumb.classList.toggle("active", i === currentSlide);
+        thumb.setAttribute("aria-current", i === currentSlide ? "true" : "false");
     });
+
+    const hasMultipleImages = galleryImages.length > 1;
+    galleryPrevious.hidden = !hasMultipleImages;
+    galleryNext.hidden = !hasMultipleImages;
+    galleryPrevious.disabled = !hasMultipleImages;
+    galleryNext.disabled = !hasMultipleImages;
+    galleryStatus.textContent = hasMultipleImages
+        ? `Image ${currentSlide + 1} of ${galleryImages.length}`
+        : "Product image";
+}
+
+function syncOptionsToCurrentSlide() {
+    const currentImage = galleryImages[currentSlide];
+    if (!currentImage || !optionGroups?.length) return;
+
+    let selectionChanged = false;
+
+    optionGroups.forEach(group => {
+        let matchingValue = "";
+
+        if (group.key === "color") {
+            matchingValue = group.values.find(value =>
+                product.galleries?.[value]?.includes(currentImage)
+            ) || "";
+        }
+
+        if (group.key === "size" || group.key === "length") {
+            matchingValue = group.values.find(value =>
+                product.sizeGalleries?.[value]?.includes(currentImage)
+            ) || "";
+        }
+
+        if (!matchingValue || selectedOptions[group.key] === matchingValue) return;
+
+        selectedOptions[group.key] = matchingValue;
+        selectionChanged = true;
+
+        const optionSection = dynamicOptions?.querySelector(
+            `.product-option-group[data-option-key="${group.key}"]`
+        );
+        optionSection?.querySelectorAll(".product-option-btn").forEach(button => {
+            button.classList.toggle("active", button.textContent === matchingValue);
+        });
+    });
+
+    if (selectionChanged) updateVariationPrice();
 }
 
 function goToSlide(index) {
-    currentSlide = Math.max(0, Math.min(index, galleryImages.length - 1));
+    if (galleryImages.length < 2) {
+        currentSlide = 0;
+    } else {
+        currentSlide = (index + galleryImages.length) % galleryImages.length;
+    }
     updateSlider(true);
+    syncOptionsToCurrentSlide();
 }
 
 function renderProductGallery(images) {
-    const validImages = Array.isArray(images) && images.length
+    const sourceImages = Array.isArray(images) && images.length
         ? images
         : [product.image];
+    const validImages = [...new Set(
+        sourceImages
+            .map(source => String(source || "").trim())
+            .filter(Boolean)
+    )];
+
+    if (!validImages.length && product.image) {
+        validImages.push(product.image);
+    }
 
     galleryImages = [...validImages];
-    sliderTrack.innerHTML = galleryImages.map(src => `
+    sliderTrack.innerHTML = galleryImages.map((src, index) => `
         <div class="product-slide">
-            <img src="${src}" alt="${product.title} variation">
+            <img src="${src}" alt="${product.title} variation ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" decoding="async">
         </div>
     `).join("");
 
@@ -130,6 +199,8 @@ function renderProductGallery(images) {
         thumbnail.src = src;
         thumbnail.alt = `${product.title} thumbnail ${index + 1}`;
         thumbnail.className = "product-thumbnail";
+        thumbnail.loading = "lazy";
+        thumbnail.decoding = "async";
         thumbnail.addEventListener("click", () => goToSlide(index));
         thumbnailsContainer.appendChild(thumbnail);
     });
@@ -137,6 +208,30 @@ function renderProductGallery(images) {
     currentSlide = 0;
     updateSlider(false);
 }
+
+[galleryPrevious, galleryNext].filter(Boolean).forEach(control => {
+    control.addEventListener("pointerdown", event => event.stopPropagation());
+    control.addEventListener("touchstart", event => event.stopPropagation(), { passive:true });
+});
+
+galleryPrevious?.addEventListener("click", event => {
+    event.stopPropagation();
+    goToSlide(currentSlide - 1);
+});
+galleryNext?.addEventListener("click", event => {
+    event.stopPropagation();
+    goToSlide(currentSlide + 1);
+});
+sliderContainer?.addEventListener("keydown", event => {
+    if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goToSlide(currentSlide - 1);
+    }
+    if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goToSlide(currentSlide + 1);
+    }
+});
 
 function variationGallery(selections = selectedOptions) {
     const color = selections.color || "";
@@ -236,6 +331,58 @@ function finishTouchSwipe() {
 sliderContainer.addEventListener("touchend", finishTouchSwipe, { passive: true });
 sliderContainer.addEventListener("touchcancel", finishTouchSwipe, { passive: true });
 
+let mouseDragStartX = 0;
+let mouseDragDeltaX = 0;
+let isMouseDragging = false;
+
+sliderContainer.addEventListener("pointerdown", event => {
+    if (
+        event.pointerType !== "mouse" ||
+        galleryImages.length < 2 ||
+        event.target.closest(".gallery-arrow")
+    ) return;
+
+    isMouseDragging = true;
+    mouseDragStartX = event.clientX;
+    mouseDragDeltaX = 0;
+    sliderTrack.style.transition = "none";
+    sliderContainer.setPointerCapture(event.pointerId);
+});
+
+sliderContainer.addEventListener("pointermove", event => {
+    if (!isMouseDragging || event.pointerType !== "mouse") return;
+
+    mouseDragDeltaX = event.clientX - mouseDragStartX;
+    const atEdge =
+        (currentSlide === 0 && mouseDragDeltaX > 0) ||
+        (currentSlide === galleryImages.length - 1 && mouseDragDeltaX < 0);
+    const offset =
+        -(currentSlide * getSlideWidth()) +
+        (mouseDragDeltaX * (atEdge ? 0.28 : 1));
+
+    sliderTrack.style.transform = `translate3d(${offset}px, 0, 0)`;
+});
+
+function finishMouseDrag(event) {
+    if (!isMouseDragging) return;
+
+    const threshold = Math.min(70, getSlideWidth() * 0.18);
+    if (Math.abs(mouseDragDeltaX) >= threshold) {
+        goToSlide(currentSlide + (mouseDragDeltaX < 0 ? 1 : -1));
+    } else {
+        updateSlider(true);
+    }
+
+    isMouseDragging = false;
+    mouseDragDeltaX = 0;
+    if (sliderContainer.hasPointerCapture(event.pointerId)) {
+        sliderContainer.releasePointerCapture(event.pointerId);
+    }
+}
+
+sliderContainer.addEventListener("pointerup", finishMouseDrag);
+sliderContainer.addEventListener("pointercancel", finishMouseDrag);
+
 window.addEventListener("resize", () => updateSlider(false));
 
 const productTitle = document.querySelector(".product-page-title");
@@ -314,6 +461,10 @@ if (productShareIcon) {
 const searchInput = document.querySelector("#search-input");
 const searchClearButton = document.querySelector(".product-search-clear");
 const productBoxes = document.querySelectorAll(".product-box");
+
+searchInput?.addEventListener("focus", () => {
+    window.location.href = "search.html";
+});
 
 
 const cartContent = document.querySelector(".cart-content");
@@ -703,8 +854,10 @@ function showToast(message, type = "success") {
 
 function requestItemDeletion(source, action) {
     pendingItemDeletion = action;
-    deleteItemConfirmMessage.textContent =
-        `Are you sure you want to delete this item from your ${source}?`;
+    const deletingWholeCart = source === "cart-all";
+    deleteItemConfirmOverlay.querySelector("h2").textContent = deletingWholeCart ? "Delete All Items" : "Delete Item";
+    deleteItemConfirmMessage.textContent = deletingWholeCart ? "Are you sure you want to delete all items from your cart?" : `Are you sure you want to delete this item from your ${source}?`;
+    deleteItemConfirm.textContent = deletingWholeCart ? "Delete All" : "Delete Item";
     deleteItemConfirmOverlay.classList.add("active");
 }
 
@@ -948,7 +1101,7 @@ function createCartBox(cartItem) {
         </div>
         <div class="cart-box-main">
         <a href="${productHref}" class="cart-product-link" aria-label="View ${cartItem.title}">
-            <img src="${cartItem.image}" class="cart-img">
+            <img src="${cartItem.image}" class="cart-img" alt="${cartItem.title}" loading="lazy" decoding="async">
         </a>
 
         <div class="cart-detail">
@@ -1290,6 +1443,10 @@ if (product) {
     });
 
     dynamicOptions.replaceChildren();
+    const largestOptionCount = Math.max(0, ...optionGroups.map(group => group.values.length));
+    const hasCompactOptionSet = largestOptionCount > 0 && largestOptionCount <= 4;
+    optionsPanel.classList.toggle("has-compact-options", hasCompactOptionSet);
+
     optionGroups.forEach((group, index) => {
         const requestedValue = params.get(group.key);
         selectedOptions[group.key] = group.values.includes(requestedValue)
@@ -1304,14 +1461,18 @@ if (product) {
 
         const section = document.createElement("section");
         section.className = "product-option-group";
+        section.dataset.optionKey = group.key;
         section.innerHTML = `<h3>${group.label}</h3><div class="product-option-values"></div>`;
         const values = section.querySelector(".product-option-values");
         if (group.values.length === 1) {
             values.classList.add("has-one-option");
         }
-        if (group.values.length <= 2) {
+        if (group.values.length <= 4) {
             values.classList.add("has-few-options");
             values.style.setProperty("--option-count", group.values.length);
+        }
+        if (group.values.length >= 4) {
+            values.classList.add("has-four-columns");
         }
 
         group.values.forEach(value => {
@@ -1319,6 +1480,7 @@ if (product) {
             button.type = "button";
             button.className = "product-option-btn";
             button.textContent = value;
+            button.classList.toggle("has-long-label", String(value).length >= 8);
             button.classList.toggle("active", value === selectedOptions[group.key]);
             button.addEventListener("click", () => {
                 values.querySelectorAll(".product-option-btn").forEach(item =>
@@ -1450,6 +1612,9 @@ function createWishlistItem(item) {
             <img
                 src="${window.normalizeMPWRImagePath?.(item.image, item.id) || item.image}"
                 class="wishlist-img"
+                alt="${item.title}"
+                loading="lazy"
+                decoding="async"
             >
         </a>
 
@@ -1512,6 +1677,8 @@ function createWishlistItem(item) {
             );
 
             saveFavoritesToFirestore();
+
+            updateFavoriteIcon();
 
             renderWishlist();
 
@@ -1763,8 +1930,65 @@ cartIcon.addEventListener("click", () => {
 
 });
 
+const cartMenuToggle = document.querySelector(".cart-menu-toggle");
+const cartActionsMenu = document.querySelector(".cart-actions-menu");
+const cartMenuIcon = cartMenuToggle.querySelector("img");
+let cartMenuIconResetTimer;
+
+function resetCartMenuIcon() {
+    cartMenuIconResetTimer = setTimeout(() => {
+        cartMenuIcon.src = "images/Icon Folder/3 Dots Icon_Black.PNG";
+    }, 220);
+}
+
+cartMenuToggle.addEventListener("pointerdown", () => {
+    clearTimeout(cartMenuIconResetTimer);
+    cartMenuIcon.src = "images/Icon Folder/3 Dots Icon_Light Gray.PNG";
+});
+cartMenuToggle.addEventListener("pointerup", resetCartMenuIcon);
+cartMenuToggle.addEventListener("pointercancel", resetCartMenuIcon);
+
+function closeCartActionsMenu() {
+    cartActionsMenu.hidden = true;
+    cartMenuToggle.setAttribute("aria-expanded", "false");
+}
+
+cartMenuToggle.addEventListener("click", event => {
+    event.stopPropagation();
+    const willOpen = cartActionsMenu.hidden;
+    cartActionsMenu.hidden = !willOpen;
+    cartMenuToggle.setAttribute("aria-expanded", String(willOpen));
+});
+
+document.querySelector(".cart-delete-all").addEventListener("click", () => {
+    closeCartActionsMenu();
+    requestItemDeletion("cart-all", () => {
+        saveCart([]);
+        renderSavedCart();
+        updateCartBadge();
+        showToast("Cart cleared", "success");
+    });
+});
+
+document.querySelector(".cart-share-all").addEventListener("click", async () => {
+    const items = JSON.parse(localStorage.getItem("cart")) || [];
+    if (!items.length) { closeCartActionsMenu(); showToast("Your cart is empty 🛒", "warning"); return; }
+    const text = items.map(item => `${item.quantity || 1} × ${item.title}`).join("\n");
+    try {
+        if (navigator.share) await navigator.share({ title: "My MPWR cart", text });
+        else { await navigator.clipboard.writeText(text); showToast("Cart copied", "success"); }
+    } catch {
+        // Sharing failures are intentionally silent.
+    }
+    closeCartActionsMenu();
+});
+
+document.addEventListener("click", event => { if (!event.target.closest(".cart-header-actions")) closeCartActionsMenu(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape" && !cartActionsMenu.hidden) closeCartActionsMenu(); });
+
 cartClose.addEventListener("click", () => {
 
+    closeCartActionsMenu();
     cart.classList.remove("active");
     syncSidePanelScrollLock();
 
@@ -1904,4 +2128,21 @@ onAuthStateChanged(auth, async (user) => {
     renderSavedCart();
     updateTotalPrice(JSON.parse(localStorage.getItem("cart")) || []);
     updateCartBadge();
+});
+
+/* Synchronize product-page drawers and badges with changes on other pages. */
+window.addEventListener("storage", event => {
+    if (event.storageArea !== localStorage) return;
+    if (event.key === "cart") {
+        const latestCart = window.normalizeMPWRItems?.(JSON.parse(event.newValue || "[]")) || JSON.parse(event.newValue || "[]");
+        renderSavedCart();
+        updateTotalPrice(latestCart);
+        updateCartBadge();
+    }
+    if (event.key === "favorites") {
+        favorites = JSON.parse(event.newValue || "[]");
+        favorites = window.normalizeMPWRItems?.(favorites) || favorites;
+        renderWishlist();
+        updateFavoriteIcon();
+    }
 });
