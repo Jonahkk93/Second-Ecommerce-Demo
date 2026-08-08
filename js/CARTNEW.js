@@ -1993,7 +1993,7 @@ function updateWishlistButtons() {
 
         } else {
 
-            icon.src = "images/Heart-Outline2.PNG";
+            icon.src = "images/optimized/heart-outline.png";
 
         }
 

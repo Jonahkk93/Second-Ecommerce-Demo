@@ -6,51 +6,76 @@
     <title>Search results | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
     <link rel="stylesheet" href="css/CARTNEW.css?v=20260808-3">
-    <link rel="stylesheet" href="css/search-results.css?v=20260808-3">
+    <link rel="stylesheet" href="css/search-results.css?v=20260809-17">
     <script src="js/products.js" defer></script>
-    <script type="module" src="js/search-results.js?v=20260808-8"></script>
-</head>
+    <script type="module" src="js/search-results.js?v=20260809-19"></script>
+    </head>
 <body>
     <header class="results-header">
-        <button class="results-back" type="button" aria-label="Back to search"><img src="images/Icon Folder/Back Icon Left_Gray.PNG" alt=""></button>
-        <form class="results-search" role="search">
-            <img src="images/Search icon black .png" alt="">
-            <input id="results-query" type="search" aria-label="Search products" autocomplete="off">
-            <button class="query-clear" type="button" aria-label="Clear search"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button>
-        </form>
-        <button class="results-wishlist" type="button" aria-label="Open wishlist"><img src="images/Heart4Nav.PNG" alt=""></button>
-        <button class="results-cart" type="button" aria-label="Open cart">
-            <img src="images/Cart black.png" alt="">
-            <span class="results-cart-count" hidden>0</span>
-        </button>
+        <div class="results-nav-row">
+            <button class="product-back-btn" type="button" aria-label="Back to search">
+                <img src="images/optimized/back.png" alt="Back">
+            </button>
+            <form class="results-search" role="search">
+                <img src="images/Search icon black .png" alt="">
+                <input id="results-query" type="search" aria-label="Search products" autocomplete="off">
+                <button class="query-clear" type="button" aria-label="Clear search"><img src="images/optimized/close-icon.png" alt=""></button>
+            </form>
+            <div id="wishlist-nav-icon">
+                <img src="images/optimized/heart-nav.png" class="wishlist-nav-image">
+            </div>
+            <div id="cart-icon">
+                <img src="images/Cart black.png" class="cart-image">
+                <span class="cart-item-count"></span>
+            </div>
+        </div>
+        <section class="results-toolbar" aria-label="Sort and filter products">
+            <select id="sort-results" aria-label="Sort results">
+                <option value="relevance" data-trigger-label="Sort by">Most relevant</option>
+                <option value="popular">Most popular</option>
+                <option value="low">Price: low to high</option>
+                <option value="high">Price: high to low</option>
+            </select>
+            <select id="color-filter" aria-label="Filter by color"><option value="" data-trigger-label="Color">All colors</option></select>
+            <select id="size-filter" aria-label="Filter by size"><option value="" data-trigger-label="Size / length">All sizes / lengths</option></select>
+            <button class="reset-filters" type="button">Clear filters</button>
+        </section>
     </header>
 
     <div class="results-cart-backdrop" aria-hidden="true"></div>
     <div class="results-wishlist-backdrop" aria-hidden="true"></div>
 
-    <main class="results-main">
-        <section class="related-section" aria-labelledby="related-title">
-            <div class="section-line"><h1 id="related-title">Related searches</h1></div>
-            <div class="related-searches"></div>
-        </section>
-
-        <section class="results-toolbar" aria-label="Sort and filter products">
-            <select id="sort-results" aria-label="Sort results">
-                <option value="relevance">Most relevant</option>
-                <option value="popular">Most popular</option>
-                <option value="low">Price: low to high</option>
-                <option value="high">Price: high to low</option>
-            </select>
-            <select id="color-filter" aria-label="Filter by color"><option value="">Color</option></select>
-            <select id="size-filter" aria-label="Filter by size"><option value="">Size / length</option></select>
-            <button class="reset-filters" type="button">Clear filters</button>
-        </section>
-
-        <div class="results-summary">
-            <h2>Results for “<span class="query-label"></span>”</h2>
-            <span class="result-total" aria-live="polite"></span>
+    <div class="product-modal-overlay">
+        <div class="product-modal">
+            <div class="product-modal-top">
+                <div class="product-modal-left">
+                    <a class="product-modal-image-link" href="product.html" aria-label="View product details">
+                        <img src="" class="product-modal-image" alt="">
+                    </a>
+                </div>
+                <div class="product-modal-right">
+                    <div class="product-modal-header">
+                        <a class="product-modal-title-link" href="product.html">
+                            <h2 class="product-modal-title"></h2>
+                        </a>
+                    </div>
+                    <span class="product-modal-price"></span>
+                    <button type="button" class="product-modal-favorite">Add To Favorites</button>
+                    <div class="product-modal-description-row">
+                        <p class="product-modal-description">Product description coming soon...</p>
+                        <a class="product-modal-read-more" href="product.html">Read more</a>
+                    </div>
+                </div>
+            </div>
+            <div class="product-modal-options-group">
+                <div class="product-modal-options-dynamic"></div>
+            </div>
+            <button class="product-modal-cart" type="button">Add to Cart</button>
         </div>
-        <div class="results-grid"></div>
+    </div>
+
+    <main class="results-main">
+        <div class="results-grid product-content"></div>
         <section class="no-results" hidden><h2>No products found</h2><p>Try a different search or clear the filters.</p></section>
     </main>
 </body>

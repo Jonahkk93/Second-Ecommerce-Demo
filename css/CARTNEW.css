@@ -65,6 +65,8 @@ body {
 
     .home-category-section{
         margin-top:42px;
+        content-visibility:auto;
+        contain-intrinsic-size:620px;
     }
 
     .home-category-heading{
@@ -144,6 +146,15 @@ header{
     display: flex;
     align-items: center;
     gap: 18px;
+}
+
+/* Avoid continuously repainting a blurred fixed surface while phones scroll. */
+@media screen and (max-width:600px){
+    header{
+        background:#fff;
+        backdrop-filter:none;
+        -webkit-backdrop-filter:none;
+    }
 }
 
 .category-back-button{

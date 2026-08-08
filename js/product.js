@@ -1420,7 +1420,7 @@ function updateFavoriteIcon() {
 
     const heartImage = exists
         ? "images/Heart7.PNG"
-        : "images/Heart-Outline2.PNG";
+        : "images/optimized/heart-outline.png";
 
     bottomFavoriteIcon?.setAttribute("src", heartImage);
 }

@@ -421,6 +421,43 @@ options: [
 }
 
 ];
+
+/* Serve phone-friendly catalogue assets while keeping the full-resolution
+   originals available for future editing. */
+const optimizedProductImages = {
+    "images/Nails1.jpg": "images/optimized/Nails1.jpg",
+    "images/Nails3.jpg": "images/optimized/Nails3.jpg",
+    "images/Nails2.jpg": "images/optimized/Nails2.jpg",
+    "images/IMG_3893.JPG": "images/optimized/IMG_3893.jpg",
+    "images/Human Wig_Shoulder.PNG": "images/optimized/Human-Wig-Shoulder.jpg",
+    "images/Human Wig_Waist.PNG": "images/optimized/Human-Wig-Waist.jpg",
+    "images/Wigs/Human Curly Wig.PNG": "images/optimized/Human-Curly-Wig.jpg",
+    "images/Wigs/Human Hair Wig 2_Shoulder.PNG": "images/optimized/Human-Hair-Wig-2-Shoulder.jpg",
+    "images/Wigs/Synthetic Wig_Shoulder.PNG": "images/optimized/Synthetic-Wig-Shoulder.jpg",
+    "images/PressOn Nails_Purple.PNG": "images/optimized/PressOn-Nails-Purple.jpg",
+    "images/PressOn Nails_BabyBlue.PNG": "images/optimized/PressOn-Nails-BabyBlue.jpg",
+    "images/Pearl.PNG": "images/optimized/Pearl.jpg",
+    "images/Silver.PNG": "images/optimized/Silver.jpg"
+};
+
+const optimizedProductImage = source => optimizedProductImages[source] || source;
+const optimizeGalleryMap = galleries => Object.fromEntries(
+    Object.entries(galleries || {}).map(([key, images]) => [
+        key,
+        images.map(optimizedProductImage)
+    ])
+);
+
+products.forEach(product => {
+    product.image = optimizedProductImage(product.image);
+    product.gallery = (product.gallery || []).map(optimizedProductImage);
+    if (product.galleries) product.galleries = optimizeGalleryMap(product.galleries);
+    if (product.sizeGalleries) product.sizeGalleries = optimizeGalleryMap(product.sizeGalleries);
+    Object.values(product.variants || {}).forEach(variant => {
+        variant.images = (variant.images || []).map(optimizedProductImage);
+    });
+});
+
 window.products = products;
 
 /* Keep catalogue image paths portable between localhost and the deployed site. */
@@ -435,11 +472,11 @@ function normalizeMPWRImagePath(source, productId) {
     try {
         const url = new URL(value, window.location.href);
         const pathname = decodeURIComponent(url.pathname);
-        if (pathname.startsWith("/images/")) return pathname.slice(1);
+        if (pathname.startsWith("/images/")) return optimizedProductImage(pathname.slice(1));
     } catch (error) {
         console.warn("Could not normalize image path", value, error);
     }
-    return value;
+    return optimizedProductImage(value);
 }
 
 function normalizeMPWRItems(items = []) {

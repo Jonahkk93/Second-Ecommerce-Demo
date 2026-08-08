@@ -3441,8 +3441,8 @@ transition: .25s ease;
         display:flex;
         align-items:center;
         background:rgba(255,255,255,.95);
-        backdrop-filter:blur(20px);
-        -webkit-backdrop-filter:blur(20px);
+        backdrop-filter:none;
+        -webkit-backdrop-filter:none;
         border-top:none;
         box-shadow:0 -10px 35px rgba(0,0,0,.08);
     }
@@ -4040,8 +4040,8 @@ transition: .25s ease;
         padding:0 14px;
         background:rgba(255,255,255,.95);
         box-shadow:0 4px 18px rgba(0,0,0,.06);
-        backdrop-filter:blur(10px);
-        -webkit-backdrop-filter:blur(10px);
+        backdrop-filter:none;
+        -webkit-backdrop-filter:none;
         pointer-events:auto;
     }
 
