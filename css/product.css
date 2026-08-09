@@ -407,8 +407,11 @@ body.side-panel-open .side-panel-backdrop{
 }
 
 .product-slide{
+    width:100%;
     min-width:100%;
-    flex-shrink:0;
+    max-width:100%;
+    flex:0 0 100%;
+    overflow:hidden;
 }
 
 .product-slide img{
