@@ -106,7 +106,27 @@ function getSlideWidth() {
     return sliderContainer.getBoundingClientRect().width;
 }
 
+function updateMobileGalleryFrame() {
+    if (!sliderContainer || !sliderTrack) return;
+
+    if (!window.matchMedia("(max-width: 600px)").matches) {
+        sliderContainer.style.removeProperty("--mobile-gallery-image");
+        return;
+    }
+
+    const activeImage = sliderTrack.children[currentSlide]?.querySelector("img");
+    if (!activeImage) return;
+    const imageUrl = (activeImage.currentSrc || activeImage.src)
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '\\"');
+    sliderContainer.style.setProperty(
+        "--mobile-gallery-image",
+        `url("${imageUrl}")`
+    );
+}
+
 function updateSlider(animate = true) {
+    updateMobileGalleryFrame();
     sliderTrack.style.transition = animate ? "transform .35s ease" : "none";
     sliderTrack.style.transform = `translateX(-${currentSlide * getSlideWidth()}px)`;
 
