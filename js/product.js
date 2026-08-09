@@ -1544,6 +1544,9 @@ if (product) {
     updateVariationPrice();
 }
 
+document.documentElement.dataset.siteContentReady = "true";
+window.MPWRLoading?.ready();
+
 productDescriptionReadMore.addEventListener("click", () => {
     const isCollapsed = productDescription.classList.toggle("is-collapsed");
 

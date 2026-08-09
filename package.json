@@ -1,0 +1,11 @@
+{
+  "name": "mpwr-storefront",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node scripts/build-site.mjs"
+  }
+}

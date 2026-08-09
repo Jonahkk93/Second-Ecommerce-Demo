@@ -11,7 +11,13 @@ const backButton = document.querySelector(".search-back");
 const liveSuggestions = document.querySelector(".live-search-suggestions");
 
 const RECENT_SEARCH_KEY = "mpwrRecentSearches";
-const suggestions = ["Press-ons","Wigs","Lashes","Nail polish","Moisturizer","Pink","Black","Shoulder"];
+let suggestions = [];
+try {
+    const configuredSuggestions = JSON.parse(document.querySelector("#search-suggestions-data")?.textContent || "[]");
+    if (Array.isArray(configuredSuggestions)) suggestions = configuredSuggestions.map(String);
+} catch (_) {
+    suggestions = [];
+}
 
 function openResultsPage(query) {
     const normalized = query.trim();
@@ -191,6 +197,8 @@ renderRecentSearches();
 const initialQuery = new URLSearchParams(location.search).get("q") || "";
 searchInput.value = initialQuery;
 renderResults();
+document.documentElement.dataset.siteContentReady = "true";
+window.MPWRLoading?.ready();
 const finishSearchDiscoveryLoading = () => {
     recentContainer.setAttribute("aria-busy","false");
     suggestedContainer.setAttribute("aria-busy","false");

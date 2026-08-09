@@ -7,6 +7,19 @@
     const failedFrames = new WeakSet();
     const imageGenerations = new WeakMap();
     let pageLoadingFinished = false;
+    const pendingTreeRoots = new Set();
+    const pendingContentElements = new Set();
+    let mutationFrame = 0;
+
+    function signalCriticalContentReady() {
+        root.dataset.siteContentReady = "true";
+        document.dispatchEvent(new CustomEvent("site:content-ready"));
+    }
+
+    window.MPWRLoading = {
+        ...(window.MPWRLoading || {}),
+        ready:signalCriticalContentReady
+    };
     const contentSelector = [
         "h1", "h2", "h3", "h4",
         "p",
@@ -145,9 +158,40 @@
         if (node.nodeType !== Node.ELEMENT_NODE) return;
         if (node.matches?.("img")) watchImage(node);
         node.querySelectorAll?.("img").forEach(watchImage);
+        if (root.classList.contains("site-page-ready")) return;
         watchContentTree(node);
         watchCartButtonTree(node);
         watchControlTree(node);
+    }
+
+    function flushMutationQueue() {
+        mutationFrame = 0;
+        const queuedRoots = [...pendingTreeRoots];
+        const roots = queuedRoots.filter(node =>
+            node.isConnected && !queuedRoots.some(other => other !== node && other.contains?.(node))
+        );
+        const contentElements = [...pendingContentElements].filter(element => element.isConnected);
+        pendingTreeRoots.clear();
+        pendingContentElements.clear();
+        contentElements.forEach(element => watchContentElement(element, true));
+        roots.forEach(watchTree);
+    }
+
+    function scheduleMutationFlush() {
+        if (mutationFrame) return;
+        mutationFrame = requestAnimationFrame(flushMutationQueue);
+    }
+
+    function queueTree(node) {
+        if (!(node instanceof HTMLElement)) return;
+        pendingTreeRoots.add(node);
+        scheduleMutationFlush();
+    }
+
+    function queueContent(element) {
+        if (!(element instanceof HTMLElement)) return;
+        pendingContentElements.add(element);
+        scheduleMutationFlush();
     }
 
     function watchControl(control) {
@@ -324,7 +368,7 @@
                 return;
             }
             if (record.type === "characterData") {
-                watchContentElement(record.target.parentElement, true);
+                queueContent(record.target.parentElement);
                 return;
             }
             const changedNodes = [...record.addedNodes, ...record.removedNodes];
@@ -335,8 +379,8 @@
                     node.classList.contains("site-control-loading-overlay")
                 )
             )) return;
-            watchContentElement(record.target, true);
-            record.addedNodes.forEach(watchTree);
+            queueContent(record.target);
+            record.addedNodes.forEach(queueTree);
         });
     });
     imageObserver.observe(root, {
@@ -357,6 +401,8 @@
     });
 
     const finishAfterPaint = () => requestAnimationFrame(() => requestAnimationFrame(finishPageLoading));
+    document.addEventListener("site:content-ready", finishAfterPaint, { once:true });
+    if (root.dataset.siteContentReady === "true") finishAfterPaint();
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", finishAfterPaint, { once:true });
     } else {
