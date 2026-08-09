@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="site-loading-enabled">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
     <title>Search results | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
     <link rel="stylesheet" href="css/CARTNEW.css?v=20260808-3">
-    <link rel="stylesheet" href="css/search-results.css?v=20260809-18">
-    <link rel="stylesheet" href="css/loading-states.css?v=20260809-1">
-    <script src="js/loading-states.js?v=20260809-1"></script>
+    <link rel="stylesheet" href="css/search-results.css?v=20260809-20">
+    <link rel="stylesheet" href="css/loading-states.css?v=20260809-21">
+    <script src="js/loading-states.js?v=20260809-21" defer></script>
     <script src="js/products.js" defer></script>
-    <script type="module" src="js/search-results.js?v=20260809-19"></script>
+    <script type="module" src="js/search-results.js?v=20260809-21"></script>
     </head>
 <body>
     <header class="results-header">
@@ -31,7 +31,13 @@
                 <span class="cart-item-count"></span>
             </div>
         </div>
-        <section class="results-toolbar" aria-label="Sort and filter products">
+        <section class="results-toolbar" aria-label="Sort and filter products" aria-busy="true">
+            <div class="filter-loading" role="status" aria-label="Loading product filters">
+                <span class="site-content-loading"></span>
+                <span class="site-content-loading"></span>
+                <span class="site-content-loading"></span>
+                <span class="site-content-loading"></span>
+            </div>
             <select id="sort-results" aria-label="Sort results">
                 <option value="relevance" data-trigger-label="Sort by">Most relevant</option>
                 <option value="popular">Most popular</option>

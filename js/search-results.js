@@ -15,6 +15,7 @@ const noResults = document.querySelector(".no-results");
 const sortResults = document.querySelector("#sort-results");
 const colorFilter = document.querySelector("#color-filter");
 const sizeFilter = document.querySelector("#size-filter");
+const resultsToolbar = document.querySelector(".results-toolbar");
 const query = new URLSearchParams(location.search).get("q")?.trim() || "";
 const productModalOverlay = document.querySelector(".product-modal-overlay");
 const productModalImage = document.querySelector(".product-modal-image");
@@ -695,12 +696,14 @@ queryInput.value = query;
 addOptions(colorFilter,baseMatches.flatMap(product => [...(product.colors || []),...optionValues(product,/color/i)]));
 addOptions(sizeFilter,baseMatches.flatMap(product => [...(product.sizes || []),...optionValues(product,/size|length/i)]));
 [sortResults,colorFilter,sizeFilter].forEach(enhanceFilterSelect);
+resultsToolbar.classList.add("filters-ready");
+resultsToolbar.removeAttribute("aria-busy");
 document.addEventListener("click",event => {
     if (!event.target.closest(".filter-picker-trigger,.filter-picker-menu")) closeFilterPickers();
 });
 window.addEventListener("resize",() => closeFilterPickers());
 window.addEventListener("scroll",() => closeFilterPickers(),{passive:true});
-document.querySelector(".results-toolbar").addEventListener("scroll",() => closeFilterPickers(),{passive:true});
+resultsToolbar.addEventListener("scroll",() => closeFilterPickers(),{passive:true});
 
 productModalOverlay.addEventListener("click",event => {
     if (event.target === productModalOverlay) closeProductModal();

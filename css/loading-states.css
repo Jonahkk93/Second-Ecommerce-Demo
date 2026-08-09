@@ -2,6 +2,9 @@
     --loading-surface:#eee9e6;
     --loading-highlight:#faf8f6;
     --loading-accent:#E5A484;
+    --loading-content-surface:#e6e6e6;
+    --loading-shine:rgba(255,255,255,.82);
+    --loading-shimmer-duration:1.3s;
 }
 
 html.site-loading-enabled::before{
@@ -45,17 +48,293 @@ html.site-loading-enabled img.site-image-error{
     opacity:0;
 }
 
+/* Prevent the home grid from flashing real text before measured loaders exist. */
+html.site-loading-enabled:not(.site-loading-prepared) .shop .section-title,
+html.site-loading-enabled:not(.site-loading-prepared) .home-category-heading h2,
+html.site-loading-enabled:not(.site-loading-prepared) .home-category-heading a,
+html.site-loading-enabled:not(.site-loading-prepared) .product-box .product-title,
+html.site-loading-enabled:not(.site-loading-prepared) .product-box .price{
+    position:relative;
+    color:transparent!important;
+    text-shadow:none!important;
+}
+
+html.site-loading-enabled:not(.site-loading-prepared) .shop .section-title::before,
+html.site-loading-enabled:not(.site-loading-prepared) .home-category-heading h2::before,
+html.site-loading-enabled:not(.site-loading-prepared) .home-category-heading a::before,
+html.site-loading-enabled:not(.site-loading-prepared) .product-box .product-title::before,
+html.site-loading-enabled:not(.site-loading-prepared) .product-box .price::before{
+    content:"";
+    position:absolute;
+    top:50%;
+    left:0;
+    height:.66em;
+    border-radius:999px;
+    background-color:var(--loading-content-surface);
+    background-image:linear-gradient(105deg,#e6e6e6 30%,var(--loading-highlight) 48%,#e6e6e6 66%);
+    background-size:240% 100%;
+    animation:site-bootstrap-media-shimmer 1.25s ease-in-out infinite;
+    transform:translateY(-50%);
+    pointer-events:none;
+}
+
+html.site-loading-enabled:not(.site-loading-prepared) :is(
+    .shop .section-title,
+    .home-category-heading h2
+)::before{
+    left:50%;
+    width:min(120px,42vw);
+    transform:translate(-50%,-50%);
+}
+
+html.site-loading-enabled:not(.site-loading-prepared) .home-category-heading a::before{
+    width:100%;
+}
+
+html.site-loading-enabled:not(.site-loading-prepared) .product-box .product-title::before{
+    width:100%;
+}
+
+html.site-loading-enabled:not(.site-loading-prepared) .product-box .price::before{
+    width:100%;
+}
+
+html.site-loading-enabled:not(.site-loading-prepared) .product-box .product-title{
+    width:fit-content;
+    max-width:100%;
+}
+
+/* First-paint media loader: works before the deferred loader script arrives. */
+html.site-loading-enabled:not(.site-page-ready) :is(
+    .img-box,
+    .product-image-container,
+    .related-product-image,
+    .product-modal-image-link,
+    .cart-product-link,
+    .wishlist-product-link
+):not(.site-image-frame):not(:has(.site-image-frame)){
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+    background-color:var(--loading-surface);
+    background-image:linear-gradient(105deg,#e9e6e4 30%,#faf8f6 48%,#e9e6e4 66%);
+    background-size:240% 100%;
+    animation:site-bootstrap-media-shimmer 1.25s ease-in-out infinite;
+}
+
+html.site-loading-enabled:not(.site-page-ready) :is(
+    .img-box,
+    .product-image-container,
+    .related-product-image,
+    .product-modal-image-link,
+    .cart-product-link,
+    .wishlist-product-link
+):not(.site-image-frame):not(:has(.site-image-frame))::after{
+    content:"";
+    position:absolute;
+    top:50%;
+    left:50%;
+    z-index:20;
+    width:24px;
+    height:24px;
+    margin:-14px 0 0 -14px;
+    border:2px solid rgba(229,164,132,.28);
+    border-top-color:var(--loading-accent);
+    border-radius:50%;
+    animation:site-spin .75s linear infinite;
+    pointer-events:none;
+}
+
+html.site-loading-enabled :is(
+    .img-box > img:not(.wishlist-icon),
+    .product-slide img,
+    .related-product-image img,
+    .product-modal-image-link img,
+    .cart-product-link img,
+    .wishlist-product-link img
+):not(.site-image-ready):not(.site-image-error){
+    opacity:.38!important;
+    filter:blur(13px) saturate(.82);
+}
+
+html.site-loading-enabled img.site-image-ready{
+    filter:none;
+}
+
+/* Site-wide icon/control sheen, active from first paint. */
+html.site-loading-enabled :is(
+    button:has(> img:not(.site-image-ready):not(.site-image-error)),
+    a[aria-label]:not(.cart-product-link):not(.wishlist-product-link):not(.product-modal-image-link):has(> img:not(.site-image-ready):not(.site-image-error)),
+    #cart-icon:has(> img:not(.site-image-ready):not(.site-image-error)),
+    #wishlist-nav-icon:has(> img:not(.site-image-ready):not(.site-image-error)),
+    #search-icon:has(> img:not(.site-image-ready):not(.site-image-error)),
+    #account-icon:has(> img:not(.site-image-ready):not(.site-image-error)),
+    .product-nav-search:has(.product-nav-search-icon:not(.site-image-ready):not(.site-image-error)),
+    .results-search:has(> img:not(.site-image-ready):not(.site-image-error)),
+    .sidebar-open:has(> img:not(.site-image-ready):not(.site-image-error)),
+    .product-box .price-and-cart > i:has(> .addie:not(.site-image-ready):not(.site-image-error))
+){
+    overflow:hidden;
+    background-color:var(--loading-content-surface)!important;
+    background-image:linear-gradient(105deg,#e6e6e6 30%,var(--loading-highlight) 48%,#e6e6e6 66%)!important;
+    background-size:240% 100%!important;
+    animation:site-bootstrap-media-shimmer 1.25s ease-in-out infinite;
+}
+
+html.site-loading-enabled .wishlist-btn:has(> img:not(.site-image-ready):not(.site-image-error)){
+    aspect-ratio:1 / 1;
+    flex:none;
+    border-radius:50%!important;
+    padding:0;
+}
+
+html.site-loading-enabled .product-box .price-and-cart > i:has(> .addie:not(.site-image-ready):not(.site-image-error)){
+    border-radius:12px!important;
+}
+
+/* Header icon placeholders should remain rounded even where the live icon is flat. */
+html.site-loading-enabled :is(
+    header .product-back-btn,
+    header .search-back,
+    header .search-submit,
+    header .sidebar-open,
+    header #search-icon,
+    header #wishlist-nav-icon,
+    header #cart-icon,
+    header #account-icon,
+    .product-page-header .product-nav-search,
+    .results-header .results-search
+):has(img:not(.site-image-ready):not(.site-image-error)){
+    border-radius:999px!important;
+}
+
+html.site-loading-enabled .gallery-arrow:has(> img:not(.site-image-ready):not(.site-image-error)){
+    border-radius:50%!important;
+}
+
+.site-control-loading{
+    isolation:isolate;
+    overflow:hidden!important;
+    background:var(--loading-content-surface)!important;
+}
+
+.site-control-loading-static{
+    position:relative!important;
+}
+
+.site-control-loading-overlay{
+    position:absolute!important;
+    inset:0;
+    z-index:1000;
+    margin:0;
+    border-radius:inherit;
+    pointer-events:none;
+}
+
+.site-content-loading{
+    position:relative;
+    display:block;
+    overflow:hidden;
+    isolation:isolate;
+    color:transparent!important;
+    background:var(--loading-content-surface)!important;
+}
+
+.site-content-loading::after{
+    content:"";
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:-50%;
+    width:45%;
+    z-index:1;
+    background:linear-gradient(
+        90deg,
+        rgba(255,255,255,0),
+        var(--loading-shine),
+        rgba(255,255,255,0)
+    );
+    animation:site-content-shimmer var(--loading-shimmer-duration) ease-in-out infinite;
+    pointer-events:none;
+}
+
+.site-auto-content-loading{
+    position:relative;
+    color:transparent!important;
+    text-shadow:none!important;
+    background:transparent!important;
+}
+
+.site-auto-content-loading *{
+    color:transparent!important;
+    text-shadow:none!important;
+}
+
+.site-text-loader-line{
+    position:absolute;
+    z-index:2;
+    margin:0;
+    border-radius:999px;
+    pointer-events:none;
+}
+
+.site-cart-button-loader-host-static{
+    position:relative!important;
+}
+
+.site-cart-button-loader-host{
+    isolation:isolate;
+}
+
+.site-cart-button-loader-overlay{
+    position:absolute;
+    inset:0;
+    z-index:1;
+    width:auto;
+    height:auto;
+    margin:0;
+    border-radius:var(--site-cart-loader-radius,inherit);
+    pointer-events:none;
+}
+
 .site-image-frame{
-    background-color:var(--loading-surface)!important;
-    background-image:linear-gradient(
-        105deg,
-        transparent 30%,
-        rgba(255,255,255,.72) 46%,
-        transparent 62%
-    )!important;
-    background-repeat:no-repeat!important;
-    background-size:220% 100%!important;
-    animation:site-skeleton 1.2s ease-in-out infinite;
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+    background-color:var(--loading-content-surface);
+    background-image:linear-gradient(105deg,#e6e6e6 30%,var(--loading-highlight) 48%,#e6e6e6 66%);
+    background-size:240% 100%;
+    animation:site-bootstrap-media-shimmer 1.25s ease-in-out infinite;
+}
+
+.site-image-frame::before{
+    content:"";
+    position:absolute;
+    inset:-14px;
+    z-index:0;
+    background-image:var(--site-loading-image);
+    background-position:center;
+    background-size:cover;
+    filter:blur(14px) saturate(.82);
+    opacity:.42;
+    transform:scale(1.06);
+    pointer-events:none;
+}
+
+.site-image-frame::after{
+    content:"";
+    position:absolute;
+    top:50%;
+    left:50%;
+    z-index:3;
+    width:24px;
+    height:24px;
+    margin:-14px 0 0 -14px;
+    border:2px solid rgba(229,164,132,.28);
+    border-top-color:var(--loading-accent);
+    border-radius:50%;
+    animation:site-spin .75s linear infinite;
+    pointer-events:none;
 }
 
 .site-image-error-frame{
@@ -68,6 +347,11 @@ button.site-button-loading{
     position:relative;
     color:transparent!important;
     pointer-events:none;
+    overflow:hidden;
+    background-color:var(--loading-content-surface)!important;
+    background-image:linear-gradient(105deg,#e6e6e6 30%,var(--loading-highlight) 48%,#e6e6e6 66%)!important;
+    background-size:240% 100%!important;
+    animation:site-bootstrap-media-shimmer 1.25s ease-in-out infinite;
 }
 
 button.site-button-loading > *{
@@ -95,23 +379,57 @@ button.site-button-loading::after{
     100%{transform:scaleX(.92)}
 }
 
-@keyframes site-skeleton{
-    from{background-position:130% 0}
-    to{background-position:-130% 0}
-}
-
 @keyframes site-spin{
     to{transform:rotate(360deg)}
 }
 
+@keyframes site-content-shimmer{
+    from{transform:translateX(0)}
+    to{transform:translateX(350%)}
+}
+
+@keyframes site-bootstrap-media-shimmer{
+    from{background-position:100% 0}
+    to{background-position:-100% 0}
+}
+
 @media(prefers-reduced-motion:reduce){
     html.site-loading-enabled::before,
+    html.site-loading-enabled:not(.site-loading-prepared) .shop .section-title::before,
+    html.site-loading-enabled:not(.site-loading-prepared) .home-category-heading h2::before,
+    html.site-loading-enabled:not(.site-loading-prepared) .home-category-heading a::before,
+    html.site-loading-enabled:not(.site-loading-prepared) .product-box .product-title::before,
+    html.site-loading-enabled:not(.site-loading-prepared) .product-box .price::before,
+    html.site-loading-enabled:not(.site-page-ready) :is(.img-box,.product-image-container,.related-product-image,.product-modal-image-link,.cart-product-link,.wishlist-product-link),
+    .site-image-frame::before,
     .site-image-frame,
+    .site-image-frame::after,
+    html.site-loading-enabled:not(.site-page-ready) :is(.img-box,.product-image-container,.related-product-image,.product-modal-image-link,.cart-product-link,.wishlist-product-link)::after,
+    .site-content-loading::after,
+    .site-text-loader-line::after,
+    .site-cart-button-loader-overlay::after,
+    .site-control-loading-overlay::after,
+    button.site-button-loading,
     button.site-button-loading::after{
         animation:none!important;
     }
 
     html.site-loading-enabled img.site-image-ready{
         transition:none;
+    }
+
+    html.site-loading-enabled :is(
+        button,
+        a[aria-label],
+        #cart-icon,
+        #wishlist-nav-icon,
+        #search-icon,
+        #account-icon,
+        .product-nav-search,
+        .results-search,
+        .sidebar-open,
+        .product-box .price-and-cart > i
+    ){
+        animation:none!important;
     }
 }

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="site-loading-enabled">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Search | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/search-page.css?v=20260809-1">
-    <link rel="stylesheet" href="css/loading-states.css?v=20260809-1">
-    <script src="js/loading-states.js?v=20260809-1"></script>
+    <link rel="stylesheet" href="css/search-page.css?v=20260809-3">
+    <link rel="stylesheet" href="css/loading-states.css?v=20260809-21">
+    <script src="js/loading-states.js?v=20260809-21" defer></script>
     <script src="js/products.js" defer></script>
-    <script src="js/search-page.js?v=20260809-3" defer></script>
+    <script src="js/search-page.js?v=20260809-4" defer></script>
 </head>
 <body>
     <header class="search-page-header">
@@ -33,10 +33,42 @@
                 <button class="clear-recent" type="button" aria-label="Clear recent searches">Clear</button>
             </div>
             <div class="search-chips recent-searches"></div>
+            <script>
+                (() => {
+                    const container = document.currentScript.previousElementSibling;
+                    try {
+                        const recent = JSON.parse(localStorage.getItem("mpwrRecentSearches") || "[]");
+                        if (!Array.isArray(recent) || recent.length === 0) return;
+                        container.setAttribute("aria-busy","true");
+                        const fragment = document.createDocumentFragment();
+                        recent.slice(0,8).forEach(label => {
+                            const loader = document.createElement("button");
+                            loader.type = "button";
+                            loader.className = "search-chip";
+                            loader.textContent = String(label);
+                            loader.tabIndex = -1;
+                            loader.setAttribute("aria-hidden","true");
+                            fragment.appendChild(loader);
+                        });
+                        container.appendChild(fragment);
+                    } catch (_) {
+                        // Invalid or unavailable storage means there is no recent-search loader.
+                    }
+                })();
+            </script>
 
             <section class="suggested-searches-section">
                 <h2>Suggested searches</h2>
-                <div class="search-chips suggested-searches"></div>
+                <div class="search-chips suggested-searches" aria-busy="true">
+                    <button class="search-chip" type="button" tabindex="-1" aria-hidden="true">Press-ons</button>
+                    <button class="search-chip" type="button" tabindex="-1" aria-hidden="true">Wigs</button>
+                    <button class="search-chip" type="button" tabindex="-1" aria-hidden="true">Lashes</button>
+                    <button class="search-chip" type="button" tabindex="-1" aria-hidden="true">Nail polish</button>
+                    <button class="search-chip" type="button" tabindex="-1" aria-hidden="true">Moisturizer</button>
+                    <button class="search-chip" type="button" tabindex="-1" aria-hidden="true">Pink</button>
+                    <button class="search-chip" type="button" tabindex="-1" aria-hidden="true">Black</button>
+                    <button class="search-chip" type="button" tabindex="-1" aria-hidden="true">Shoulder</button>
+                </div>
             </section>
         </section>
 

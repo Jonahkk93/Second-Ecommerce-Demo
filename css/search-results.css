@@ -29,6 +29,12 @@ button,select{cursor:pointer}
 .results-main{width:min(1500px,100%);margin:0 auto;padding:143px 5% 70px}
 .results-toolbar{display:flex;width:auto;align-self:stretch;gap:8px;margin:0 68px 0 54px;padding:9px 0 12px;overflow-x:auto;background:transparent;scrollbar-width:none}
 .results-toolbar::-webkit-scrollbar{display:none}
+.filter-loading{display:flex;flex:0 0 auto;gap:8px}
+.filter-loading span{width:112px;height:36px;border-radius:999px}
+.filter-loading span:first-child{width:162px}
+.filter-loading span:nth-child(3){width:138px}
+.filter-loading span:last-child{width:108px}
+.results-toolbar.filters-ready .filter-loading{display:none}
 .results-toolbar>select{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .filter-picker{position:relative;flex:0 0 auto}
 .filter-picker-trigger,.reset-filters{display:flex;min-height:36px;width:100%;align-items:center;justify-content:space-between;gap:12px;padding:0 15px;border:1px solid #e5e5e5;border-radius:999px;background:#f7f7f7;color:#444;font:inherit;font-size:14px;text-align:left;cursor:pointer;transition:border-color .2s ease,background-color .2s ease,box-shadow .2s ease}
@@ -45,7 +51,8 @@ button,select{cursor:pointer}
 .filter-picker[data-select-id="sort-results"]{min-width:162px}
 .filter-picker[data-select-id="color-filter"]{min-width:112px}
 .filter-picker[data-select-id="size-filter"]{min-width:138px}
-.reset-filters{min-width:108px;margin-left:0;background:#fff}
+.reset-filters{display:none;width:auto;min-width:108px;flex:0 0 auto;margin-left:0;background:#fff}
+.results-toolbar.filters-ready .reset-filters{display:flex}
 .results-grid{margin-top:20px}
 .no-results{padding:90px 20px;text-align:center}
 .no-results h2{margin-bottom:8px}
@@ -57,6 +64,7 @@ button,select{cursor:pointer}
     #cart-icon .cart-item-count{top:-2px;right:-5px;min-width:16px;height:16px;padding:1px 4px 0;font-size:10px}
     .results-main{padding:116px 10px 45px}
     .results-toolbar{width:calc(100% + 20px);align-self:center;gap:7px;margin:0;padding:7px 10px 10px;scroll-padding-left:10px}
+    .filter-loading{gap:7px}.filter-loading span{width:88px;height:32px}.filter-loading span:first-child{width:132px}.filter-loading span:nth-child(3){width:112px}.filter-loading span:last-child{width:94px}
     .filter-picker-trigger,.reset-filters{min-height:32px;padding:0 12px;font-size:12px}
     .filter-picker[data-select-id="sort-results"]{min-width:132px}
     .filter-picker[data-select-id="color-filter"]{min-width:88px}

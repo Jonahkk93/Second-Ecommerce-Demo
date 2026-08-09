@@ -186,9 +186,13 @@ backButton.addEventListener("click",() => {
     else window.location.href = "index.html";
 });
 
-suggestions.forEach(item => suggestedContainer.appendChild(chip(item)));
+suggestedContainer.replaceChildren(...suggestions.map(chip));
 renderRecentSearches();
 const initialQuery = new URLSearchParams(location.search).get("q") || "";
 searchInput.value = initialQuery;
 renderResults();
+window.addEventListener("load",() => {
+    recentContainer.setAttribute("aria-busy","false");
+    suggestedContainer.setAttribute("aria-busy","false");
+},{once:true});
 requestAnimationFrame(() => searchInput.focus());

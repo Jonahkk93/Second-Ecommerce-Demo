@@ -101,6 +101,7 @@ const thumbnailsContainer =
 
 let currentSlide = 0;
 let galleryImages = [];
+let thumbnailLoadGeneration = 0;
 
 function getSlideWidth() {
     return sliderContainer.getBoundingClientRect().width;
@@ -193,6 +194,8 @@ function goToSlide(index) {
 }
 
 function renderProductGallery(images) {
+    const thumbnailGeneration = ++thumbnailLoadGeneration;
+    thumbnailsContainer.classList.add("thumbnails-loading-state");
     const sourceImages = Array.isArray(images) && images.length
         ? images
         : [product.image];
@@ -223,6 +226,19 @@ function renderProductGallery(images) {
         thumbnail.decoding = "async";
         thumbnail.addEventListener("click", () => goToSlide(index));
         thumbnailsContainer.appendChild(thumbnail);
+    });
+
+    const thumbnailLoads = [...thumbnailsContainer.querySelectorAll("img")].map(thumbnail => {
+        if (thumbnail.complete && thumbnail.naturalWidth > 0) return Promise.resolve();
+        return new Promise(resolve => {
+            thumbnail.addEventListener("load", resolve, { once:true });
+            thumbnail.addEventListener("error", resolve, { once:true });
+        });
+    });
+    Promise.all(thumbnailLoads).then(() => {
+        if (thumbnailGeneration === thumbnailLoadGeneration) {
+            thumbnailsContainer.classList.remove("thumbnails-loading-state");
+        }
     });
 
     currentSlide = 0;
@@ -550,11 +566,13 @@ function renderRelatedProducts() {
 
     relatedProductsGrid.innerHTML = recommendations.map(item => `
         <a class="related-product-card" href="product.html?id=${encodeURIComponent(item.id)}">
-            <img src="${item.image}" alt="${item.title}">
+            <span class="related-product-image"><img src="${item.image}" alt="${item.title}"></span>
             <span class="related-product-title">${item.title}</span>
             <span class="related-product-price">UGX ${Number(item.price).toLocaleString()}</span>
         </a>
     `).join("");
+    relatedProducts.classList.remove("related-products-loading-state");
+    relatedProducts.querySelector(".related-products-loading-placeholder")?.remove();
 }
 
 renderRelatedProducts();
@@ -711,6 +729,8 @@ function renderReviewList(reviews) {
         card.appendChild(date);
         reviewList.appendChild(card);
     });
+    productReviews.classList.remove("reviews-loading-state");
+    productReviews.querySelector(".reviews-loading-placeholder")?.remove();
 }
 
 reviewsReadMore?.addEventListener("click", () => {
@@ -737,6 +757,7 @@ async function loadProductReviews() {
         renderReviewList(reviews);
     } catch (error) {
         console.error("Unable to load reviews:", error);
+        renderReviewList([]);
     }
 }
 
@@ -1517,6 +1538,8 @@ if (product) {
         dynamicOptions.appendChild(section);
     });
 
+    optionsPanel.classList.add("options-ready");
+    optionsPanel.removeAttribute("aria-busy");
     renderProductGallery(variationGallery());
     updateVariationPrice();
 }
