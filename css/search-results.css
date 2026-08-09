@@ -51,6 +51,7 @@ button,select{cursor:pointer}
 .no-results h2{margin-bottom:8px}
 @media(max-width:600px){
     .results-header{height:auto;min-height:0;padding:11px 10px 0;background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none}.results-nav-row{gap:7px}.product-back-btn{width:36px;height:42px;flex-basis:36px}.product-back-btn img{width:20px;height:20px}.results-search{height:44px}
+    .results-search input{font-size:16px}
     #wishlist-nav-icon,#cart-icon{flex:0 0 auto;width:24px;height:24px;min-width:24px;min-height:24px;aspect-ratio:auto;border-radius:0}
     .wishlist-nav-image,.cart-image{width:22px;height:22px}
     #cart-icon .cart-item-count{top:-2px;right:-5px;min-width:16px;height:16px;padding:1px 4px 0;font-size:10px}

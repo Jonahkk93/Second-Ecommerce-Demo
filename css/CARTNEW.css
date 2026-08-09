@@ -1270,6 +1270,13 @@ header{
     box-shadow: 0 0 10px rgba(229,164,132,.25);
 }
 
+/* iOS zooms the viewport when a focused input is smaller than 16px. */
+@media screen and (max-width:600px){
+    #search-input{
+        font-size:16px;
+    }
+}
+
 .no-results{
     display: none;
     text-align: center;

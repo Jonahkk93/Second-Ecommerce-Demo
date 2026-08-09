@@ -4141,6 +4141,14 @@ transition: .25s ease;
 }
 
 /* Match the shared cart and wishlist width on tablet and laptop screens. */
+/* Prevent iOS from enlarging the page when the mobile search field is focused. */
+@media screen and (max-width:600px){
+    #search-input,
+    .product-nav-search #search-input{
+        font-size:16px;
+    }
+}
+
 @media screen and (min-width:601px){
     .cart,
     .wishlist{
