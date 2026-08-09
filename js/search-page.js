@@ -191,8 +191,13 @@ renderRecentSearches();
 const initialQuery = new URLSearchParams(location.search).get("q") || "";
 searchInput.value = initialQuery;
 renderResults();
-window.addEventListener("load",() => {
+const finishSearchDiscoveryLoading = () => {
     recentContainer.setAttribute("aria-busy","false");
     suggestedContainer.setAttribute("aria-busy","false");
-},{once:true});
+};
+if (document.documentElement.classList.contains("site-page-ready")) {
+    finishSearchDiscoveryLoading();
+} else {
+    document.addEventListener("site:ready",finishSearchDiscoveryLoading,{once:true});
+}
 requestAnimationFrame(() => searchInput.focus());

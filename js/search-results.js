@@ -1,12 +1,25 @@
 import { mountMPWRDrawers } from "./drawer-component.js?v=20260808-8";
-import "./firebase.js";
-import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+let firebaseServicesPromise;
+function loadFirebaseServices() {
+    if (!firebaseServicesPromise) {
+        firebaseServicesPromise = Promise.all([
+            import("./firebase.js"),
+            import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js"),
+            import("https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js")
+        ]).then(([, firestore, authApi]) => ({
+            auth:window.auth,
+            db:window.db,
+            doc:firestore.doc,
+            getDoc:firestore.getDoc,
+            setDoc:firestore.setDoc,
+            onAuthStateChanged:authApi.onAuthStateChanged
+        }));
+    }
+    return firebaseServicesPromise;
+}
 
 mountMPWRDrawers(document.body);
-
-const auth = window.auth;
-const db = window.db;
 
 const queryInput = document.querySelector("#results-query");
 const searchForm = document.querySelector(".results-search");
@@ -218,9 +231,10 @@ function mergeCommerceItems(accountItems,localItems,includeQuantity = false) {
 }
 
 async function saveCommerceToAccount(collectionName,items) {
-    const user = auth.currentUser;
-    if (!user) return;
     try {
+        const { auth, db, doc, setDoc } = await loadFirebaseServices();
+        const user = auth?.currentUser;
+        if (!user || !db) return;
         await setDoc(doc(db,collectionName,user.uid),{items});
         localStorage.setItem(collectionName === "carts" ? "mpwrCartOwnerUid" : "mpwrFavoritesOwnerUid",user.uid);
     } catch (error) {
@@ -855,30 +869,35 @@ window.addEventListener("storage",event => {
     if (cartDrawer.classList.contains("active")) renderCartDrawer();
     if (wishlistDrawer.classList.contains("active")) renderWishlistDrawer();
 }));
-onAuthStateChanged(auth,async user => {
-    if (!user) return;
-    try {
-        const [cartDocument,favoritesDocument] = await Promise.all([
-            getDoc(doc(db,"carts",user.uid)),
-            getDoc(doc(db,"favorites",user.uid))
-        ]);
-        const mergedCart = mergeCommerceItems(cartDocument.exists() ? cartDocument.data().items || [] : [],getCart(),true);
-        const mergedFavorites = mergeCommerceItems(favoritesDocument.exists() ? favoritesDocument.data().items || [] : [],getFavorites());
-        localStorage.setItem("cart",JSON.stringify(mergedCart));
-        localStorage.setItem("favorites",JSON.stringify(mergedFavorites));
-        localStorage.setItem("mpwrCartOwnerUid",user.uid);
-        localStorage.setItem("mpwrFavoritesOwnerUid",user.uid);
-        await Promise.all([
-            setDoc(doc(db,"carts",user.uid),{items:mergedCart}),
-            setDoc(doc(db,"favorites",user.uid),{items:mergedFavorites})
-        ]);
-        updateCartButton();
-        updateProductWishlistButtons(mergedFavorites);
-        if (cartDrawer.classList.contains("active")) renderCartDrawer();
-        if (wishlistDrawer.classList.contains("active")) renderWishlistDrawer();
-    } catch (error) {
-        console.error("Unable to synchronize shopping data",error);
-    }
+loadFirebaseServices().then(({ auth, db, doc, getDoc, setDoc, onAuthStateChanged }) => {
+    if (!auth || !db) return;
+    onAuthStateChanged(auth,async user => {
+        if (!user) return;
+        try {
+            const [cartDocument,favoritesDocument] = await Promise.all([
+                getDoc(doc(db,"carts",user.uid)),
+                getDoc(doc(db,"favorites",user.uid))
+            ]);
+            const mergedCart = mergeCommerceItems(cartDocument.exists() ? cartDocument.data().items || [] : [],getCart(),true);
+            const mergedFavorites = mergeCommerceItems(favoritesDocument.exists() ? favoritesDocument.data().items || [] : [],getFavorites());
+            localStorage.setItem("cart",JSON.stringify(mergedCart));
+            localStorage.setItem("favorites",JSON.stringify(mergedFavorites));
+            localStorage.setItem("mpwrCartOwnerUid",user.uid);
+            localStorage.setItem("mpwrFavoritesOwnerUid",user.uid);
+            await Promise.all([
+                setDoc(doc(db,"carts",user.uid),{items:mergedCart}),
+                setDoc(doc(db,"favorites",user.uid),{items:mergedFavorites})
+            ]);
+            updateCartButton();
+            updateProductWishlistButtons(mergedFavorites);
+            if (cartDrawer.classList.contains("active")) renderCartDrawer();
+            if (wishlistDrawer.classList.contains("active")) renderWishlistDrawer();
+        } catch (error) {
+            console.error("Unable to synchronize shopping data",error);
+        }
+    });
+}).catch(error => {
+    console.error("Unable to initialize account synchronization",error);
 });
 [sortResults,colorFilter,sizeFilter].forEach(control => control.addEventListener("change",render));
 document.querySelector(".reset-filters").addEventListener("click",() => {

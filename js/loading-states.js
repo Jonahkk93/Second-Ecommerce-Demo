@@ -6,6 +6,7 @@
     const pendingImages = new WeakSet();
     const failedFrames = new WeakSet();
     const imageGenerations = new WeakMap();
+    let pageLoadingFinished = false;
     const contentSelector = [
         "h1", "h2", "h3", "h4",
         "p",
@@ -292,6 +293,8 @@
     }
 
     function finishPageLoading() {
+        if (pageLoadingFinished) return;
+        pageLoadingFinished = true;
         root.classList.add("site-loading-prepared");
         root.classList.add("site-page-ready");
         root.classList.remove("site-navigating");
@@ -311,6 +314,7 @@
             control.classList.remove("site-control-loading", "site-control-loading-static");
             control.removeAttribute("aria-busy");
         });
+        document.dispatchEvent(new CustomEvent("site:ready"));
     }
 
     const imageObserver = new MutationObserver(records => {
@@ -352,8 +356,14 @@
         document.querySelectorAll(".site-auto-content-loading").forEach(renderContentLines);
     });
 
+    const finishAfterPaint = () => requestAnimationFrame(() => requestAnimationFrame(finishPageLoading));
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", finishAfterPaint, { once:true });
+    } else {
+        finishAfterPaint();
+    }
     window.addEventListener("load", finishPageLoading, { once:true });
-    window.setTimeout(finishPageLoading, 12000);
+    window.setTimeout(finishPageLoading, 2500);
     window.addEventListener("pageshow", event => {
         if (event.persisted) finishPageLoading();
     });
