@@ -169,6 +169,8 @@ const productModalImageLink = document.querySelector(".product-modal-image-link"
 const productModalTitle = document.querySelector(".product-modal-title");
 
 const productModalTitleLink = document.querySelector(".product-modal-title-link");
+const productModalReviewStars = document.querySelector(".product-modal-review-stars");
+const productModalReviewSummary = document.querySelector(".product-modal-review-summary");
 const productModalFavorite =
     document.querySelector(".product-modal-favorite");
 
@@ -1201,8 +1203,9 @@ function addToCart(productBox, selections = {}, overrides = {}) {
        Flying image animation
     --------------------------------------------------------- */
 
-    const productImage =
-        productBox.querySelector(".img-box > img");
+    const productImage = productModalOverlay.classList.contains("active")
+        ? productModalImage
+        : productBox.querySelector(".img-box > img");
 
     const imageRect =
         productImage.getBoundingClientRect();
@@ -1219,27 +1222,37 @@ function addToCart(productBox, selections = {}, overrides = {}) {
 
     flyingImage.style.top = imageRect.top + "px";
 
+    flyingImage.style.width = imageRect.width + "px";
+
+    flyingImage.style.height = imageRect.height + "px";
+
+    flyingImage.style.margin = "0";
+
+    flyingImage.style.position = "fixed";
+
+    flyingImage.style.zIndex = "100001";
+
+    flyingImage.style.pointerEvents = "none";
+
     document.body.appendChild(flyingImage);
 
-    requestAnimationFrame(() => {
-
-        flyingImage.style.left = cartRect.left + "px";
-
-        flyingImage.style.top = cartRect.top + "px";
-
-        flyingImage.style.width = "20px";
-
-        flyingImage.style.height = "20px";
-
-        flyingImage.style.opacity = "0";
-
+    const translateX = cartRect.left + cartRect.width / 2 -
+        (imageRect.left + imageRect.width / 2);
+    const translateY = cartRect.top + cartRect.height / 2 -
+        (imageRect.top + imageRect.height / 2);
+    const flyingAnimation = flyingImage.animate([
+        { transform: "translate3d(0, 0, 0) scale(1)", opacity: 1 },
+        {
+            transform: `translate3d(${translateX}px, ${translateY}px, 0) scale(.15)`,
+            opacity: 0
+        }
+    ], {
+        duration: 650,
+        easing: "cubic-bezier(.25,.8,.25,1)",
+        fill: "forwards"
     });
 
-    setTimeout(() => {
-
-        flyingImage.remove();
-
-    }, 650);
+    flyingAnimation.finished.finally(() => flyingImage.remove());
 
 
     /* --------------------------------------------------------
@@ -1749,8 +1762,59 @@ productModalFavorite.addEventListener("click", () => {
     if (!selectedProduct) return;
 
     toggleWishlist(selectedProduct);
+    updateProductModalFavorite();
 
 });
+
+function updateProductModalFavorite() {
+    if (!productModalFavorite || !selectedProduct) return;
+
+    const isFavorite = favorites.some(item =>
+        String(item.id) === String(selectedProduct.dataset.id)
+    );
+    const label = isFavorite ? "Remove from Favorites" : "Add to Favorites";
+    const icon = productModalFavorite.querySelector("img");
+
+    productModalFavorite.setAttribute("aria-label", label);
+    productModalFavorite.setAttribute("title", label);
+    productModalFavorite.classList.toggle("is-favorite", isFavorite);
+    icon?.setAttribute(
+        "src",
+        isFavorite ? "images/Heart7.PNG" : "images/optimized/heart-outline.png"
+    );
+}
+
+async function updateProductModalReviews(product) {
+    if (!productModalReviewStars || !productModalReviewSummary) return;
+
+    productModalReviewStars.textContent = "☆☆☆☆☆";
+    productModalReviewSummary.textContent = "Loading reviews…";
+
+    try {
+        const snapshot = await getDocs(query(
+            collection(db, "reviews"),
+            where("productId", "==", String(product.id))
+        ));
+        if (selectedModalProduct?.id !== product.id) return;
+
+        const ratings = snapshot.docs.map(review => Number(review.data().rating || 0));
+        const count = ratings.length;
+        const average = count
+            ? ratings.reduce((sum, rating) => sum + rating, 0) / count
+            : 0;
+
+        productModalReviewStars.textContent =
+            "★".repeat(Math.round(average)) + "☆".repeat(5 - Math.round(average));
+        productModalReviewSummary.textContent = count
+            ? `${average.toFixed(1)} · ${count} ${count === 1 ? "Review" : "Reviews"}`
+            : "No reviews yet";
+    } catch (error) {
+        console.error("Unable to load modal reviews:", error);
+        if (selectedModalProduct?.id === product.id) {
+            productModalReviewSummary.textContent = "No reviews yet";
+        }
+    }
+}
 
 
 /* ============================================================
@@ -2221,9 +2285,10 @@ function openProductModal(productBox) {
 
     productModalImage.src = product.image;
     productModalTitle.textContent = product.title;
-    const previewWords = product.description.trim().split(/\s+/).slice(0, 6);
-
-    productModalDescription.textContent = `${previewWords.join(" ")}...`;
+    productModalDescription.textContent = String(
+        product.description || "Product description coming soon."
+    ).trim();
+    void updateProductModalReviews(product);
     productModalOptions.replaceChildren();
     productModalOptionsGroup.hidden = optionGroups.length === 0;
 
@@ -2265,8 +2330,11 @@ function openProductModal(productBox) {
         productModalOptions.appendChild(section);
     });
 
+    updateProductModalFavorite();
     updateModalVariant();
     productModalOverlay.classList.add("active");
+    document.documentElement.classList.add("product-modal-open");
+    document.body.classList.add("product-modal-open");
 }
 
 
@@ -2277,6 +2345,8 @@ function openProductModal(productBox) {
 function closeProductModal() {
 
     productModalOverlay.classList.remove("active");
+    document.documentElement.classList.remove("product-modal-open");
+    document.body.classList.remove("product-modal-open");
 
     selectedProduct = null;
     selectedModalProduct = null;

@@ -48,10 +48,10 @@ button,select{cursor:pointer}
 .filter-picker-menu button:hover,.filter-picker-menu button:focus{background:#fff4ef;outline:0}
 .filter-picker-menu button.selected{border-radius:8px;background:#E5A484;color:#fff}
 .filter-option-divider{width:calc(100% - 16px);height:1px;margin:3px 8px;background:linear-gradient(to right,#E4E4E4 12%,#E4E4E4 88%,transparent)}
-.filter-picker[data-select-id="sort-results"]{min-width:162px}
-.filter-picker[data-select-id="color-filter"]{min-width:112px}
-.filter-picker[data-select-id="size-filter"]{min-width:138px}
-.reset-filters{display:none;width:auto;min-width:108px;flex:0 0 auto;margin-left:0;background:#fff}
+.filter-picker[data-select-id="sort-results"]{min-width:104px}
+.filter-picker[data-select-id="color-filter"]{min-width:78px}
+.filter-picker[data-select-id="size-filter"]{min-width:96px}
+.reset-filters{display:none;width:auto;min-width:82px;flex:0 0 auto;margin-left:0;background:#fff}
 .results-toolbar.filters-ready .reset-filters{display:flex}
 .results-grid{margin-top:20px}
 .no-results{padding:90px 20px;text-align:center}
@@ -66,9 +66,9 @@ button,select{cursor:pointer}
     .results-toolbar{width:calc(100% + 20px);align-self:center;gap:7px;margin:0;padding:7px 10px 10px;scroll-padding-left:10px}
     .filter-loading{gap:7px}.filter-loading span{width:88px;height:32px}.filter-loading span:first-child{width:132px}.filter-loading span:nth-child(3){width:112px}.filter-loading span:last-child{width:94px}
     .filter-picker-trigger,.reset-filters{min-height:32px;padding:0 12px;font-size:12px}
-    .filter-picker[data-select-id="sort-results"]{min-width:132px}
-    .filter-picker[data-select-id="color-filter"]{min-width:88px}
-    .filter-picker[data-select-id="size-filter"]{min-width:112px}
-    .reset-filters{min-width:94px}
+    .filter-picker[data-select-id="sort-results"]{min-width:96px}
+    .filter-picker[data-select-id="color-filter"]{min-width:70px}
+    .filter-picker[data-select-id="size-filter"]{min-width:88px}
+    .reset-filters{min-width:76px}
     .results-grid{margin-top:12px}
 }

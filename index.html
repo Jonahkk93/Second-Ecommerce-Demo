@@ -1,16 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" class="site-loading-enabled">
+<html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         <title>MPWR</title>
-        <link rel="stylesheet" href="css/CARTNEW.css?v=20260809-1">
+        <link rel="stylesheet" href="css/CARTNEW.css?v=20260815-15">
         <link rel="stylesheet" href="css/password-toggle.css">
         <link rel="stylesheet" href="css/signout-confirm.css">
         <link rel="stylesheet" href="css/Larke.css">
         <link rel="stylesheet" href="css/touch-interactions.css">
-        <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
-        <script src="js/loading-states.js?v=20260809-23" defer></script>
         <script src="js/touch-interactions.js" defer></script>
 </head>
 
@@ -254,7 +252,6 @@
     <div class="img-box">
 
         <button class="wishlist-btn">
-
             <img
                 src="images/optimized/heart-outline.png"
                 class="wishlist-icon"
@@ -673,9 +670,12 @@
         </a>
     </div>
 
-        <span class="product-modal-price"></span>
+        <div class="product-modal-reviews" aria-live="polite" aria-label="Product reviews">
+            <span class="product-modal-review-stars" aria-hidden="true">☆☆☆☆☆</span>
+            <span class="product-modal-review-summary">No reviews yet</span>
+        </div>
 
-        <button type="button" class="product-modal-favorite">Add To Favorites</button>
+        <span class="product-modal-price"></span>
 
         <div class="product-modal-description-row">
             <p class="product-modal-description">
@@ -691,9 +691,15 @@
 
 </div>
 
-        <button class="product-modal-cart">
-            Add to Cart
-        </button>
+        <div class="product-modal-actions">
+            <button type="button" class="product-modal-favorite" aria-label="Add to Favorites" title="Add to Favorites">
+                <img src="images/optimized/heart-outline.png" class="product-modal-favorite-icon" alt="">
+                <span>Add to Favorites</span>
+            </button>
+            <button class="product-modal-cart">
+                Add to Cart
+            </button>
+        </div>
 
     </div>
 
@@ -725,7 +731,7 @@
              </div>
 
             <div class="footer-col">
-                <h4>Online Shop</h4>
+                <h4>Categories</h4>
                 <ul>
                     <li><a href="Wigs.html">Wigs</a></li>
                     <li><a href="Nails.html">Press-on Nails</a></li>
@@ -856,7 +862,7 @@
 
         <h2>Create Account</h2>
 
-        <p>Create an account to enjoy faster checkout.</p>
+        <p>Create an account for a faster checkout.</p>
 
     </div>
 
@@ -962,8 +968,8 @@
 <script src="js/products.js"></script>
 <script src="js/category-sections.js"></script>
 
-<script type="module" src="js/CARTNEW.js"></script>
-<script src="js/popular-products.js?v=20260809-3"></script>
+<script type="module" src="js/CARTNEW.js?v=20260815-15"></script>
+<script type="module" src="js/popular-products.js"></script>
 <script src="js/password-toggle.js"></script>
 <script src="js/signout-confirm.js"></script>
 

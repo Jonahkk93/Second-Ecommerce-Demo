@@ -1555,6 +1555,50 @@ productDescriptionReadMore.addEventListener("click", () => {
         : "Read less";
 });
 
+function flyProductImageToCart() {
+    const productImage = sliderTrack.children[currentSlide]?.querySelector("img") ||
+        sliderTrack.querySelector("img");
+    if (!productImage || !cartIcon) return;
+
+    const imageRect = productImage.getBoundingClientRect();
+    const cartRect = cartIcon.getBoundingClientRect();
+    if (!imageRect.width || !imageRect.height || !cartRect.width || !cartRect.height) return;
+
+    const flyingImage = productImage.cloneNode(true);
+    flyingImage.classList.add("flying-image");
+    Object.assign(flyingImage.style, {
+        position:"fixed",
+        left:`${imageRect.left}px`,
+        top:`${imageRect.top}px`,
+        width:`${imageRect.width}px`,
+        height:`${imageRect.height}px`,
+        margin:"0",
+        zIndex:"100001",
+        pointerEvents:"none"
+    });
+    document.body.appendChild(flyingImage);
+
+    const translateX = cartRect.left + cartRect.width / 2 -
+        (imageRect.left + imageRect.width / 2);
+    const translateY = cartRect.top + cartRect.height / 2 -
+        (imageRect.top + imageRect.height / 2);
+    const animation = flyingImage.animate([
+        { transform:"translate3d(0, 0, 0) scale(1)", opacity:1 },
+        {
+            transform:`translate3d(${translateX}px, ${translateY}px, 0) scale(.15)`,
+            opacity:0
+        }
+    ],{
+        duration:650,
+        easing:"cubic-bezier(.25,.8,.25,1)",
+        fill:"forwards"
+    });
+
+    animation.finished.finally(() => flyingImage.remove());
+    cartIcon.classList.add("cart-bounce");
+    setTimeout(() => cartIcon.classList.remove("cart-bounce"),450);
+}
+
 addTocartIcon.addEventListener("click", () => {
 
     const cartItem = {
@@ -1587,6 +1631,7 @@ addTocartIcon.addEventListener("click", () => {
     renderSavedCart();
 
     updateCartBadge();
+    flyProductImageToCart();
     showToast("Added to cart🛒", "success");
 
     console.log(cartItems);

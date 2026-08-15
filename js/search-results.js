@@ -20,7 +20,11 @@ function loadFirebaseServices() {
             db:window.db,
             doc:firestore.doc,
             getDoc:firestore.getDoc,
+            getDocs:firestore.getDocs,
             setDoc:firestore.setDoc,
+            collection:firestore.collection,
+            query:firestore.query,
+            where:firestore.where,
             onAuthStateChanged:authApi.onAuthStateChanged
         }));
     }
@@ -43,6 +47,8 @@ const productModalImage = document.querySelector(".product-modal-image");
 const productModalImageLink = document.querySelector(".product-modal-image-link");
 const productModalTitle = document.querySelector(".product-modal-title");
 const productModalTitleLink = document.querySelector(".product-modal-title-link");
+const productModalReviewStars = document.querySelector(".product-modal-review-stars");
+const productModalReviewSummary = document.querySelector(".product-modal-review-summary");
 const productModalPrice = document.querySelector(".product-modal-price");
 const productModalFavorite = document.querySelector(".product-modal-favorite");
 const productModalDescription = document.querySelector(".product-modal-description");
@@ -458,6 +464,8 @@ function searchScore(product, searchQuery) {
 
 function closeProductModal() {
     productModalOverlay.classList.remove("active");
+    document.documentElement.classList.remove("product-modal-open");
+    document.body.classList.remove("product-modal-open");
     selectedModalProduct = null;
     selectedModalCard = null;
 }
@@ -508,8 +516,10 @@ function openProductModal(product,card) {
 
     productModalTitle.textContent = product.title;
     productModalImage.alt = product.title;
-    const previewWords = String(product.description || "Product description coming soon.").trim().split(/\s+/).slice(0,6);
-    productModalDescription.textContent = `${previewWords.join(" ")}...`;
+    productModalDescription.textContent = String(
+        product.description || "Product description coming soon."
+    ).trim();
+    void updateModalReviews(product);
     productModalOptions.replaceChildren();
     productModalOptionsGroup.hidden = optionGroups.length === 0;
 
@@ -544,10 +554,11 @@ function openProductModal(product,card) {
         productModalOptions.appendChild(section);
     });
 
-    const isFavorite = getFavorites().some(item => String(item.id) === String(product.id));
-    productModalFavorite.textContent = isFavorite ? "Remove From Favorites" : "Add To Favorites";
+    updateModalFavoriteButton();
     updateModalVariant();
     productModalOverlay.classList.add("active");
+    document.documentElement.classList.add("product-modal-open");
+    document.body.classList.add("product-modal-open");
 }
 
 function optionValues(product,keyPattern) {
@@ -745,9 +756,54 @@ productModalFavorite.addEventListener("click",() => {
     });
     saveFavorites(favorites);
     const isFavorite = favoriteIndex < 0;
-    productModalFavorite.textContent = isFavorite ? "Remove From Favorites" : "Add To Favorites";
+    updateModalFavoriteButton(isFavorite);
     selectedModalCard?.querySelector(".wishlist-icon")?.setAttribute("src",isFavorite ? "images/Heart7.PNG" : "images/optimized/heart-outline.png");
 });
+
+function updateModalFavoriteButton(isFavorite = getFavorites().some(item => String(item.id) === String(selectedModalProduct?.id))) {
+    if (!productModalFavorite) return;
+    const label = isFavorite ? "Remove from Favorites" : "Add to Favorites";
+    const icon = productModalFavorite.querySelector("img");
+
+    productModalFavorite.setAttribute("aria-label",label);
+    productModalFavorite.setAttribute("title",label);
+    productModalFavorite.classList.toggle("is-favorite",isFavorite);
+    icon?.setAttribute("src",isFavorite ? "images/Heart7.PNG" : "images/optimized/heart-outline.png");
+}
+
+async function updateModalReviews(product) {
+    if (!productModalReviewStars || !productModalReviewSummary) return;
+
+    productModalReviewStars.textContent = "☆☆☆☆☆";
+    productModalReviewSummary.textContent = "Loading reviews…";
+
+    try {
+        const { db, collection, getDocs, query, where } = await loadFirebaseServices();
+        const snapshot = await getDocs(query(
+            collection(db, "reviews"),
+            where("productId", "==", String(product.id))
+        ));
+        if (selectedModalProduct?.id !== product.id) return;
+
+        const ratings = snapshot.docs.map(review => Number(review.data().rating || 0));
+        const count = ratings.length;
+        const average = count
+            ? ratings.reduce((sum, rating) => sum + rating, 0) / count
+            : 0;
+
+        productModalReviewStars.textContent =
+            "★".repeat(Math.round(average)) + "☆".repeat(5 - Math.round(average));
+        productModalReviewSummary.textContent = count
+            ? `${average.toFixed(1)} · ${count} ${count === 1 ? "Review" : "Reviews"}`
+            : "No reviews yet";
+    } catch (error) {
+        console.error("Unable to load modal reviews:", error);
+        if (selectedModalProduct?.id === product.id) {
+            productModalReviewSummary.textContent = "No reviews yet";
+        }
+    }
+}
+
 productModalCart.addEventListener("click",() => {
     if (!selectedModalProduct) return;
     const cart = getCart();
@@ -769,7 +825,7 @@ productModalCart.addEventListener("click",() => {
     cart.push(cartItem);
     saveCart(cart);
 
-    const productImage = selectedModalCard?.querySelector(".img-box > img");
+    const productImage = productModalImage || selectedModalCard?.querySelector(".img-box > img");
     const cartIcon = document.querySelector("#cart-icon");
     if (productImage && cartIcon) {
         const imageRect = productImage.getBoundingClientRect();
@@ -778,17 +834,25 @@ productModalCart.addEventListener("click",() => {
         flyingImage.classList.add("flying-image");
         flyingImage.style.left = `${imageRect.left}px`;
         flyingImage.style.top = `${imageRect.top}px`;
+        flyingImage.style.width = `${imageRect.width}px`;
+        flyingImage.style.height = `${imageRect.height}px`;
+        flyingImage.style.margin = "0";
         document.body.appendChild(flyingImage);
 
-        requestAnimationFrame(() => {
-            flyingImage.style.left = `${cartRect.left}px`;
-            flyingImage.style.top = `${cartRect.top}px`;
-            flyingImage.style.width = "20px";
-            flyingImage.style.height = "20px";
-            flyingImage.style.opacity = "0";
+        const translateX = cartRect.left + cartRect.width / 2 -
+            (imageRect.left + imageRect.width / 2);
+        const translateY = cartRect.top + cartRect.height / 2 -
+            (imageRect.top + imageRect.height / 2);
+        const animation = flyingImage.animate([
+            { transform:"translate3d(0, 0, 0) scale(1)", opacity:1 },
+            { transform:`translate3d(${translateX}px, ${translateY}px, 0) scale(.15)`, opacity:0 }
+        ],{
+            duration:650,
+            easing:"cubic-bezier(.25,.8,.25,1)",
+            fill:"forwards"
         });
 
-        setTimeout(() => flyingImage.remove(),650);
+        animation.finished.finally(() => flyingImage.remove());
         cartIcon.classList.add("cart-bounce");
         setTimeout(() => cartIcon.classList.remove("cart-bounce"),450);
     }

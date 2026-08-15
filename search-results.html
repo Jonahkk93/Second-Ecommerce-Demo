@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
     <title>Search results | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/CARTNEW.css?v=20260808-3">
-    <link rel="stylesheet" href="css/search-results.css?v=20260809-20">
+    <link rel="stylesheet" href="css/CARTNEW.css?v=20260815-13">
+    <link rel="stylesheet" href="css/search-results.css?v=20260815-3">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
     <script src="js/products.js" defer></script>
-    <script type="module" src="js/search-results.js?v=20260809-23"></script>
+    <script type="module" src="js/search-results.js?v=20260815-13"></script>
     </head>
 <body>
     <header class="results-header">
@@ -46,7 +46,7 @@
             </select>
             <select id="color-filter" aria-label="Filter by color"><option value="" data-trigger-label="Color">All colors</option></select>
             <select id="size-filter" aria-label="Filter by size"><option value="" data-trigger-label="Size / length">All sizes / lengths</option></select>
-            <button class="reset-filters" type="button">Clear filters</button>
+            <button class="reset-filters" type="button">Reset filters</button>
         </section>
     </header>
 
@@ -67,8 +67,11 @@
                             <h2 class="product-modal-title"></h2>
                         </a>
                     </div>
+                    <div class="product-modal-reviews" aria-live="polite" aria-label="Product reviews">
+                        <span class="product-modal-review-stars" aria-hidden="true">☆☆☆☆☆</span>
+                        <span class="product-modal-review-summary">No reviews yet</span>
+                    </div>
                     <span class="product-modal-price"></span>
-                    <button type="button" class="product-modal-favorite">Add To Favorites</button>
                     <div class="product-modal-description-row">
                         <p class="product-modal-description">Product description coming soon...</p>
                         <a class="product-modal-read-more" href="product.html">Read more</a>
@@ -78,7 +81,13 @@
             <div class="product-modal-options-group">
                 <div class="product-modal-options-dynamic"></div>
             </div>
-            <button class="product-modal-cart" type="button">Add to Cart</button>
+            <div class="product-modal-actions">
+                <button type="button" class="product-modal-favorite" aria-label="Add to Favorites" title="Add to Favorites">
+                    <img src="images/optimized/heart-outline.png" class="product-modal-favorite-icon" alt="">
+                    <span>Add to Favorites</span>
+                </button>
+                <button class="product-modal-cart" type="button">Add to Cart</button>
+            </div>
         </div>
     </div>
 

@@ -94,6 +94,12 @@ body.side-panel-open{
     overscroll-behavior: none;
 }
 
+html.product-modal-open,
+body.product-modal-open{
+    overflow:hidden;
+    overscroll-behavior:none;
+}
+
 header{
     position: fixed;
     top: 0;
@@ -1039,7 +1045,7 @@ header{
 
     pointer-events: none;
 
-    z-index: 9999;
+    z-index: 100001;
 
     transition:
         left .65s cubic-bezier(.25,.8,.25,1),
@@ -3892,6 +3898,106 @@ margin-top:50px;
     margin-top: 48px;
 }
 
+/* Match the product page's circular favorite control beside the modal cart action. */
+.product-modal-actions{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-top:48px;
+}
+
+.product-modal-actions .product-modal-cart{
+    flex:1 1 auto;
+    width:auto;
+    margin:0;
+}
+
+/* Keep the product details compact inside the modal. */
+.product-modal-right{
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+    gap:6px;
+}
+
+.product-modal-header,
+.product-modal-price,
+.product-modal-description-row{
+    flex:0 0 auto;
+    margin:0;
+}
+
+.product-modal-reviews{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    color:#6e6e6e;
+    font-size:13px;
+    line-height:1;
+}
+
+.product-modal-review-stars{
+    color:#d4af37;
+    font-size:15px;
+    letter-spacing:1px;
+}
+
+/* Replace the legacy one-line truncation with a three-line preview. */
+.product-modal-description{
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:3;
+    line-clamp:3;
+    overflow:hidden;
+    white-space:normal;
+}
+
+.product-modal-favorite{
+    width:52px;
+    min-width:52px;
+    height:52px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    margin:0;
+    position:relative;
+    flex-shrink:0;
+    background:#fff;
+    border:1px solid #e8e8e8;
+    border-radius:50%;
+    box-shadow:0 6px 18px rgba(0,0,0,.08);
+    color:inherit;
+    transition:all .25s ease;
+}
+
+.product-modal-favorite:hover{
+    color:inherit;
+    transform:translateY(-2px);
+    box-shadow:0 10px 24px rgba(0,0,0,.12);
+}
+
+.product-modal-favorite:active{
+    transform:scale(.94);
+}
+
+.product-modal-favorite span{
+    display:none;
+}
+
+.product-modal-favorite-icon{
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:contain;
+}
+
+@media screen and (max-width:600px){
+    .product-modal-actions{
+        margin-top:32px;
+    }
+}
+
 @media screen and (max-width: 600px){
     .product-modal-options-group + .product-modal-cart{
         margin-top: 32px;
@@ -4621,6 +4727,124 @@ header{
     .wishlist{
         width:clamp(420px, 32vw, 480px);
     }
+}
+
+/* Keep modal copy compact now that the review summary is shown under the title. */
+.product-modal-description-row,
+.product-modal .product-modal-description-row{
+    display:flex;
+    align-items:baseline;
+    flex-wrap:nowrap;
+    gap:0;
+    min-width:0;
+}
+
+.product-modal-description,
+.product-modal .product-modal-description{
+    display:block;
+    flex:0 1 auto;
+    min-width:0;
+    width:auto;
+    max-width:none;
+    -webkit-line-clamp:unset;
+    line-clamp:unset;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:clip;
+}
+
+.product-modal-read-more{
+    display:block;
+    flex:0 0 auto;
+    margin:0;
+    white-space:nowrap;
+}
+
+.product-modal .product-modal-read-more::before{
+    content:"... ";
+}
+
+/* Let modal copy expand beyond the legacy one-line, fixed-height layout. */
+.product-modal-right{
+    height:auto;
+}
+
+.product-modal-description-row{
+    display:block;
+}
+
+.product-modal-description{
+    max-width:100%;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:3;
+    line-clamp:3;
+    white-space:normal;
+    overflow:hidden;
+}
+
+.product-modal-read-more{
+    display:inline-block;
+    margin-top:4px;
+}
+
+/* Preserve the three-line description preview on tablet and laptop layouts. */
+@media screen and (min-width:601px){
+    .product-modal .product-modal-right{
+        height:auto;
+    }
+
+    .product-modal .product-modal-description-row{
+        display:block;
+    }
+
+    .product-modal .product-modal-description{
+        width:100%;
+        max-width:100%;
+        display:-webkit-box;
+        -webkit-box-orient:vertical;
+        -webkit-line-clamp:3;
+        line-clamp:3;
+        white-space:normal;
+        overflow:hidden;
+    }
+}
+
+/* Final modal copy layout: a one-line description with its link beside it. */
+.product-modal .product-modal-description-row{
+    display:flex;
+    align-items:baseline;
+    flex-wrap:nowrap;
+    gap:0;
+    min-width:0;
+}
+
+.product-modal .product-modal-description{
+    display:inline-block;
+    flex:0 1 max-content;
+    min-width:0;
+    width:max-content;
+    max-width:calc(100% - 84px);
+    -webkit-line-clamp:unset;
+    line-clamp:unset;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:clip;
+}
+
+.product-modal .product-modal-read-more{
+    display:inline-block;
+    flex:0 0 auto;
+    margin:0;
+    white-space:nowrap;
+}
+
+/* Distribute product details across the full height of the modal image. */
+.product-modal .product-modal-right{
+    align-self:stretch;
+    height:auto;
+    justify-content:space-between;
+    gap:0;
 }
 
 

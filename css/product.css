@@ -2356,7 +2356,7 @@ transition: .25s ease;
 
     pointer-events: none;
 
-    z-index: 9999;
+    z-index: 100001;
 
     transition:
         left .65s cubic-bezier(.25,.8,.25,1),
