@@ -8,6 +8,8 @@ const itemsContainer = document.getElementById("checkout-items");
 const errorElement = document.getElementById("form-error");
 const submitButton = document.getElementById("place-order");
 const mobileFields = document.getElementById("mobile-money-fields");
+const creditCardFields = document.getElementById("credit-card-fields");
+const flutterwaveFields = document.getElementById("flutterwave-fields");
 const itemsToggle = document.getElementById("order-items-toggle");
 const checkoutBack = document.getElementById("checkout-back");
 const exitOverlay = document.getElementById("checkout-exit-overlay");
@@ -158,12 +160,28 @@ itemsToggle.addEventListener("click", () => {
         : "Show fewer items";
 });
 
-document.querySelectorAll('input[name="paymentMethod"]').forEach(input => input.addEventListener("change", () => {
-    const mobileSelected = form.elements.paymentMethod.value === "mobile_money";
+function updatePaymentFields() {
+    const method = form.elements.paymentMethod.value;
+    const mobileSelected = method === "mobile_money";
+    const cardSelected = method === "credit_card";
+    const flutterwaveSelected = method === "flutterwave";
+
     mobileFields.hidden = !mobileSelected;
+    creditCardFields.hidden = !cardSelected;
+    flutterwaveFields.hidden = !flutterwaveSelected;
+
     form.elements.mobileNumber.required = mobileSelected;
+    ["cardholderName", "cardNumber", "cardExpiry", "cardCvv"].forEach(name => {
+        form.elements[name].required = cardSelected;
+    });
+    ["flutterwaveEmail", "flutterwavePhone"].forEach(name => {
+        form.elements[name].required = flutterwaveSelected;
+    });
     if (!mobileSelected) closeNetworkPicker();
-}));
+}
+
+document.querySelectorAll('input[name="paymentMethod"]').forEach(input => input.addEventListener("change", updatePaymentFields));
+updatePaymentFields();
 
 onAuthStateChanged(auth, async user => {
     currentUser = user;

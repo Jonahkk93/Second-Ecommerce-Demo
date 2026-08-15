@@ -4884,9 +4884,7 @@ header{
         max-height:calc(100dvh - 20px);
         padding:12px;
         padding-top:18px;
-        padding-right:18px;
         padding-bottom:26px;
-        padding-left:18px;
         border-radius:16px;
     }
 
