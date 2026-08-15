@@ -4883,7 +4883,8 @@ header{
         width:min(92vw, 360px);
         max-height:calc(100dvh - 20px);
         padding:12px;
-        padding-bottom:16px;
+        padding-top:22px;
+        padding-bottom:26px;
         border-radius:16px;
     }
 
@@ -4894,12 +4895,12 @@ header{
     }
 
     .product-modal-left{
-        flex-basis:82px;
+        flex-basis:90px;
     }
 
     .product-modal-image{
-        width:82px;
-        height:82px;
+        width:90px;
+        height:90px;
         border-radius:12px;
     }
 
