@@ -200,9 +200,17 @@ reviewForm.addEventListener("submit", async event => {
             `${user.uid}_${currentReviewItem.id}`
         );
         const productId = currentReviewItem.id;
+        const purchasedOptions = currentReviewItem.selectedOptions && Object.keys(currentReviewItem.selectedOptions).length
+            ? currentReviewItem.selectedOptions
+            : {
+                ...(currentReviewItem.color ? { color: currentReviewItem.color } : {}),
+                ...(currentReviewItem.size ? { size: currentReviewItem.size } : {})
+            };
 
         await setDoc(reviewRef, {
             productId: String(currentReviewItem.id),
+            productTitle: currentReviewItem.title || "Purchased product",
+            purchasedOptions,
             userId: user.uid,
             customerName: user.displayName || user.email?.split("@")[0] || "MPWR customer",
             rating: currentReviewRating,

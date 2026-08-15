@@ -183,6 +183,39 @@ function updatePaymentFields() {
 document.querySelectorAll('input[name="paymentMethod"]').forEach(input => input.addEventListener("change", updatePaymentFields));
 updatePaymentFields();
 
+function validateCheckoutForm() {
+    const fields = [...form.querySelectorAll("input, textarea, select")]
+        .filter(field => field.willValidate && !field.disabled);
+    const invalidFields = fields.filter(field => !field.checkValidity());
+    const firstInvalid = invalidFields[0];
+    if (!firstInvalid) return true;
+
+    fields.forEach(field => {
+        const invalid = invalidFields.includes(field);
+        field.classList.toggle("is-invalid", invalid);
+        field.setAttribute("aria-invalid", String(invalid));
+    });
+
+    const hasFormatError = invalidFields.some(field =>
+        field.validity.typeMismatch || field.validity.patternMismatch
+    );
+    errorElement.textContent = hasFormatError
+        ? "Please correct all highlighted fields."
+        : "Please complete all highlighted fields.";
+    firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+    firstInvalid.focus({ preventScroll: true });
+    return false;
+}
+
+form.addEventListener("input", event => {
+    const field = event.target;
+    if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement)) return;
+    if (field.checkValidity()) {
+        field.classList.remove("is-invalid");
+        field.removeAttribute("aria-invalid");
+    }
+});
+
 onAuthStateChanged(auth, async user => {
     currentUser = user;
     if (!user) {
@@ -209,7 +242,7 @@ form.addEventListener("submit", async event => {
     event.preventDefault();
     errorElement.textContent = "";
     if (!currentUser) { errorElement.textContent = "Please sign in to place your order."; return; }
-    if (!form.reportValidity()) return;
+    if (!validateCheckoutForm()) return;
     cart = JSON.parse(localStorage.getItem("cart")) || [];
     if (!cart.length) { window.location.replace("index.html"); return; }
 

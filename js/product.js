@@ -558,8 +558,9 @@ function renderRelatedProducts() {
 
     const currentIndex = products.findIndex(item => item.id === product.id);
     const recommendations = [];
+    const recommendationLimit = window.matchMedia("(max-width: 600px)").matches ? 6 : 10;
 
-    for (let offset = 1; recommendations.length < Math.min(3, products.length - 1); offset++) {
+    for (let offset = 1; recommendations.length < Math.min(recommendationLimit, products.length - 1); offset++) {
         const candidate = products[(currentIndex + offset) % products.length];
         if (candidate.id !== product.id) recommendations.push(candidate);
     }
@@ -605,7 +606,10 @@ function positionReviews() {
 }
 
 positionReviews();
-window.addEventListener("resize", positionReviews);
+window.addEventListener("resize", () => {
+    positionReviews();
+    renderRelatedProducts();
+});
 
 function setReviewRating(rating) {
     selectedReviewRating = rating;
@@ -630,6 +634,17 @@ function reviewDate(value) {
         month: "short",
         day: "numeric"
     }).format(date);
+}
+
+function reviewPurchasedOptions(review) {
+    const options = review.purchasedOptions || review.selectedOptions || {
+        color: review.color || "",
+        size: review.size || "",
+        length: review.length || ""
+    };
+    return ["color", "size", "length"]
+        .filter(key => options[key])
+        .map(key => options[key]);
 }
 
 function renderReviewList(reviews) {
@@ -666,9 +681,10 @@ function renderReviewList(reviews) {
         const customer = document.createElement("strong");
         customer.textContent = review.customerName || "MPWR customer";
 
-        const verified = document.createElement("span");
+        const verified = document.createElement("img");
         verified.className = "verified-purchase";
-        verified.textContent = "Verified purchase";
+        verified.src = "images/Icon Folder/Verified Icon_E5A484.PNG";
+        verified.alt = "Verified purchase";
 
         const stars = document.createElement("span");
         stars.className = "review-card-stars";
@@ -681,10 +697,27 @@ function renderReviewList(reviews) {
         body.textContent = review.text;
 
         const date = document.createElement("time");
+        date.className = "review-purchase-date";
         date.textContent = reviewDate(review.updatedAt || review.createdAt);
 
-        header.append(customer, verified);
-        card.append(header, stars, body);
+        const reviewerDetails = document.createElement("div");
+        reviewerDetails.className = "review-client-details";
+
+        const clientLine = document.createElement("div");
+        clientLine.className = "review-client-name";
+        clientLine.append(customer, verified, stars, date);
+
+        const purchasedItem = document.createElement("span");
+        purchasedItem.className = "review-purchased-item";
+        const purchasedOptions = reviewPurchasedOptions(review);
+        purchasedItem.textContent = [
+            `Purchased: ${review.productTitle || product.title}`,
+            ...purchasedOptions
+        ].join(" • ");
+
+        reviewerDetails.append(clientLine, purchasedItem);
+        header.append(reviewerDetails);
+        card.append(header, body);
 
         if (review.userId === auth.currentUser?.uid) {
             const updateButton = document.createElement("button");
@@ -726,7 +759,6 @@ function renderReviewList(reviews) {
             }
         }
 
-        card.appendChild(date);
         reviewList.appendChild(card);
     });
     productReviews.classList.remove("reviews-loading-state");
@@ -832,6 +864,8 @@ reviewForm?.addEventListener("submit", async event => {
         const reviewRef = doc(db, "reviews", `${user.uid}_${product.id}`);
         const payload = {
             productId: String(product.id),
+            productTitle: product.title,
+            purchasedOptions: { ...selectedOptions },
             userId: user.uid,
             customerName: user.displayName || user.email?.split("@")[0] || "MPWR customer",
             rating: selectedReviewRating,

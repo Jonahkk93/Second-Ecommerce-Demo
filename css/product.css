@@ -354,7 +354,7 @@ body.side-panel-open .side-panel-backdrop{
     position:absolute;
     top:50%;
     z-index:3;
-    display:grid;
+    display:none;
     place-items:center;
     width:44px;
     height:44px;
@@ -392,6 +392,7 @@ body.side-panel-open .side-panel-backdrop{
 
 @media (max-width:600px){
     .gallery-arrow{
+        display:grid;
         width:38px;
         height:38px;
     }
@@ -557,8 +558,8 @@ align-items: center;
     top:50%;
     right:14px;
     display:flex;
-    width:16px;
-    height:16px;
+    width:14px;
+    height:14px;
     padding:3px;
     align-items:center;
     justify-content:center;
@@ -2898,33 +2899,73 @@ transition: .25s ease;
 .review-card-header{
     display:flex;
     align-items:center;
-    flex-wrap:wrap;
-    gap:9px;
-    margin-bottom:9px;
+    flex-wrap:nowrap;
+    gap:0;
+    margin-bottom:4px;
+}
+
+.review-client-details{
+    display:grid;
+    width:100%;
+    min-width:0;
+    gap:3px;
+}
+
+.review-client-name{
+    display:flex;
+    align-items:center;
+    min-width:0;
+}
+
+.review-client-name strong{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
 }
 
 .verified-purchase{
-    padding:4px 8px;
-    border-radius:999px;
-    background:rgba(229,164,132,.16);
-    color:#a96545;
-    font-size:11px;
-    font-weight:700;
-    text-transform:uppercase;
+    width:14px;
+    height:14px;
+    margin-left:4px;
+    object-fit:contain;
+    flex:0 0 auto;
+    align-self:center;
+}
+
+.review-card-header .review-card-stars{
+    flex:0 0 auto;
+    margin-left:6px;
+    line-height:1;
+}
+
+.review-client-name .review-purchase-date{
+    display:inline-block;
+    flex:0 0 auto;
+    margin:0 0 0 auto;
+    padding-left:12px;
+    color:#999;
+    font-size:12px;
+    line-height:1;
+    white-space:nowrap;
+}
+
+.review-purchased-item{
+    display:block;
+    max-width:100%;
+    overflow:hidden;
+    color:#8a817c;
+    font-size:12px;
+    line-height:1.2;
+    text-overflow:ellipsis;
+    white-space:nowrap;
 }
 
 .review-card p{
-    margin:12px 0;
+    margin:0 0 12px;
     color:#555;
     line-height:1.6;
     overflow-wrap:anywhere;
-}
-
-.review-card time{
-    display:block;
-    margin-top:12px;
-    color:#999;
-    font-size:12px;
 }
 
 .review-update-button{

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Account | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/account.css">
+    <link rel="stylesheet" href="css/account.css?v=20260815-13">
     <link rel="stylesheet" href="css/signout-confirm.css">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
@@ -32,34 +32,38 @@
                 <h2 id="account-profile-name">MPWR Customer</h2>
             </div>
 
+            <nav class="account-settings-list" aria-label="Account settings">
             <a class="account-profile-link" href="personal-information.html">
-                <span>Personal Information</span>
+                <span class="account-settings-label"><img src="images/Icon Folder/Profile Icon_333.PNG" alt=""><span>Personal Information</span></span>
                 <span aria-hidden="true">›</span>
             </a>
 
              <a class="account-profile-link" href="purchases.html">
-                <span>My Purchases</span>
+                <span class="account-settings-label"><img src="images/Icon Folder/Purchased Icon_333.PNG" alt=""><span>My Purchases</span></span>
                 <span aria-hidden="true">›</span>
             </a> 
 
             <a class="account-order-status-link" href="orders.html">
-                <span>Order Status</span>
+                <span class="account-settings-label"><img src="images/Icon Folder/Order status_333.PNG" alt=""><span>Order Status</span></span>
                 <span aria-hidden="true">›</span>
             </a>
 
              <a class="account-profile-link" href="#">
-                <span>History</span>
+                <span class="account-settings-label"><img src="images/Icon Folder/History Icon_333.PNG" alt=""><span>History</span></span>
                 <span aria-hidden="true">›</span>
             </a> 
             
              <a class="account-profile-link" href="#">
-                <span>My Payment Options</span>
+                <span class="account-settings-label"><img src="images/Icon Folder/Credit Card 2_333.PNG" alt=""><span>My Payment Options</span></span>
                 <span aria-hidden="true">›</span>
             </a> 
               <a class="account-profile-link" href="#">
-                <span>My Shipping Address</span>
+                <span class="account-settings-label"><img src="images/Icon Folder/Location Icon_333.PNG" alt=""><span>My Shipping Address</span></span>
                 <span aria-hidden="true">›</span>
-            </a> 
+            </a>
+            </nav>
+
+            <nav class="account-settings-list account-settings-list-secondary" aria-label="Account support and policies">
               <a class="account-profile-link" href="#">
                 <span>Feedback & Rating</span>
                 <span aria-hidden="true">›</span>
@@ -83,7 +87,8 @@
               <a class="account-profile-link" href="#">
                 <span>Connect with us</span>
                 <span aria-hidden="true">›</span>
-            </a> 
+            </a>
+            </nav>
             
         <button class="account-signout" type="button" >Sign out</button>
         
