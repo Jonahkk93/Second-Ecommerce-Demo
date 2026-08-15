@@ -4883,7 +4883,7 @@ header{
         width:min(92vw, 360px);
         max-height:calc(100dvh - 20px);
         padding:12px;
-        padding-top:22px;
+        padding-top:18px;
         padding-bottom:26px;
         border-radius:16px;
     }
@@ -4895,13 +4895,18 @@ header{
     }
 
     .product-modal-left{
-        flex-basis:90px;
+        flex-basis:100px;
     }
 
     .product-modal-image{
-        width:90px;
-        height:90px;
+        width:100px;
+        height:100px;
         border-radius:12px;
+    }
+
+    .product-modal .product-modal-right{
+        align-self:center;
+        height:90px;
     }
 
     .product-modal .product-modal-title{
