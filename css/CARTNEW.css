@@ -4847,5 +4847,31 @@ header{
     gap:0;
 }
 
+/* Keep the review summary compact and on one line in every modal size. */
+.product-modal .product-modal-reviews{
+    display:flex;
+    align-items:center;
+    flex-wrap:nowrap;
+    gap:5px;
+    min-width:0;
+    max-width:100%;
+    white-space:nowrap;
+}
+
+.product-modal .product-modal-review-stars{
+    flex:0 0 auto;
+    font-size:clamp(11px, 4vw, 15px);
+    letter-spacing:.5px;
+}
+
+.product-modal .product-modal-review-summary{
+    flex:0 1 auto;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    font-size:clamp(10px, 3.5vw, 13px);
+    white-space:nowrap;
+}
+
 
 
