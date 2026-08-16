@@ -1384,19 +1384,21 @@ align-items: center;
 
     position: absolute;
 
-    top: 18px;
+    top: calc(50% - 15px);
 
     right: 20px;
 
-    width: 34px;
+    width: 30px;
 
-    height: 34px;
+    height: 30px;
+
+    padding: 0;
 
     border: none;
 
-    border-radius: 50%;
+    border-radius: 0;
 
-    background: white;
+    background: transparent;
 
     display: flex;
 
@@ -1406,23 +1408,25 @@ align-items: center;
 
     cursor: pointer;
 
-    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    box-shadow: none;
 
-    transition: .25s ease;
+    transition: .2s ease;
 
 }
 
 .wishlist-remove:hover{
 
-    transform: scale(1.08);
+    transform: scale(1.15);
+
+    opacity: .7;
 
 }
 
 .wishlist-remove-icon{
 
-    width: 16px;
+    width: 30px;
 
-    height: 16px;
+    height: 30px;
 
     display: block;
 
@@ -1502,7 +1506,8 @@ align-items: center;
 
 }
 
-.clear-wishlist:hover{
+.clear-wishlist:hover,
+.clear-wishlist.is-confirming{
 
     color: #d9534f;
 
@@ -1518,6 +1523,13 @@ align-items: center;
 
     object-fit: contain;
 
+}
+
+@media (min-width:601px){
+    .clear-wishlist.is-confirming{
+        color:#d9534f;
+        border-color:#d9534f;
+    }
 }
 
 .wishlist-add-cart:active{
@@ -2407,11 +2419,24 @@ transition: .25s ease;
 .cart-menu-toggle:hover img{transform:translateY(-2px) scale(1.08);opacity:.8;}
 .cart-menu-toggle:active img{transform:translateY(1px) scale(.92);}
 .cart-close-button #cart-close{width:22px;height:22px;padding:0;box-sizing:border-box;object-fit:contain;opacity:1;}
-.cart-actions-menu{position:absolute;top:42px;right:38px;width:150px;padding:6px;border:1px solid #ececec;border-radius:10px;background:#fff;box-shadow:0 10px 28px rgba(51,51,51,.16);}
+.cart-actions-menu{position:absolute;top:42px;right:38px;min-width:150px;width:max-content;padding:6px;border:1px solid #ececec;border-radius:10px;background:#fff;box-shadow:0 10px 28px rgba(51,51,51,.16);}
 .cart-actions-menu[hidden]{display:none;}
-.cart-actions-menu button{width:100%;padding:11px 12px;border:0;border-radius:7px;background:transparent;color:#333;font:inherit;text-align:left;cursor:pointer;}
+.cart-actions-menu button{width:100%;min-height:40px;padding:11px 12px;border:0;border-radius:7px;background:transparent;color:#333;font:inherit;line-height:1;text-align:left;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:9px;}
 .cart-actions-menu button:hover,.cart-actions-menu button:focus-visible{background:#f5f5f5;outline:none;}
 .cart-actions-menu .cart-delete-all{color:#b33939;}
+.cart-actions-menu button img{width:16px;height:16px;flex:0 0 16px;display:block;object-fit:contain;transform:translateY(-2px);}
+
+.wishlist-header-actions{position:absolute;top:25px;right:24px;z-index:4;display:flex;align-items:center;gap:10px;}
+.wishlist-menu-toggle,.wishlist-close-button{display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;background:transparent;cursor:pointer;}
+.wishlist-menu-toggle img{width:25px;height:25px;display:block;object-fit:contain;transform:translateY(1px);transition:transform .25s ease,opacity .25s ease;}
+.wishlist-menu-toggle:hover img{transform:translateY(-2px) scale(1.08);opacity:.8;}
+.wishlist-menu-toggle:active img{transform:translateY(1px) scale(.92);}
+.wishlist-header-actions #wishlist-close{position:static;width:22px;height:22px;padding:0;box-sizing:border-box;object-fit:contain;opacity:1;}
+.wishlist-actions-menu{position:absolute;top:42px;right:38px;min-width:165px;width:max-content;padding:6px;border:1px solid #ececec;border-radius:10px;background:#fff;box-shadow:0 10px 28px rgba(51,51,51,.16);}
+.wishlist-actions-menu[hidden]{display:none;}
+.wishlist-actions-menu button{width:100%;min-height:40px;padding:11px 12px;border:0;border-radius:7px;background:transparent;color:#333;font:inherit;line-height:1;text-align:left;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:9px;}
+.wishlist-actions-menu button:hover,.wishlist-actions-menu button:focus-visible{background:#f5f5f5;outline:none;}
+.wishlist-actions-menu button img{width:16px;height:16px;flex:0 0 16px;display:block;object-fit:contain;transform:translateY(-2px);}
 
 @media screen and (min-width:601px) and (max-width:1440px){
     .cart-header-actions{right:27px;}
@@ -2424,7 +2449,9 @@ transition: .25s ease;
 
 @media screen and (max-width:600px){
     .cart-header-actions{top:13px;right:27px;gap:9px;}
+    .wishlist-header-actions{top:13px;right:27px;gap:9px;}
     .cart-menu-toggle,.cart-close-button{width:36px;height:36px;padding:0;}
+    .wishlist-menu-toggle,.wishlist-close-button{width:36px;height:36px;padding:0;}
     .cart-menu-toggle img{width:25px;height:25px;}
     .cart-close-button #cart-close{width:22px;height:22px;padding:0;box-sizing:border-box;opacity:1;}
 }
@@ -3451,6 +3478,7 @@ transition: .25s ease;
         animation:none;
     }
 }
+
 
 .benefit-item span{
     font-size:22px;
@@ -4485,6 +4513,32 @@ transition: .25s ease;
     }
 }
 
+/* Match Wishlist action positions to their Cart drawer counterparts. */
+.wishlist-remove{
+    right:30px;
+}
+
+#wishlist-close{
+    top:32px;
+    right:31px;
+}
+
+@media screen and (min-width:601px) and (max-width:1440px){
+    #wishlist-close{right:34px;}
+}
+
+@media screen and (max-width:600px){
+    #wishlist-close{
+        top:20px;
+        right:34px;
+        width:22px;
+        height:22px;
+        padding:0;
+        box-sizing:border-box;
+        opacity:1;
+    }
+}
+
 /* Match all product navigation controls to the shared content shimmer. */
 html.site-loading-enabled :is(
     .product-back-btn:has(> img:not(.site-image-ready):not(.site-image-error)),
@@ -4526,4 +4580,26 @@ html.site-loading-enabled :is(
     )::after{
         animation:none;
     }
+}
+
+/* Final responsive drawer alignment override. */
+.cart-header-actions,
+.wishlist-header-actions{right:27px;}
+
+.cart-close-button,
+.wishlist-close-button{
+    width:36px;
+    height:36px;
+    padding:0;
+    display:grid;
+    place-items:center;
+}
+
+.cart-close-button #cart-close,
+.wishlist-close-button #wishlist-close{
+    position:static;
+    width:22px;
+    height:22px;
+    padding:0;
+    box-sizing:border-box;
 }

@@ -3,6 +3,14 @@ export function mountMPWRDrawers(target = document.body) {
     target.insertAdjacentHTML("beforeend", `
         <div class="cart">
             <h2 class="cart-title">My Cart <span class="cart-title-count" aria-live="polite">(0)</span></h2>
+            <div class="cart-header-actions">
+                <button class="cart-menu-toggle" type="button" aria-label="Cart options" aria-expanded="false" aria-controls="cart-actions-menu"><img src="images/optimized/more.png" alt=""></button>
+                <div class="cart-actions-menu" id="cart-actions-menu" role="menu" hidden>
+                    <button class="cart-delete-all" type="button" role="menuitem"><img src="images/Icon Folder/Delete Icon_d9534f.PNG" alt="">Delete all</button>
+                    <button class="cart-share-all" type="button" role="menuitem"><img src="images/Icon Folder/Share Icon V2_Black.PNG" alt="">Share Cart</button>
+                </div>
+                <button class="cart-close-button" type="button" aria-label="Close cart"><img src="images/optimized/close-icon.png" class="ri-close-line" id="cart-close" alt=""></button>
+            </div>
             <div class="cart-content"></div>
             <div class="cart-empty">
                 <img src="images/Cart black.png" class="empty-cart-icon" alt="">
@@ -12,18 +20,16 @@ export function mountMPWRDrawers(target = document.body) {
             </div>
             <div class="total"><div class="total-title">Total</div><div class="total-price">UGX 0</div></div>
             <button class="btn-buy" type="button">Check Out</button><br><br>
-            <div class="cart-header-actions">
-                <button class="cart-menu-toggle" type="button" aria-label="Cart options" aria-expanded="false" aria-controls="cart-actions-menu"><img src="images/optimized/more.png" alt=""></button>
-                <div class="cart-actions-menu" id="cart-actions-menu" role="menu" hidden>
-                    <button class="cart-delete-all" type="button" role="menuitem">Delete all</button>
-                    <button class="cart-share-all" type="button" role="menuitem">Share Cart</button>
-                </div>
-                <button class="cart-close-button" type="button" aria-label="Close cart"><img src="images/optimized/close-icon.png" class="ri-close-line" id="cart-close" alt=""></button>
-            </div>
         </div>
         <div class="wishlist">
             <h2 class="wishlist-title">My Wishlist</h2>
-            <img src="images/optimized/close-icon.png" id="wishlist-close" alt="Close wishlist">
+            <div class="wishlist-header-actions">
+                <button class="wishlist-menu-toggle" type="button" aria-label="Wishlist options" aria-expanded="false" aria-controls="wishlist-actions-menu"><img src="images/optimized/more.png" alt=""></button>
+                <div class="wishlist-actions-menu" id="wishlist-actions-menu" role="menu" hidden>
+                    <button class="wishlist-share-all" type="button" role="menuitem"><img src="images/Icon Folder/Share Icon V2_Black.PNG" alt="">Share Wishlist</button>
+                </div>
+                <button class="wishlist-close-button" type="button" aria-label="Close wishlist"><img src="images/optimized/close-icon.png" id="wishlist-close" alt=""></button>
+            </div>
             <div class="wishlist-content"></div>
             <div class="wishlist-empty">
                 <img src="images/BlackHeart.PNG" class="wishlist-empty-icon" alt="">

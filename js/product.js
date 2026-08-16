@@ -30,6 +30,25 @@ updateProductHeaderMode();
 const productId = Number(params.get("id"));
 const product = products.find(item => item.id === productId);
 
+function recordProductVisit(item) {
+    if (!item) return;
+
+    try {
+        const storedHistory = JSON.parse(localStorage.getItem("mpwrProductHistory")) || [];
+        const visits = Array.isArray(storedHistory) ? storedHistory : [];
+        const nextHistory = [
+            { id: String(item.id), visitedAt: Date.now() },
+            ...visits.filter(visit => String(visit?.id) !== String(item.id))
+        ].slice(0, 100);
+
+        localStorage.setItem("mpwrProductHistory", JSON.stringify(nextHistory));
+    } catch (error) {
+        console.warn("Unable to save product history:", error);
+    }
+}
+
+recordProductVisit(product);
+
 function getProductOptions(item) {
     if (Array.isArray(item?.options) && item.options.length) {
         return item.options.filter(group =>
@@ -457,6 +476,7 @@ const wishlistContent = document.querySelector(".wishlist-content");
 const wishlistEmpty = document.querySelector(".wishlist-empty");
 const wishlistFooter = document.querySelector(".wishlist-footer");
 const clearWishlistButton = document.querySelector(".clear-wishlist");
+const clearWishlistIcon = clearWishlistButton?.querySelector(".clear-wishlist-icon");
 const wishlistContinue = document.querySelector(".wishlist-continue");
 const bottomwishlistNavIcon = document.querySelector(".product-bottom-favorite");
 const bottomFavoriteIcon = bottomwishlistNavIcon?.querySelector("img");
@@ -528,6 +548,7 @@ const deleteItemConfirmMessage = document.querySelector(".delete-item-confirm-me
 const deleteItemCancel = document.querySelector(".delete-item-cancel");
 const deleteItemConfirm = document.querySelector(".delete-item-confirm");
 let pendingItemDeletion = null;
+let confirmingDeleteIcon = null;
 const sidePanelBackdrop = document.querySelector(".side-panel-backdrop");
 const reviewCompose = document.querySelector(".review-compose");
 const reviewForm = document.querySelector("#review-form");
@@ -927,13 +948,20 @@ function showToast(message, type = "success") {
     }, 2500);
 }
 
-function requestItemDeletion(source, action) {
+function requestItemDeletion(source, action, icon = null) {
     pendingItemDeletion = action;
+    confirmingDeleteIcon = icon;
+    if (icon) icon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     const deletingWholeCart = source === "cart-all";
     deleteItemConfirmOverlay.querySelector("h2").textContent = deletingWholeCart ? "Delete All Items" : "Delete Item";
     deleteItemConfirmMessage.textContent = deletingWholeCart ? "Are you sure you want to delete all items from your cart?" : `Are you sure you want to delete this item from your ${source}?`;
     deleteItemConfirm.textContent = deletingWholeCart ? "Delete All" : "Delete Item";
     deleteItemConfirmOverlay.classList.add("active");
+}
+
+function resetConfirmingDeleteIcon() {
+    if (confirmingDeleteIcon) confirmingDeleteIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
+    confirmingDeleteIcon = null;
 }
 
 const flashToast = sessionStorage.getItem("flashToast");
@@ -1244,7 +1272,7 @@ function attachCartEvents(cartBox, cartItem) {
             renderSavedCart();
             updateCartBadge();
             showToast("Deleted", "success");
-        });
+        }, removeButton);
     };
 
     attachCartSwipe(cartBox);
@@ -1345,7 +1373,7 @@ function attachCartEvents(cartBox, cartItem) {
     });
 
     removeButton.addEventListener("pointerleave", () => {
-        removeButton.src = "images/Icon Folder/Delete Icon_333.PNG";
+        if (removeButton !== confirmingDeleteIcon) removeButton.src = "images/Icon Folder/Delete Icon_333.PNG";
     });
 
     increment.addEventListener("click", () => {
@@ -1783,7 +1811,7 @@ function createWishlistItem(item) {
     });
 
     removeButton.addEventListener("pointerleave", () => {
-        removeIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
+        if (removeIcon !== confirmingDeleteIcon) removeIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
     });
 
     removeButton.addEventListener("pointerdown", () => {
@@ -1808,7 +1836,7 @@ function createWishlistItem(item) {
             renderWishlist();
 
             showToast("Deleted", "success");
-        });
+        }, removeIcon);
 
     });
 
@@ -1882,23 +1910,21 @@ function clearWishlist() {
 }
 
 clearWishlistButton?.addEventListener("pointerenter", () => {
-    clearWishlistButton.querySelector(".clear-wishlist-icon").src =
-        "images/Icon Folder/Delete Icon_d9534f.PNG";
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
 });
 
 clearWishlistButton?.addEventListener("pointerleave", () => {
-    clearWishlistButton.querySelector(".clear-wishlist-icon").src =
-        "images/Icon Folder/Delete Icon_333.PNG";
+    if (!confirmOverlay.classList.contains("active")) {
+        clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
+    }
 });
 
 clearWishlistButton?.addEventListener("pointerdown", () => {
-    const icon = clearWishlistButton.querySelector(".clear-wishlist-icon");
-
-    icon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
 
     setTimeout(() => {
-        if (!clearWishlistButton.matches(":hover")) {
-            icon.src = "images/Icon Folder/Delete Icon_333.PNG";
+        if (!clearWishlistButton.matches(":hover") && !confirmOverlay.classList.contains("active")) {
+            clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
         }
     }, 120);
 });
@@ -1916,6 +1942,8 @@ clearWishlistButton?.addEventListener("click", () => {
 
     }
 
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
+    clearWishlistButton.classList.add("is-confirming");
     confirmOverlay.classList.add("active");
 
 });
@@ -1923,6 +1951,8 @@ clearWishlistButton?.addEventListener("click", () => {
 confirmCancel.addEventListener("click", () => {
 
     confirmOverlay.classList.remove("active");
+    clearWishlistButton.classList.remove("is-confirming");
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
 
 });
 
@@ -1931,6 +1961,8 @@ confirmOverlay.addEventListener("click", (e) => {
     if (e.target === confirmOverlay) {
 
         confirmOverlay.classList.remove("active");
+        clearWishlistButton.classList.remove("is-confirming");
+        clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
 
     }
 
@@ -1941,6 +1973,8 @@ confirmClear.addEventListener("click", () => {
     clearWishlist();
 
     confirmOverlay.classList.remove("active");
+    clearWishlistButton.classList.remove("is-confirming");
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
 
     showToast(
         "Wishlist cleared",
@@ -1970,12 +2004,14 @@ moveWishlistConfirm?.addEventListener("click", () => {
 
 deleteItemCancel?.addEventListener("click", () => {
     pendingItemDeletion = null;
+    resetConfirmingDeleteIcon();
     deleteItemConfirmOverlay.classList.remove("active");
 });
 
 deleteItemConfirmOverlay?.addEventListener("click", event => {
     if (event.target === deleteItemConfirmOverlay) {
         pendingItemDeletion = null;
+        resetConfirmingDeleteIcon();
         deleteItemConfirmOverlay.classList.remove("active");
     }
 });
@@ -1983,6 +2019,7 @@ deleteItemConfirmOverlay?.addEventListener("click", event => {
 deleteItemConfirm?.addEventListener("click", () => {
     const deleteItem = pendingItemDeletion;
     pendingItemDeletion = null;
+    resetConfirmingDeleteIcon();
     deleteItemConfirmOverlay.classList.remove("active");
     deleteItem?.();
 });
@@ -2271,3 +2308,28 @@ window.addEventListener("storage", event => {
         updateFavoriteIcon();
     }
 });
+
+const wishlistMenuToggle = document.querySelector(".wishlist-menu-toggle");
+const wishlistActionsMenu = document.querySelector(".wishlist-actions-menu");
+function closeWishlistActionsMenu() {
+    wishlistActionsMenu.hidden = true;
+    wishlistMenuToggle.setAttribute("aria-expanded","false");
+}
+wishlistMenuToggle.addEventListener("click",event => {
+    event.stopPropagation();
+    const opening = wishlistActionsMenu.hidden;
+    wishlistActionsMenu.hidden = !opening;
+    wishlistMenuToggle.setAttribute("aria-expanded",String(opening));
+});
+document.querySelector(".wishlist-share-all").addEventListener("click",async () => {
+    const items = JSON.parse(localStorage.getItem("favorites")) || [];
+    closeWishlistActionsMenu();
+    if (!items.length) { showToast("Your Wishlist is empty", "warning"); return; }
+    const text = items.map(item => item.title).join("\n");
+    try {
+        if (navigator.share) await navigator.share({title:"My MPWR Wishlist",text});
+        else { await navigator.clipboard.writeText(text); showToast("Wishlist copied", "success"); }
+    } catch {}
+});
+document.addEventListener("click",event => { if (!event.target.closest(".wishlist-header-actions")) closeWishlistActionsMenu(); });
+document.addEventListener("keydown",event => { if (event.key === "Escape" && !wishlistActionsMenu.hidden) closeWishlistActionsMenu(); });

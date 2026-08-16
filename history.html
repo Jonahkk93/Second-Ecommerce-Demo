@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" class="site-loading-enabled">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Recently Viewed | MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/CARTNEW.css?v=20260816-14">
+    <link rel="stylesheet" href="css/history.css?v=20260816-39">
+    <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
+    <script src="js/loading-states.js?v=20260809-23" defer></script>
+    <script src="js/products.js" defer></script>
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/history.js?v=20260816-28"></script>
+</head>
+<body>
+    <header class="history-header">
+        <a class="history-back" href="Account.html" aria-label="Back to account"></a>
+        <a class="logo" href="index.html">MPWR</a>
+        <div class="history-nav-actions">
+            <button id="wishlist-nav-icon" type="button" aria-label="Open wishlist">
+                <img src="images/optimized/heart-nav.png" class="wishlist-nav-image" alt="">
+            </button>
+            <button class="history-cart-trigger" id="cart-icon" type="button" aria-label="Open cart">
+                <img src="images/Cart black.png" class="cart-image" alt="">
+                <span class="cart-item-count" aria-live="polite"></span>
+            </button>
+        </div>
+    </header>
+
+    <div class="history-cart-backdrop" aria-hidden="true"></div>
+
+    <div class="product-modal-overlay" aria-hidden="true">
+        <div class="product-modal" role="dialog" aria-modal="true" aria-labelledby="history-product-modal-title">
+            <div class="product-modal-top">
+                <div class="product-modal-left">
+                    <a class="product-modal-image-link" href="product.html" aria-label="View product details">
+                        <img src="" class="product-modal-image" alt="">
+                    </a>
+                </div>
+                <div class="product-modal-right">
+                    <div class="product-modal-header">
+                        <a class="product-modal-title-link" href="product.html">
+                            <h2 class="product-modal-title" id="history-product-modal-title"></h2>
+                        </a>
+                    </div>
+                    <div class="product-modal-reviews" aria-live="polite" aria-label="Product reviews">
+                        <span class="product-modal-review-stars" aria-hidden="true">☆☆☆☆☆</span>
+                        <span class="product-modal-review-summary">No reviews yet</span>
+                    </div>
+                    <span class="product-modal-price"></span>
+                    <div class="product-modal-description-row">
+                        <p class="product-modal-description">Product description coming soon.</p>
+                        <a class="product-modal-read-more" href="product.html">read more</a>
+                    </div>
+                </div>
+            </div>
+            <div class="product-modal-options-group">
+                <div class="product-modal-options-dynamic"></div>
+            </div>
+            <div class="product-modal-actions">
+                <button type="button" class="product-modal-favorite" aria-label="Add to Favorites" title="Add to Favorites">
+                    <img src="images/optimized/heart-outline.png" class="product-modal-favorite-icon" alt="">
+                    <span>Add to Favorites</span>
+                </button>
+                <button class="product-modal-cart" type="button">Add to Cart</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="history-page">
+        <section class="history-products" aria-live="polite">
+            <section class="history-intro">
+                <p><img src="images/Icon Folder/History Icon_E5A484.PNG" alt=""> <span>HISTORY</p>
+            </section>
+        </section>
+
+        <div class="history-footer" hidden>
+            <button class="history-clear clear-wishlist" type="button">
+                <img src="images/Icon Folder/Delete Icon_Black.PNG" class="clear-wishlist-icon" alt="">
+                <span>Clear History</span>
+            </button>
+        </div>
+
+        <section class="history-empty" hidden>
+            <img src="images/Cart black.png" alt="">
+            <h2>No recently viewed items</h2>
+            <p>Explore our collection and the products you open will be saved here.</p>
+            <a href="index.html">Start shopping</a>
+        </section>
+    </main>
+
+    <div class="confirm-overlay history-clear-confirm-overlay" aria-hidden="true">
+        <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="history-clear-title">
+            <img src="images/trashbin.png" class="confirm-icon" alt="">
+            <h2 id="history-clear-title">Clear History</h2>
+            <p>This will remove all products from your recently viewed history.</p>
+            <div class="confirm-buttons">
+                <button class="confirm-cancel history-clear-cancel" type="button">Cancel</button>
+                <button class="confirm-clear history-clear-confirm" type="button">Clear History</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="confirm-overlay wishlist-clear-confirm-overlay" aria-hidden="true">
+        <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="wishlist-clear-title">
+            <img src="images/trashbin.png" class="confirm-icon" alt="">
+            <h2 id="wishlist-clear-title">Clear Wishlist</h2>
+            <p>This will remove all saved products from your Wishlist.</p>
+            <div class="confirm-buttons">
+                <button class="confirm-cancel wishlist-clear-cancel" type="button">Cancel</button>
+                <button class="confirm-clear wishlist-clear-confirm" type="button">Clear Wishlist</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="confirm-overlay delete-item-confirm-overlay" aria-hidden="true">
+        <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="cart-delete-title">
+            <h2 id="cart-delete-title">Delete Item</h2>
+            <p class="delete-item-confirm-message">Are you sure you want to delete this item?</p>
+            <div class="confirm-buttons">
+                <button class="confirm-cancel delete-item-cancel" type="button">Cancel</button>
+                <button class="confirm-clear delete-item-confirm" type="button">Delete Item</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="confirm-overlay move-wishlist-confirm-overlay" aria-hidden="true">
+        <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="move-wishlist-title">
+            <h2 id="move-wishlist-title">Move to Wishlist</h2>
+            <p>Are you sure you want to move this item from your cart to your Wishlist?</p>
+            <div class="confirm-buttons">
+                <button class="confirm-cancel move-wishlist-cancel" type="button">Cancel</button>
+                <button class="confirm-clear move-wishlist-confirm" type="button">Move to Wishlist</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

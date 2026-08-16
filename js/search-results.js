@@ -1,4 +1,4 @@
-import { mountMPWRDrawers } from "./drawer-component.js?v=20260808-8";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20260816-6";
 
 let firebaseServicesPromise;
 let commerceSyncQueue = Promise.resolve();
@@ -75,15 +75,28 @@ const wishlistDrawer = document.querySelector(".wishlist");
 const wishlistBackdrop = document.querySelector(".results-wishlist-backdrop");
 const wishlistDrawerItems = document.querySelector(".wishlist-content");
 let pendingConfirmation = null;
+let confirmingDeleteIcon = null;
 let suppressSwipeCloseUntil = 0;
 
-function requestConfirmation(overlay,action) {
+function requestConfirmation(overlay,action, icon = null) {
     pendingConfirmation = action;
+    confirmingDeleteIcon = icon;
+    if (icon) icon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
+    if (overlay.classList.contains("wishlist-clear-confirm-overlay")) {
+        document.querySelector(".clear-wishlist-icon").src = "images/Icon Folder/Delete Icon_d9534f.PNG";
+        document.querySelector(".clear-wishlist").classList.add("is-confirming");
+    }
     overlay.classList.add("active");
 }
 
 function closeConfirmation(overlay) {
     overlay.classList.remove("active");
+    if (confirmingDeleteIcon) confirmingDeleteIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
+    confirmingDeleteIcon = null;
+    if (overlay.classList.contains("wishlist-clear-confirm-overlay")) {
+        document.querySelector(".clear-wishlist-icon").src = "images/Icon Folder/Delete Icon_333.PNG";
+        document.querySelector(".clear-wishlist").classList.remove("is-confirming");
+    }
     pendingConfirmation = null;
 }
 
@@ -205,7 +218,7 @@ function attachCartSwipe(row,cart,index,item) {
         saveFavorites(favorites);
         saveCart(cart);
     }));
-    row.querySelector(".cart-share").addEventListener("click",async() => { try { const url = new URL(`product.html?id=${encodeURIComponent(item.id)}`,location.href).href; if (navigator.share) await navigator.share({title:cartItemTitle(item),url}); else await navigator.clipboard.writeText(url); } catch {} row.classList.remove("is-swiped"); });
+    row.querySelector(".cart-share").addEventListener("click",async() => { try { const url = new URL(cartProductHref(item),location.href).href; if (navigator.share) await navigator.share({title:cartItemTitle(item),url}); else await navigator.clipboard.writeText(url); } catch {} row.classList.remove("is-swiped"); });
 }
 
 function closeOpenCartSwipes(except = null) {
@@ -279,6 +292,19 @@ function cartItemTitle(item) {
     return item.title || products.find(product => String(product.id) === String(item.id))?.title || "Product";
 }
 
+function cartProductHref(item) {
+    const parameters = new URLSearchParams({ id: String(item.id) });
+    const selections = item.selectedOptions && Object.keys(item.selectedOptions).length
+        ? item.selectedOptions
+        : { color: item.color, size: item.size };
+
+    Object.entries(selections).forEach(([name,value]) => {
+        if (value) parameters.set(name,value);
+    });
+
+    return `product.html?${parameters.toString()}`;
+}
+
 function cartItemPrice(item) {
     const rawPrice = item.price || products.find(product => String(product.id) === String(item.id))?.price || 0;
     return Number(String(rawPrice).replace(/[^0-9.]/g,"")) || 0;
@@ -314,16 +340,16 @@ function renderWishlistDrawer() {
         row.innerHTML = `<a href="product.html?id=${encodeURIComponent(item.id)}" class="wishlist-product-link" aria-label="View ${cartItemTitle(item)}"><img class="wishlist-img" src="${cartItemImage(item)}" alt="${cartItemTitle(item)}" loading="lazy" decoding="async"></a><div class="wishlist-details"><h3><a href="product.html?id=${encodeURIComponent(item.id)}" class="wishlist-title-link">${cartItemTitle(item)}</a></h3><span>UGX ${cartItemPrice(item).toLocaleString()}</span><button class="wishlist-add-cart" type="button">Add to Cart</button></div><button class="wishlist-remove" type="button"><img class="wishlist-remove-icon" src="images/Icon Folder/Delete Icon_333.PNG" alt=""></button>`;
         const removeIcon = row.querySelector(".wishlist-remove-icon");
         row.querySelector(".wishlist-remove").addEventListener("pointerenter",() => { removeIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG"; });
-        row.querySelector(".wishlist-remove").addEventListener("pointerleave",() => { removeIcon.src = "images/Icon Folder/Delete Icon_333.PNG"; });
+        row.querySelector(".wishlist-remove").addEventListener("pointerleave",() => { if (removeIcon !== confirmingDeleteIcon) removeIcon.src = "images/Icon Folder/Delete Icon_333.PNG"; });
         row.querySelector(".wishlist-remove").addEventListener("pointerdown",() => { removeIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG"; });
-        row.querySelector(".wishlist-remove").addEventListener("click",() => requestConfirmation(document.querySelector(".delete-item-confirm-overlay"),() => { favorites.splice(index,1); saveFavorites(favorites); }));
-        row.querySelector(".wishlist-add-cart").addEventListener("click",() => {
-            const cart = getCart();
-            const cartItem = {...item,id:String(item.id),price:cartItemPrice(item),quantity:1};
-            const existing = cart.find(savedItem => itemIdentity(savedItem) === itemIdentity(cartItem));
-            if (existing) existing.quantity = Math.max(1,Number(existing.quantity) || 1) + 1;
-            else cart.push(cartItem);
-            saveCart(cart);
+        row.querySelector(".wishlist-remove").addEventListener("click",() => requestConfirmation(document.querySelector(".delete-item-confirm-overlay"),() => { favorites.splice(index,1); saveFavorites(favorites); }, removeIcon));
+        row.querySelector(".wishlist-add-cart").addEventListener("click",event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const product = products.find(candidate => String(candidate.id) === String(item.id));
+            if (!product) return;
+            const productCard = document.querySelector(`.product-box[data-id="${CSS.escape(String(item.id))}"]`);
+            openProductModal(product,productCard);
         });
         wishlistDrawerItems.appendChild(row);
     });
@@ -344,14 +370,15 @@ function renderCartDrawer() {
             : [item.color,item.size].filter(Boolean).join(" • ");
         const row = document.createElement("article");
         row.className = "cart-box";
-        row.innerHTML = `<div class="cart-swipe-actions" aria-hidden="true"><button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist"><img src="images/Icon Folder/Move To Favorites Outline Icon_White.PNG" alt=""><span>Wishlist</span></button><button class="cart-swipe-action cart-share" type="button" aria-label="Share item"><img src="images/Icon Folder/Share Icon V2_White.PNG" alt=""><span>Share</span></button><button class="cart-swipe-action cart-delete" type="button" aria-label="Delete item"><img src="images/Icon Folder/Delete Icon_White.PNG" alt=""><span>Delete</span></button></div><div class="cart-box-main"><a href="product.html?id=${encodeURIComponent(item.id)}" class="cart-product-link" aria-label="View ${cartItemTitle(item)}"><img class="cart-img" src="${cartItemImage(item)}" alt="${cartItemTitle(item)}" loading="lazy" decoding="async"></a><div class="cart-detail"><h2 class="cart-product-title"><a href="product.html?id=${encodeURIComponent(item.id)}" class="cart-title-link">${cartItemTitle(item)}</a></h2><div class="cart-variants">${selections}</div><span class="cart-price">UGX ${cartItemPrice(item).toLocaleString()}</span><div class="cart-quantity"><button class="decrement" type="button" data-action="decrease" aria-label="Decrease quantity"><img src="images/Icon Folder/Minus Icon_333.PNG" alt=""></button><span class="number">${quantity}</span><button class="increment" type="button" data-action="increase" aria-label="Increase quantity"><img src="images/Icon Folder/Plus Icon_333.PNG" alt=""></button></div></div><div class="cart-item-actions"><img src="images/Icon Folder/Delete Icon_333.PNG" class="cart-remove" alt="Remove item" role="button" tabindex="0"></div></div>`;
-        row.querySelector('[data-action="decrease"]').addEventListener("click",() => { if (quantity > 1) cart[index].quantity = quantity - 1; else cart.splice(index,1); saveCart(cart); });
-        row.querySelector('[data-action="increase"]').addEventListener("click",() => { cart[index].quantity = quantity + 1; saveCart(cart); });
+        const productHref = cartProductHref(item);
+        row.innerHTML = `<div class="cart-swipe-actions" aria-hidden="true"><button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist"><img src="images/Icon Folder/Move To Favorites Outline Icon_White.PNG" alt=""><span>Wishlist</span></button><button class="cart-swipe-action cart-share" type="button" aria-label="Share item"><img src="images/Icon Folder/Share Icon V2_White.PNG" alt=""><span>Share</span></button><button class="cart-swipe-action cart-delete" type="button" aria-label="Delete item"><img src="images/Icon Folder/Delete Icon_White.PNG" alt=""><span>Delete</span></button></div><div class="cart-box-main"><a href="${productHref}" class="cart-product-link" aria-label="View ${cartItemTitle(item)}"><img class="cart-img" src="${cartItemImage(item)}" alt="${cartItemTitle(item)}" loading="lazy" decoding="async"></a><div class="cart-detail"><h2 class="cart-product-title"><a href="${productHref}" class="cart-title-link">${cartItemTitle(item)}</a></h2><div class="cart-variants">${selections}</div><span class="cart-price">UGX ${cartItemPrice(item).toLocaleString()}</span><div class="cart-quantity"><button class="decrement" type="button" data-action="decrease" aria-label="Decrease quantity"><img src="images/Icon Folder/Minus Icon_333.PNG" alt=""></button><span class="number">${quantity}</span><button class="increment" type="button" data-action="increase" aria-label="Increase quantity"><img src="images/Icon Folder/Plus Icon_333.PNG" alt=""></button></div></div><div class="cart-item-actions"><img src="images/Icon Folder/Delete Icon_333.PNG" class="cart-remove" alt="Remove item" role="button" tabindex="0"></div></div>`;
+        row.querySelector('[data-action="decrease"]').addEventListener("click",event => { event.stopPropagation(); if (quantity > 1) cart[index].quantity = quantity - 1; else cart.splice(index,1); saveCart(cart); });
+        row.querySelector('[data-action="increase"]').addEventListener("click",event => { event.stopPropagation(); cart[index].quantity = quantity + 1; saveCart(cart); });
         const cartRemoveIcon = row.querySelector(".cart-remove");
         cartRemoveIcon.addEventListener("pointerdown",() => { cartRemoveIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG"; });
         cartRemoveIcon.addEventListener("pointerenter",() => { cartRemoveIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG"; });
-        cartRemoveIcon.addEventListener("pointerleave",() => { cartRemoveIcon.src = "images/Icon Folder/Delete Icon_333.PNG"; });
-        cartRemoveIcon.addEventListener("click",() => requestConfirmation(document.querySelector(".delete-item-confirm-overlay"),() => { cart.splice(index,1); saveCart(cart); }));
+        cartRemoveIcon.addEventListener("pointerleave",() => { if (cartRemoveIcon !== confirmingDeleteIcon) cartRemoveIcon.src = "images/Icon Folder/Delete Icon_333.PNG"; });
+        cartRemoveIcon.addEventListener("click",() => requestConfirmation(document.querySelector(".delete-item-confirm-overlay"),() => { cart.splice(index,1); saveCart(cart); }, cartRemoveIcon));
         attachCartSwipe(row,cart,index,item);
         drawerItems.appendChild(row);
     });
@@ -741,7 +768,9 @@ window.addEventListener("scroll",() => closeFilterPickers(),{passive:true});
 resultsToolbar.addEventListener("scroll",() => closeFilterPickers(),{passive:true});
 
 productModalOverlay.addEventListener("click",event => {
-    if (event.target === productModalOverlay) closeProductModal();
+    if (event.target !== productModalOverlay) return;
+    event.stopPropagation();
+    closeProductModal();
 });
 productModalFavorite.addEventListener("click",() => {
     if (!selectedModalProduct) return;
@@ -920,10 +949,18 @@ document.querySelector(".cart-share-all").addEventListener("click",async() => {
     }
 });
 clearWishlist.addEventListener("pointerenter",() => { clearWishlistIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG"; });
-clearWishlist.addEventListener("pointerleave",() => { clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG"; });
+clearWishlist.addEventListener("pointerleave",() => {
+    if (!document.querySelector(".wishlist-clear-confirm-overlay").classList.contains("active")) {
+        clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
+    }
+});
 clearWishlist.addEventListener("pointerdown",() => {
     clearWishlistIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
-    setTimeout(() => { if (!clearWishlist.matches(":hover")) clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG"; },120);
+    setTimeout(() => {
+        if (!clearWishlist.matches(":hover") && !document.querySelector(".wishlist-clear-confirm-overlay").classList.contains("active")) {
+            clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
+        }
+    },120);
 });
 clearWishlist.addEventListener("click",() => requestConfirmation(document.querySelector(".wishlist-clear-confirm-overlay"),() => saveFavorites([])));
 window.addEventListener("storage",event => {
@@ -987,3 +1024,28 @@ render();
 updateCartButton();
 document.documentElement.dataset.siteContentReady = "true";
 window.MPWRLoading?.ready();
+
+const wishlistMenuToggle = document.querySelector(".wishlist-menu-toggle");
+const wishlistActionsMenu = document.querySelector(".wishlist-actions-menu");
+function closeWishlistActionsMenu() {
+    wishlistActionsMenu.hidden = true;
+    wishlistMenuToggle.setAttribute("aria-expanded","false");
+}
+wishlistMenuToggle.addEventListener("click",event => {
+    event.stopPropagation();
+    const opening = wishlistActionsMenu.hidden;
+    wishlistActionsMenu.hidden = !opening;
+    wishlistMenuToggle.setAttribute("aria-expanded",String(opening));
+});
+document.querySelector(".wishlist-share-all").addEventListener("click",async () => {
+    const items = getFavorites();
+    closeWishlistActionsMenu();
+    if (!items.length) { showDrawerToast("Your Wishlist is empty", "warning"); return; }
+    const text = items.map(item => item.title).join("\n");
+    try {
+        if (navigator.share) await navigator.share({title:"My MPWR Wishlist",text});
+        else { await copyText(text); showDrawerToast("Wishlist copied", "success"); }
+    } catch {}
+});
+document.addEventListener("click",event => { if (!event.target.closest(".wishlist-header-actions")) closeWishlistActionsMenu(); });
+document.addEventListener("keydown",event => { if (event.key === "Escape" && !wishlistActionsMenu.hidden) closeWishlistActionsMenu(); });

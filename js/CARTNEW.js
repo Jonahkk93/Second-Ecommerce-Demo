@@ -20,7 +20,7 @@
    NAVIGATION
 ============================================================ */
 
-import { mountMPWRDrawers } from "./drawer-component.js";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20260816-6";
 
 mountMPWRDrawers(document.body);
 
@@ -121,6 +121,7 @@ const wishlistFooter = document.querySelector(".wishlist-footer");
 const wishlistContinue = document.querySelector(".wishlist-continue");
 
 const clearWishlistButton = document.querySelector(".clear-wishlist");
+const clearWishlistIcon = clearWishlistButton?.querySelector(".clear-wishlist-icon");
 
 function syncSidePanelScrollLock() {
 
@@ -152,6 +153,7 @@ const deleteItemConfirmMessage = document.querySelector(".delete-item-confirm-me
 const deleteItemCancel = document.querySelector(".delete-item-cancel");
 const deleteItemConfirm = document.querySelector(".delete-item-confirm");
 let pendingItemDeletion = null;
+let confirmingDeleteIcon = null;
 
 
 /* ============================================================
@@ -524,13 +526,20 @@ function showToast(message, type = "success") {
 
 }
 
-function requestItemDeletion(source, action) {
+function requestItemDeletion(source, action, icon = null) {
     pendingItemDeletion = action;
+    confirmingDeleteIcon = icon;
+    if (icon) icon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     const deletingWholeCart = source === "cart-all";
     deleteItemConfirmOverlay.querySelector("h2").textContent = deletingWholeCart ? "Delete All Items" : "Delete Item";
     deleteItemConfirmMessage.textContent = deletingWholeCart ? "Are you sure you want to delete all items from your cart?" : `Are you sure you want to delete this item from your ${source}?`;
     deleteItemConfirm.textContent = deletingWholeCart ? "Delete All" : "Delete Item";
     deleteItemConfirmOverlay.classList.add("active");
+}
+
+function resetConfirmingDeleteIcon() {
+    if (confirmingDeleteIcon) confirmingDeleteIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
+    confirmingDeleteIcon = null;
 }
 
 const flashToast = sessionStorage.getItem("flashToast");
@@ -981,7 +990,7 @@ function attachCartEvents(cartBox, cartItem) {
     });
 
     removeButton.addEventListener("pointerleave", () => {
-        removeButton.src = "images/Icon Folder/Delete Icon_333.PNG";
+        if (removeButton !== confirmingDeleteIcon) removeButton.src = "images/Icon Folder/Delete Icon_333.PNG";
     });
 
     removeButton.addEventListener("click", () => {
@@ -996,7 +1005,7 @@ function attachCartEvents(cartBox, cartItem) {
             renderSavedCart();
             updateCartCount();
             showToast("Deleted", "success");
-        });
+        }, removeButton);
     });
 
 incrementButton.addEventListener("click", () => {
@@ -1889,7 +1898,7 @@ function createWishlistItem(item) {
     });
 
     removeButton.addEventListener("pointerleave", () => {
-        removeIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
+        if (removeIcon !== confirmingDeleteIcon) removeIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
     });
 
     removeButton.addEventListener("pointerdown", () => {
@@ -1905,11 +1914,13 @@ function createWishlistItem(item) {
             saveWishlist();
             renderWishlist();
             showToast("Deleted", "success");
-        });
+        }, removeIcon);
 
     });
 
-   addCartButton.addEventListener("click", () => {
+   addCartButton.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
 
     const productBox = document.querySelector(
     `.product-box[data-id="${item.id}"]`
@@ -1918,9 +1929,6 @@ function createWishlistItem(item) {
     if (!productBox) return;
 
     openProductModal(productBox);
-
-    wishlist.classList.remove("active");
-    syncSidePanelScrollLock();
 });
 
     return wishlistBox;
@@ -2071,23 +2079,21 @@ function updateWishlistButtons() {
 ============================================================ */
 
 clearWishlistButton.addEventListener("pointerenter", () => {
-    clearWishlistButton.querySelector(".clear-wishlist-icon").src =
-        "images/Icon Folder/Delete Icon_d9534f.PNG";
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
 });
 
 clearWishlistButton.addEventListener("pointerleave", () => {
-    clearWishlistButton.querySelector(".clear-wishlist-icon").src =
-        "images/Icon Folder/Delete Icon_333.PNG";
+    if (!confirmOverlay.classList.contains("active")) {
+        clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
+    }
 });
 
 clearWishlistButton.addEventListener("pointerdown", () => {
-    const icon = clearWishlistButton.querySelector(".clear-wishlist-icon");
-
-    icon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
 
     setTimeout(() => {
-        if (!clearWishlistButton.matches(":hover")) {
-            icon.src = "images/Icon Folder/Delete Icon_333.PNG";
+        if (!clearWishlistButton.matches(":hover") && !confirmOverlay.classList.contains("active")) {
+            clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
         }
     }, 120);
 });
@@ -2108,6 +2114,8 @@ clearWishlistButton.addEventListener("click", () => {
 
     }
 
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
+    clearWishlistButton.classList.add("is-confirming");
     confirmOverlay.classList.add("active");
 
 });
@@ -2120,6 +2128,8 @@ clearWishlistButton.addEventListener("click", () => {
 confirmCancel.addEventListener("click", () => {
 
     confirmOverlay.classList.remove("active");
+    clearWishlistButton.classList.remove("is-confirming");
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
 
 });
 
@@ -2128,6 +2138,8 @@ confirmOverlay.addEventListener("click", (e) => {
     if (e.target === confirmOverlay) {
 
         confirmOverlay.classList.remove("active");
+        clearWishlistButton.classList.remove("is-confirming");
+        clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
 
     }
 
@@ -2149,6 +2161,8 @@ confirmClear.addEventListener("click", () => {
     updateWishlistButtons();
 
     confirmOverlay.classList.remove("active");
+    clearWishlistButton.classList.remove("is-confirming");
+    clearWishlistIcon.src = "images/Icon Folder/Delete Icon_333.PNG";
 
     showToast(
 
@@ -2181,12 +2195,14 @@ moveWishlistConfirm?.addEventListener("click", () => {
 
 deleteItemCancel?.addEventListener("click", () => {
     pendingItemDeletion = null;
+    resetConfirmingDeleteIcon();
     deleteItemConfirmOverlay.classList.remove("active");
 });
 
 deleteItemConfirmOverlay?.addEventListener("click", event => {
     if (event.target === deleteItemConfirmOverlay) {
         pendingItemDeletion = null;
+        resetConfirmingDeleteIcon();
         deleteItemConfirmOverlay.classList.remove("active");
     }
 });
@@ -2194,6 +2210,7 @@ deleteItemConfirmOverlay?.addEventListener("click", event => {
 deleteItemConfirm?.addEventListener("click", () => {
     const deleteItem = pendingItemDeletion;
     pendingItemDeletion = null;
+    resetConfirmingDeleteIcon();
     deleteItemConfirmOverlay.classList.remove("active");
     deleteItem?.();
 });
@@ -2384,25 +2401,8 @@ productBoxes.forEach(product => {
 productModalOverlay.addEventListener("click", (event) => {
 
     if (event.target === productModalOverlay) {
-        productModalOverlay.classList.remove("active");
-    }
-
-});
-
-/* ============================================================
-   CLOSE WHEN CLICKING OUTSIDE
-============================================================ */
-
-productModalOverlay.addEventListener("click", event => {
-
-    console.log("Overlay clicked", event.target);
-
-    if (event.target === productModalOverlay) {
-
-        console.log("Closing modal");
-
+        event.stopPropagation();
         closeProductModal();
-
     }
 
 });
@@ -2708,4 +2708,29 @@ window.addEventListener("storage", event => {
         updateWishlistButtons();
     }
 });
+
+const wishlistMenuToggle = document.querySelector(".wishlist-menu-toggle");
+const wishlistActionsMenu = document.querySelector(".wishlist-actions-menu");
+function closeWishlistActionsMenu() {
+    wishlistActionsMenu.hidden = true;
+    wishlistMenuToggle.setAttribute("aria-expanded","false");
+}
+wishlistMenuToggle.addEventListener("click",event => {
+    event.stopPropagation();
+    const opening = wishlistActionsMenu.hidden;
+    wishlistActionsMenu.hidden = !opening;
+    wishlistMenuToggle.setAttribute("aria-expanded",String(opening));
+});
+document.querySelector(".wishlist-share-all").addEventListener("click",async () => {
+    const items = JSON.parse(localStorage.getItem("favorites")) || [];
+    closeWishlistActionsMenu();
+    if (!items.length) { showToast("Your Wishlist is empty", "warning"); return; }
+    const text = items.map(item => item.title).join("\n");
+    try {
+        if (navigator.share) await navigator.share({title:"My MPWR Wishlist",text});
+        else { await navigator.clipboard.writeText(text); showToast("Wishlist copied", "success"); }
+    } catch {}
+});
+document.addEventListener("click",event => { if (!event.target.closest(".wishlist-header-actions")) closeWishlistActionsMenu(); });
+document.addEventListener("keydown",event => { if (event.key === "Escape" && !wishlistActionsMenu.hidden) closeWishlistActionsMenu(); });
 

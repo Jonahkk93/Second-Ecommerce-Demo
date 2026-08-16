@@ -563,11 +563,23 @@ body{
 
 .orders-page-title{
     margin-bottom:24px;
+    display:flex;
+    align-items:center;
+    gap:6px;
     color:#E5A484;
     font-size:13px;
     font-weight:700;
     letter-spacing:1.4px;
     text-transform:uppercase;
+}
+
+.orders-page-title img{
+    display:block;
+    flex:0 0 14px;
+    width:14px;
+    height:14px;
+    object-fit:contain;
+    transform:translateY(-1px);
 }
 
 @media (max-width:600px){
