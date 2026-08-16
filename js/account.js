@@ -342,6 +342,11 @@ document.querySelectorAll(".account-tab").forEach(tab => {
         document.querySelectorAll(".account-tab").forEach(item =>
             item.classList.toggle("active", item === tab)
         );
+        document.querySelectorAll(".account-tab-icon").forEach(icon => {
+            icon.src = icon.closest(".account-tab").classList.contains("active")
+                ? icon.dataset.iconActive
+                : icon.dataset.iconDefault;
+        });
         document.querySelectorAll(".account-order-section").forEach(panel =>
             panel.classList.toggle("active", panel.dataset.panel === tab.dataset.section)
         );

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" class="site-loading-enabled">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>My Shipping Address | MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/shipping-address.css?v=20260816-1">
+    <link rel="stylesheet" href="css/touch-interactions.css">
+    <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
+    <script src="js/loading-states.js?v=20260809-23" defer></script>
+    <script src="js/touch-interactions.js" defer></script>
+</head>
+<body>
+    <header class="shipping-header">
+        <a class="shipping-back" href="Account.html" aria-label="Back to my account"></a>
+        <a class="shipping-logo" href="index.html">MPWR</a>
+        <span aria-hidden="true"></span>
+    </header>
+
+    <main class="shipping-page">
+        <div class="shipping-heading">
+            <p class="shipping-kicker">My account</p>
+            <h1>Shipping address</h1>
+            <p class="shipping-security">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.8 2.9 8.1 7 10 4.1-1.9 7-5.2 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                <span>Securely saved to your MPWR account</span>
+            </p>
+        </div>
+
+        <p class="shipping-loading">Loading your addresses…</p>
+        <section class="shipping-addresses" aria-live="polite" hidden></section>
+        <section class="shipping-empty" hidden>
+            <span class="shipping-empty-icon" aria-hidden="true"></span>
+            <h2>No saved addresses yet</h2>
+            <p>Add a delivery address to make checkout faster.</p>
+        </section>
+    </main>
+
+    <div class="shipping-add-bar">
+        <button class="shipping-add" type="button">Add new address</button>
+    </div>
+
+    <div class="shipping-editor-overlay" aria-hidden="true">
+        <section class="shipping-editor" role="dialog" aria-modal="true" aria-labelledby="shipping-editor-title">
+            <div class="shipping-editor-header">
+                <div>
+                    <p class="shipping-kicker">Delivery details</p>
+                    <h2 id="shipping-editor-title">Add new address</h2>
+                </div>
+                <button class="shipping-editor-close" type="button" aria-label="Close address form">×</button>
+            </div>
+
+            <form id="shipping-address-form" novalidate>
+                <div class="shipping-form-grid two-columns">
+                    <label>First name<input name="firstName" autocomplete="given-name" required></label>
+                    <label>Last name<input name="lastName" autocomplete="family-name" required></label>
+                </div>
+                <label>Phone number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="e.g. 0772 123 456" required></label>
+                <label>Address or building<input name="address" autocomplete="street-address" placeholder="Street, building or landmark" required></label>
+                <div class="shipping-form-grid two-columns">
+                    <label>City / town<input name="city" autocomplete="address-level2" required></label>
+                    <label>District<input name="district" autocomplete="address-level1" required></label>
+                </div>
+                <div class="shipping-form-grid two-columns">
+                    <label>Country
+                        <select name="country" autocomplete="country-name" required>
+                            <option value="Uganda">Uganda</option>
+                        </select>
+                    </label>
+                    <label>Postal code <small>(optional)</small><input name="postalCode" autocomplete="postal-code"></label>
+                </div>
+                <label>Delivery notes <small>(optional)</small><textarea name="notes" rows="3" placeholder="Directions, landmark or preferred delivery time"></textarea></label>
+                <label class="shipping-default-choice"><input name="isDefault" type="checkbox"><span>Use as my default shipping address</span></label>
+                <p class="shipping-form-error" role="alert"></p>
+                <button class="shipping-save" type="submit">Save address</button>
+            </form>
+        </section>
+    </div>
+
+    <div class="shipping-delete-overlay" aria-hidden="true">
+        <section class="shipping-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="shipping-delete-title">
+            <img src="images/Icon Folder/Delete Icon_d9534f.PNG" alt="">
+            <h2 id="shipping-delete-title">Delete this address?</h2>
+            <p>This address will be removed from your MPWR account.</p>
+            <div class="shipping-delete-actions">
+                <button class="shipping-delete-cancel" type="button">Cancel</button>
+                <button class="shipping-delete-confirm" type="button">Delete address</button>
+            </div>
+        </section>
+    </div>
+
+    <div class="shipping-toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/shipping-address.js?v=20260816-1"></script>
+</body>
+</html>

@@ -135,9 +135,23 @@ body{
     object-fit:cover;
 }
 
+.account-profile-details{
+    display:grid;
+    gap:4px;
+    min-width:0;
+    margin-left:10px;
+}
+
 .account-profile-picture h2{
-    margin:0 0 0 10px;
+    margin:0;
     font-size:20px;
+}
+
+.account-profile-details p{
+    margin:0;
+    color:var(--muted);
+    font-size:14px;
+    overflow-wrap:anywhere;
 }
 
 .account-personal-info,
@@ -361,11 +375,10 @@ body{
 
 .personal-photo-editor{
     display:flex;
+    justify-content:center;
     align-items:center;
     gap:22px;
     margin-bottom:28px;
-    padding-bottom:26px;
-    border-bottom:1px solid var(--line);
 }
 
 .personal-photo-editor img{
@@ -383,22 +396,37 @@ body{
 .personal-photo-control{
     position:relative;
     display:block;
-    flex:0 0 auto;
+    flex:0 0 112px;
+    width:112px;
+    height:112px;
+    overflow:hidden;
+    border-radius:50%;
+    line-height:0;
     cursor:pointer;
 }
 
 .personal-photo-control span{
     position:absolute;
-    right:8px;
-    bottom:8px;
-    padding:5px 9px;
-    border-radius:999px;
-    background:rgba(255,255,255,.94);
-    color:#a96040;
-    box-shadow:0 4px 14px rgba(0,0,0,.14);
+    right:0;
+    bottom:0;
+    left:0;
+    height:25%;
+    border-radius:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,.5);
+    color:#fff;
+    box-shadow:none;
     font-size:11px;
     font-weight:700;
     line-height:1;
+}
+
+.personal-photo-control img{
+    width:100%;
+    height:100%;
+    flex:0 0 auto;
 }
 
 .personal-photo-editor small{
@@ -450,7 +478,7 @@ body{
     min-height:50px;
     margin-top:20px;
     border:0;
-    border-radius:999px;
+    border-radius:10px;
     background:var(--accent);
     color:#fff;
     cursor:pointer;
@@ -461,6 +489,113 @@ body{
 .personal-information-card > button:disabled{
     cursor:wait;
     opacity:.65;
+}
+
+.personal-information-card > .personal-account-delete{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-top:12px;
+    border:1px solid #ddd;
+    border-radius:10px;
+    background:rgba(243,243,243,.932);
+    color:#666;
+    transition:.25s ease;
+}
+
+.personal-account-delete img{
+    display:block;
+    flex:0 0 18px;
+    width:18px;
+    height:18px;
+    object-fit:contain;
+}
+
+.personal-information-card > .personal-account-delete:hover,
+.personal-information-card > .personal-account-delete.is-confirming{
+    border-color:#d9534f;
+    color:#d9534f;
+}
+
+.personal-delete-confirm-overlay{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(0,0,0,.55);
+    opacity:0;
+    visibility:hidden;
+    transition:.3s ease;
+}
+
+.personal-delete-confirm-overlay.active{
+    opacity:1;
+    visibility:visible;
+}
+
+.personal-delete-confirm-box{
+    width:min(100%,380px);
+    padding:28px;
+    border-radius:18px;
+    background:#fff;
+    text-align:center;
+    transform:scale(.9);
+    transition:.3s ease;
+}
+
+.personal-delete-confirm-overlay.active .personal-delete-confirm-box{
+    transform:scale(1);
+}
+
+.personal-delete-confirm-box > img{
+    width:48px;
+    margin-bottom:18px;
+}
+
+.personal-delete-confirm-box h2{
+    margin:0 0 12px;
+    font-size:26px;
+}
+
+.personal-delete-confirm-box p{
+    margin:0 0 24px;
+    color:#666;
+    line-height:1.5;
+}
+
+.personal-delete-confirm-box > div{
+    display:flex;
+    gap:12px;
+}
+
+.personal-delete-confirm-box button{
+    flex:1;
+    padding:12px;
+    border-radius:10px;
+    font:inherit;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.personal-delete-cancel{
+    border:1px solid #ddd;
+    background:#fff;
+    color:#555;
+}
+
+.personal-delete-confirm{
+    border:0;
+    background:var(--accent);
+    color:#fff;
+}
+
+body.personal-delete-confirm-open{
+    overflow:hidden;
 }
 
 .personal-information-message{
@@ -488,6 +623,10 @@ body{
 
 .account-tab{
     position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
     padding:17px 10px;
     border:0;
     background:transparent;
@@ -496,7 +635,20 @@ body{
     cursor:pointer;
 }
 
-.account-tab span{
+.account-tab-label{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+}
+
+.account-tab-icon{
+    display:block;
+    width:17px;
+    height:17px;
+    object-fit:contain;
+}
+
+.account-tab > [data-count]{
     display:inline-flex;
     align-items:center;
     justify-content:center;
@@ -927,5 +1079,13 @@ body.review-modal-open{
     .account-review-modal{
         padding:26px 20px;
         border-radius:20px;
+    }
+}
+
+@media (max-width:760px){
+    .personal-photo-control{
+        flex-basis:86px;
+        width:86px;
+        height:86px;
     }
 }

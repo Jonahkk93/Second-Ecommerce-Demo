@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Purchases | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/account.css?v=20260816-06">
+    <link rel="stylesheet" href="css/account.css?v=20260816-27">
     <link rel="stylesheet" href="css/signout-confirm.css">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
@@ -27,10 +27,22 @@
             </div>
 
             <nav class="account-tabs" aria-label="Purchase categories">
-                <button class="account-tab active" type="button" data-section="shipped">Shipped <span data-count="shipped">0</span></button>
-                <button class="account-tab" type="button" data-section="pending">Pending <span data-count="pending">0</span></button>
-                <button class="account-tab" type="button" data-section="returns">Returns <span data-count="returns">0</span></button>
-                <button class="account-tab" type="button" data-section="review">To Review <span data-count="review">0</span></button>
+                <button class="account-tab active" type="button" data-section="shipped">
+                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Delivered Icon_333.PNG" data-icon-default="images/Icon Folder/Delivered Icon_Gray.PNG" data-icon-active="images/Icon Folder/Delivered Icon_333.PNG" alt="">Shipped</span>
+                    <span data-count="shipped">0</span>
+                </button>
+                <button class="account-tab" type="button" data-section="pending">
+                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Pending Icon_Gray.PNG" data-icon-default="images/Icon Folder/Pending Icon_Gray.PNG" data-icon-active="images/Icon Folder/Pending Icon_333.PNG" alt="">Pending</span>
+                    <span data-count="pending">0</span>
+                </button>
+                <button class="account-tab" type="button" data-section="returns">
+                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Return Icon V2_Gray.PNG" data-icon-default="images/Icon Folder/Return Icon V2_Gray.PNG" data-icon-active="images/Icon Folder/Return Icon V2_333.PNG" alt="">Returns</span>
+                    <span data-count="returns">0</span>
+                </button>
+                <button class="account-tab" type="button" data-section="review">
+                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Reviews Icon_Gray.PNG" data-icon-default="images/Icon Folder/Reviews Icon_Gray.PNG" data-icon-active="images/Icon Folder/Reviews Icon_333.PNG" alt="">To Review</span>
+                    <span data-count="review">0</span>
+                </button>
             </nav>
 
             <div class="account-sections">
@@ -88,7 +100,7 @@
 
     <script src="js/products.js"></script>
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/account.js?v=20260815-2"></script>
+    <script type="module" src="js/account.js?v=20260816-3"></script>
     <script src="js/signout-confirm.js"></script>
 </body>
 </html>

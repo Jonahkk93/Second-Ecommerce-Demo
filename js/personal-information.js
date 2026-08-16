@@ -1,4 +1,5 @@
 import {
+    deleteUser,
     onAuthStateChanged,
     updateProfile,
     verifyBeforeUpdateEmail
@@ -27,6 +28,11 @@ const lastNameInput = document.getElementById("personal-last-name");
 const emailInput = document.getElementById("personal-email");
 const message = document.getElementById("personal-information-message");
 const saveButton = document.getElementById("personal-information-save");
+const deleteButton = document.getElementById("personal-account-delete");
+const deleteIcon = deleteButton.querySelector("img");
+const deleteOverlay = document.getElementById("personal-delete-confirm-overlay");
+const deleteCancelButton = document.getElementById("personal-delete-cancel");
+const deleteConfirmButton = document.getElementById("personal-delete-confirm");
 
 let currentUser = null;
 let currentPhotoUrl = "";
@@ -51,6 +57,71 @@ function friendlyError(error) {
     if (code.includes("invalid-email")) return "Enter a valid email address.";
     return "Your changes could not be saved. Please try again.";
 }
+
+function closeDeleteConfirmation() {
+    deleteOverlay.classList.remove("active");
+    deleteOverlay.setAttribute("aria-hidden", "true");
+    deleteButton.classList.remove("is-confirming");
+    deleteIcon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+    document.body.classList.remove("personal-delete-confirm-open");
+}
+
+deleteButton.addEventListener("click", () => {
+    deleteOverlay.classList.add("active");
+    deleteOverlay.setAttribute("aria-hidden", "false");
+    deleteButton.classList.add("is-confirming");
+    deleteIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
+    document.body.classList.add("personal-delete-confirm-open");
+    deleteCancelButton.focus();
+});
+
+deleteButton.addEventListener("pointerenter", () => {
+    deleteIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
+});
+
+deleteButton.addEventListener("pointerleave", () => {
+    if (!deleteOverlay.classList.contains("active")) {
+        deleteIcon.src = "images/Icon Folder/Delete Icon_Black.PNG";
+    }
+});
+
+deleteButton.addEventListener("pointerdown", () => {
+    deleteIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
+});
+
+deleteCancelButton.addEventListener("click", closeDeleteConfirmation);
+
+deleteOverlay.addEventListener("click", event => {
+    if (event.target === deleteOverlay) closeDeleteConfirmation();
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && deleteOverlay.classList.contains("active")) closeDeleteConfirmation();
+});
+
+deleteConfirmButton.addEventListener("click", async () => {
+    if (!currentUser) return;
+
+    deleteConfirmButton.disabled = true;
+    deleteConfirmButton.textContent = "Deleting…";
+
+    try {
+        await deleteUser(currentUser);
+        window.location.replace("index.html");
+    } catch (error) {
+        console.error("Unable to delete account:", error);
+        closeDeleteConfirmation();
+        showMessage(
+            String(error?.code || "").includes("requires-recent-login")
+                ? "For security, sign out and sign in again before deleting your account."
+                : "Your account could not be deleted. Please try again.",
+            "error"
+        );
+    } finally {
+        deleteConfirmButton.disabled = false;
+        deleteConfirmButton.textContent = "Delete Account";
+    }
+});
 
 fileInput.addEventListener("change", () => {
     const file = fileInput.files[0];

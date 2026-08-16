@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Personal Information | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/account.css?v=20260816-22">
+    <link rel="stylesheet" href="css/account.css?v=20260816-26">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
@@ -25,12 +25,11 @@
 
         <form class="personal-information-card" id="personal-information-form">
             <div class="personal-photo-editor">
-                <label class="personal-photo-control" for="personal-profile-file" aria-label="Change profile picture">
+                <label class="personal-photo-control" for="personal-profile-file" aria-label="Edit profile picture">
                     <img id="personal-profile-image" alt="Profile picture">
-                    <span>Change</span>
+                    <span>Edit</span>
                     <input id="personal-profile-file" type="file" accept="image/*" hidden>
                 </label>
-                <small>JPG, PNG or WebP. Maximum 5 MB.</small>
             </div>
 
             <div class="personal-fields-grid">
@@ -48,12 +47,28 @@
 
             <p class="personal-information-message" id="personal-information-message" role="status"></p>
             <button type="submit" id="personal-information-save">Save Changes</button>
+            <button class="personal-account-delete" id="personal-account-delete" type="button">
+                <img src="images/Icon Folder/Delete Icon_Black.PNG" alt="">
+                <span>Delete Account</span>
+            </button>
         </form>
     </main>
 
     <div class="account-loading" id="personal-information-loading">Loading your profile…</div>
 
+    <div class="personal-delete-confirm-overlay" id="personal-delete-confirm-overlay" aria-hidden="true">
+        <div class="personal-delete-confirm-box" role="dialog" aria-modal="true" aria-labelledby="personal-delete-confirm-title">
+            <img src="images/trashbin.png" alt="">
+            <h2 id="personal-delete-confirm-title">Delete Account</h2>
+            <p>This permanently deletes your account and you will no longer be able to sign in.</p>
+            <div>
+                <button class="personal-delete-cancel" id="personal-delete-cancel" type="button">Cancel</button>
+                <button class="personal-delete-confirm" id="personal-delete-confirm" type="button">Delete Account</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/personal-information.js"></script>
+    <script type="module" src="js/personal-information.js?v=20260816-26"></script>
 </body>
 </html>

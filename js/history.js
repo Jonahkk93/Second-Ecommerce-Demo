@@ -921,8 +921,6 @@ productModalCart.addEventListener("click",() => {
     saveCart(cart);
     cartTrigger.classList.add("cart-bounce");
     setTimeout(() => cartTrigger.classList.remove("cart-bounce"),450);
-    wishlistDrawer.classList.add("active");
-    syncDrawerState();
     showToast("Added to cart 🛒","success");
 });
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Checkout | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/checkout.css?v=20260815-3">
+    <link rel="stylesheet" href="css/checkout.css?v=20260817-2">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
 </head>
@@ -36,7 +36,7 @@
                 </fieldset>
 
                 <fieldset>
-                    <legend><span>2</span> Delivery address</legend>
+                    <legend><span>2</span> Delivery address <a class="manage-addresses" href="shipping-address.html?return=checkout.html">Manage saved addresses</a></legend>
                     <label>Address or building<input name="address" autocomplete="street-address" placeholder="Street, building or landmark" required></label>
                     <div class="field-grid two-columns">
                         <label>City / town<input name="city" autocomplete="address-level2" required></label>
@@ -46,19 +46,19 @@
                 </fieldset>
 
                 <fieldset>
-                    <legend><span>3</span> Payment</legend>
+                    <legend><span>3</span> Payment <a class="manage-payment-options" href="payment-options.html?return=checkout.html">Manage saved options</a></legend>
                     <div class="payment-options">
                         <label class="payment-card">
                             <input type="radio" name="paymentMethod" value="credit_card" checked>
-                            <span><strong>Credit / debit card</strong><small>Pay securely with your card</small></span>
+                            <span class="payment-card-content"><img src="images/Icon Folder/Visa_Mastercard Icon 2.PNG" alt=""><span class="payment-card-copy"><strong>Credit / debit card</strong><small>Pay securely with your card</small></span></span>
                         </label>
                         <label class="payment-card">
                             <input type="radio" name="paymentMethod" value="flutterwave">
-                            <span><strong>Flutterwave</strong><small>Pay securely through Flutterwave</small></span>
+                            <span class="payment-card-content"><img src="images/Icon Folder/Flutterwave Logo.PNG" alt=""><span class="payment-card-copy"><strong>Flutterwave</strong><small>Pay securely through Flutterwave</small></span></span>
                         </label>
                         <label class="payment-card">
                             <input type="radio" name="paymentMethod" value="mobile_money">
-                            <span><strong>Mobile money</strong><small>We’ll contact you with a payment prompt</small></span>
+                            <span class="payment-card-content"><img src="images/Icon Folder/Mobile Money Options.PNG" alt=""><span class="payment-card-copy"><strong>Mobile money</strong><small>We’ll contact you with a payment prompt</small></span></span>
                         </label>
                     </div>
                     <div id="credit-card-fields" class="payment-detail-fields" hidden>
@@ -81,11 +81,11 @@
                             <input type="hidden" name="mobileNetwork" value="MTN">
                             <div class="network-picker">
                                 <button class="network-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
-                                    <span>MTN MoMo</span><span class="network-picker-arrow" aria-hidden="true"></span>
+                                    <span class="network-option"><img src="images/Icon Folder/Momo logo.jpg" alt=""><span class="network-picker-text">MTN MoMo</span></span><span class="network-picker-arrow" aria-hidden="true"></span>
                                 </button>
                                 <div class="network-picker-menu" role="listbox" hidden>
-                                    <button type="button" role="option" data-value="MTN" aria-selected="true" class="selected">MTN MoMo</button>
-                                    <button type="button" role="option" data-value="Airtel" aria-selected="false">Airtel Money</button>
+                                    <button type="button" role="option" data-value="MTN" aria-selected="true" class="selected"><span class="network-option"><img src="images/Icon Folder/Momo logo.jpg" alt=""><span>MTN MoMo</span></span></button>
+                                    <button type="button" role="option" data-value="Airtel" aria-selected="false"><span class="network-option"><img src="images/Icon Folder/Airtel Icon.PNG" alt=""><span>Airtel Money</span></span></button>
                                 </div>
                             </div>
                         </div>
@@ -132,6 +132,6 @@
 
     <script src="js/products.js"></script>
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/checkout.js?v=20260815-4"></script>
+    <script type="module" src="js/checkout.js?v=20260816-6"></script>
 </body>
 </html>

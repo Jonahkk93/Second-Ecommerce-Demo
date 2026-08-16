@@ -232,7 +232,9 @@ function itemIdentity(item) {
 }
 
 /* Recalculate the homepage when it is restored from browser history. */
-function restoreHomepageLayout() {
+const homepageLayoutReloadKey = "mpwr-homepage-layout-reload";
+
+function restoreHomepageLayout(event) {
     document.documentElement.style.removeProperty("width");
     document.documentElement.style.removeProperty("max-width");
     document.body.style.removeProperty("width");
@@ -254,6 +256,28 @@ function restoreHomepageLayout() {
     requestAnimationFrame(() => {
         document.documentElement.classList.remove("layout-refreshing");
         window.dispatchEvent(new Event("resize"));
+
+        requestAnimationFrame(() => {
+            const navigation = performance.getEntriesByType("navigation")[0];
+            const restoredFromHistory =
+                Boolean(event?.persisted) || navigation?.type === "back_forward";
+            const renderedWidth = document.documentElement.getBoundingClientRect().width;
+            const browserWindowWidth = window.outerWidth;
+            const staleViewport =
+                browserWindowWidth >= 700 &&
+                renderedWidth + Math.max(120, renderedWidth * 0.2) < browserWindowWidth;
+            const reloadPending = sessionStorage.getItem(homepageLayoutReloadKey) === "1";
+
+            if (restoredFromHistory && staleViewport && !reloadPending) {
+                sessionStorage.setItem(homepageLayoutReloadKey, "1");
+                window.location.reload();
+                return;
+            }
+
+            if (reloadPending) {
+                sessionStorage.removeItem(homepageLayoutReloadKey);
+            }
+        });
     });
 }
 

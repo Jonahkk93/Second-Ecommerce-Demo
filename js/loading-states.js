@@ -426,7 +426,7 @@
 
     document.addEventListener("submit", event => {
         const form = event.target;
-        if (!(form instanceof HTMLFormElement) || !form.checkValidity()) return;
+        if (event.defaultPrevented || !(form instanceof HTMLFormElement) || !form.checkValidity()) return;
         const submitter = event.submitter || form.querySelector('button[type="submit"]');
         if (!(submitter instanceof HTMLButtonElement)) return;
         submitter.classList.add("site-button-loading");

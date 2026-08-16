@@ -36,6 +36,7 @@ async function loadProfile(user) {
 
     document.getElementById("account-profile-picture").src = photo;
     document.getElementById("account-profile-name").textContent = fullName;
+    document.getElementById("account-profile-email").textContent = user.email || data.email || "";
 }
 
 signoutButton.addEventListener("click", async () => {

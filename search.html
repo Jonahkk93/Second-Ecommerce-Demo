@@ -6,11 +6,14 @@
     <title>Search | MPWR</title>
     <script type="application/json" id="search-suggestions-data">["Press-ons","Wigs","Lashes","Nail polish","Moisturizer","Pink","Black","Shoulder"]</script>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/search-page.css?v=20260809-3">
+    <link rel="stylesheet" href="css/CARTNEW.css?v=20260816-14">
+    <link rel="stylesheet" href="css/search-page.css?v=20260816-7">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
+    <link rel="stylesheet" href="css/touch-interactions.css">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
+    <script src="js/touch-interactions.js" defer></script>
     <script src="js/products.js" defer></script>
-    <script src="js/search-page.js?v=20260809-6" defer></script>
+    <script src="js/search-page.js?v=20260816-9" defer></script>
 </head>
 <body>
     <header class="search-page-header">
@@ -27,13 +30,53 @@
         </form>
     </header>
 
+    <div class="product-modal-overlay" aria-hidden="true">
+        <div class="product-modal" role="dialog" aria-modal="true" aria-labelledby="search-product-modal-title">
+            <div class="product-modal-top">
+                <div class="product-modal-left">
+                    <a class="product-modal-image-link" href="product.html" aria-label="View product details">
+                        <img class="product-modal-image" src="" alt="">
+                    </a>
+                </div>
+                <div class="product-modal-right">
+                    <div class="product-modal-header">
+                        <a class="product-modal-title-link" href="product.html">
+                            <h2 class="product-modal-title" id="search-product-modal-title"></h2>
+                        </a>
+                    </div>
+                    <div class="product-modal-reviews" aria-live="polite" aria-label="Product reviews">
+                        <span class="product-modal-review-stars" aria-hidden="true">☆☆☆☆☆</span>
+                        <span class="product-modal-review-summary">No reviews yet</span>
+                    </div>
+                    <span class="product-modal-price"></span>
+                    <div class="product-modal-description-row">
+                        <p class="product-modal-description"></p>
+                        <a class="product-modal-read-more" href="product.html">read more</a>
+                    </div>
+                </div>
+            </div>
+            <div class="product-modal-options-group">
+                <div class="product-modal-options-dynamic"></div>
+            </div>
+            <div class="product-modal-actions">
+                <button class="product-modal-favorite" type="button" aria-label="Add to Favorites" title="Add to Favorites">
+                    <img class="product-modal-favorite-icon" src="images/optimized/heart-outline.png" alt="">
+                    <span>Add to Favorites</span>
+                </button>
+                <button class="product-modal-cart" type="button">Add to Cart</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" role="status" aria-live="polite"></div>
+
     <main class="search-page-main">
         <section class="search-discovery" aria-label="Search suggestions">
             <div class="search-section-heading">
                 <h1>Recently searched</h1>
                 <button class="clear-recent" type="button" aria-label="Clear recent searches">Clear</button>
             </div>
-            <div class="search-chips recent-searches"></div>
+            <div class="search-chips recent-searches" id="recent-searches"></div>
             <script>
                 (() => {
                     const container = document.currentScript.previousElementSibling;
@@ -57,6 +100,7 @@
                     }
                 })();
             </script>
+            <button class="recent-searches-more" type="button" aria-controls="recent-searches" aria-expanded="false" hidden>More</button>
 
             <section class="suggested-searches-section">
                 <h2>Suggested searches</h2>

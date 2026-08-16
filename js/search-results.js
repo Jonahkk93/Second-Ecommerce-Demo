@@ -892,7 +892,19 @@ productModalCart.addEventListener("click",() => {
 searchForm.id = "results-search-form";
 searchForm.addEventListener("submit",event => { event.preventDefault(); if (queryInput.value.trim()) location.href = `search-results.html?q=${encodeURIComponent(queryInput.value.trim())}`; });
 document.querySelector(".query-clear").addEventListener("click",() => { queryInput.value = ""; queryInput.focus(); });
-document.querySelector(".product-back-btn").addEventListener("click",() => location.href = `search.html?q=${encodeURIComponent(query)}`);
+document.querySelector(".product-back-btn").addEventListener("click",() => {
+    const fallback = `search.html?q=${encodeURIComponent(query)}`;
+    try {
+        const previous = new URL(document.referrer);
+        if (previous.origin === location.origin && previous.pathname.toLowerCase().endsWith("/search.html")) {
+            history.back();
+            return;
+        }
+    } catch (_) {
+        // A missing or invalid referrer uses the safe Search page fallback.
+    }
+    location.replace(fallback);
+});
 document.querySelector("#cart-icon").addEventListener("click",() => {
     openCartDrawer();
 });

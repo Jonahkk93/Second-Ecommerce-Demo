@@ -4,7 +4,7 @@ body{min-height:100vh;background:#fafafa}
 body.cart-drawer-open,body.wishlist-drawer-open{overflow:hidden}
 button,input,select{font:inherit}
 button,select{cursor:pointer}
-.results-header{position:fixed;top:0;right:0;left:0;z-index:1000;display:flex;width:100%;height:auto;min-height:0;flex-direction:column;gap:0;padding:15px 5% 0;background:rgba(255,255,255,.98);border-bottom:1px solid #eee;box-shadow:0 5px 18px rgba(0,0,0,.045);backdrop-filter:blur(16px)}
+.results-header{position:fixed;top:0;right:0;left:0;z-index:1000;display:flex;width:100vw;max-width:none;height:auto;min-height:0;flex-direction:column;gap:0;padding:15px 5% 0;background:rgba(255,255,255,.98);border-bottom:1px solid #eee;box-shadow:0 5px 18px rgba(0,0,0,.045);backdrop-filter:blur(16px)}
 .results-nav-row{display:flex;width:100%;align-items:center;justify-content:flex-start;gap:12px}
 .product-back-btn{display:flex;width:42px;height:42px;flex:0 0 42px;align-items:center;justify-content:center;border:0;background:none;cursor:pointer}
 .product-back-btn img{display:block;width:24px;height:24px;object-fit:contain}
@@ -26,7 +26,7 @@ button,select{cursor:pointer}
 .results-cart-backdrop{position:fixed;inset:0;z-index:999;background:rgba(20,15,12,.28);opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease}
 .results-cart-backdrop.active{opacity:1;visibility:visible}
 .results-wishlist-backdrop{position:fixed;inset:0;z-index:999;background:rgba(20,15,12,.28);opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease}.results-wishlist-backdrop.active{opacity:1;visibility:visible}
-.results-main{width:min(1500px,100%);margin:0 auto;padding:143px 5% 70px}
+.results-main{width:100vw;max-width:1500px;margin:0 auto;padding:143px 5% 70px}
 .results-toolbar{display:flex;width:auto;align-self:stretch;gap:8px;margin:0 68px 0 54px;padding:9px 0 12px;overflow-x:auto;background:transparent;scrollbar-width:none}
 .results-toolbar::-webkit-scrollbar{display:none}
 .filter-loading{display:flex;flex:0 0 auto;gap:8px}

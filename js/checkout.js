@@ -78,6 +78,20 @@ function closeNetworkPicker() {
     networkTrigger.setAttribute("aria-expanded", "false");
 }
 
+function setNetworkOption(option) {
+    if (!option) return;
+    form.elements.mobileNetwork.value = option.dataset.value;
+    networkTrigger.querySelector(".network-picker-text").textContent = option.textContent.trim();
+    const optionImage = option.querySelector("img");
+    const triggerImage = networkTrigger.querySelector("img");
+    if (optionImage && triggerImage) triggerImage.src = optionImage.src;
+    networkMenu.querySelectorAll("button").forEach(button => {
+        const selected = button === option;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-selected", String(selected));
+    });
+}
+
 networkTrigger.addEventListener("click", event => {
     event.stopPropagation();
     const willOpen = networkMenu.hidden;
@@ -89,13 +103,7 @@ networkTrigger.addEventListener("click", event => {
 networkMenu.querySelectorAll("button").forEach(option => {
     option.addEventListener("click", event => {
         event.stopPropagation();
-        form.elements.mobileNetwork.value = option.dataset.value;
-        networkTrigger.querySelector("span").textContent = option.textContent.trim();
-        networkMenu.querySelectorAll("button").forEach(button => {
-            const selected = button === option;
-            button.classList.toggle("selected", selected);
-            button.setAttribute("aria-selected", String(selected));
-        });
+        setNetworkOption(option);
         closeNetworkPicker();
         networkTrigger.focus();
     });
@@ -234,6 +242,41 @@ onAuthStateChanged(auth, async user => {
             form.elements.firstName.value ||= data.firstName || "";
             form.elements.lastName.value ||= data.lastName || "";
             form.elements.phone.value ||= data.phone || data.phoneNumber || "";
+            const savedAddresses = Array.isArray(data.shippingAddresses)
+                ? data.shippingAddresses
+                : data.shippingAddress && typeof data.shippingAddress === "object"
+                    ? [data.shippingAddress]
+                    : [];
+            const shippingAddress = savedAddresses.find(address => address.isDefault) || savedAddresses[0];
+            if (shippingAddress) {
+                if (shippingAddress.firstName) form.elements.firstName.value = shippingAddress.firstName;
+                if (shippingAddress.lastName) form.elements.lastName.value = shippingAddress.lastName;
+                if (shippingAddress.phone || shippingAddress.phoneNumber) form.elements.phone.value = shippingAddress.phone || shippingAddress.phoneNumber;
+                if (shippingAddress.address || shippingAddress.street) form.elements.address.value = shippingAddress.address || shippingAddress.street;
+                if (shippingAddress.city) form.elements.city.value = shippingAddress.city;
+                if (shippingAddress.district || shippingAddress.region) form.elements.district.value = shippingAddress.district || shippingAddress.region;
+                if (shippingAddress.notes) form.elements.notes.value = shippingAddress.notes;
+                form.elements.mobileNumber.value ||= shippingAddress.phone || shippingAddress.phoneNumber || "";
+                form.elements.flutterwavePhone.value ||= shippingAddress.phone || shippingAddress.phoneNumber || "";
+            }
+            const savedPaymentMethods = Array.isArray(data.paymentMethods) ? data.paymentMethods : [];
+            const paymentMethod = savedPaymentMethods.find(method => method.isDefault) || savedPaymentMethods[0];
+            if (paymentMethod) {
+                const checkoutType = paymentMethod.type === "card" ? "credit_card" : paymentMethod.type;
+                const paymentRadio = form.querySelector(`input[name="paymentMethod"][value="${checkoutType}"]`);
+                if (paymentRadio) paymentRadio.checked = true;
+                if (paymentMethod.type === "card") {
+                    form.elements.cardholderName.value = paymentMethod.cardholderName || "";
+                } else if (paymentMethod.type === "flutterwave") {
+                    form.elements.flutterwaveEmail.value = paymentMethod.email || user.email || "";
+                    form.elements.flutterwavePhone.value = paymentMethod.phone || "";
+                } else if (paymentMethod.type === "mobile_money") {
+                    const network = paymentMethod.network === "Airtel" ? "Airtel" : "MTN";
+                    form.elements.mobileNumber.value = paymentMethod.phone || "";
+                    setNetworkOption(networkMenu.querySelector(`[data-value="${network}"]`));
+                }
+                updatePaymentFields();
+            }
         }
     } catch (error) { console.warn("Could not load checkout profile", error); }
 });
