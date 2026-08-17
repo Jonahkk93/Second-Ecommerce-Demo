@@ -18,6 +18,7 @@ const deleteOverlay = document.querySelector(".shipping-delete-overlay");
 const deleteCancel = document.querySelector(".shipping-delete-cancel");
 const deleteConfirm = document.querySelector(".shipping-delete-confirm");
 const toast = document.querySelector(".shipping-toast");
+const shippingPickers = [...document.querySelectorAll(".shipping-picker")];
 
 let currentUser = null;
 let profile = {};
@@ -79,7 +80,51 @@ function setModalState() {
     );
 }
 
+function closeShippingPickers(except = null) {
+    shippingPickers.forEach(picker => {
+        if (picker === except) return;
+        picker.querySelector(".shipping-picker-menu").hidden = true;
+        picker.querySelector(".shipping-picker-trigger").setAttribute("aria-expanded", "false");
+    });
+}
+
+function setShippingPickerValue(picker, value, focus = false) {
+    const option = picker.querySelector(`[data-value="${CSS.escape(value)}"]`);
+    if (!option) return;
+    picker.previousElementSibling.value = value;
+    picker.querySelector(".shipping-picker-text").textContent = option.textContent.trim();
+    picker.querySelectorAll('[role="option"]').forEach(button => {
+        const selected = button === option;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-selected", String(selected));
+    });
+    if (focus) picker.querySelector(".shipping-picker-trigger").focus();
+}
+
+shippingPickers.forEach(picker => {
+    const trigger = picker.querySelector(".shipping-picker-trigger");
+    const menu = picker.querySelector(".shipping-picker-menu");
+    trigger.addEventListener("click", event => {
+        event.stopPropagation();
+        const open = menu.hidden;
+        closeShippingPickers(picker);
+        menu.hidden = !open;
+        trigger.setAttribute("aria-expanded", String(open));
+    });
+    menu.querySelectorAll("button").forEach(option => option.addEventListener("click", event => {
+        event.stopPropagation();
+        setShippingPickerValue(picker, option.dataset.value, true);
+        menu.hidden = true;
+        trigger.setAttribute("aria-expanded", "false");
+    }));
+});
+
+document.addEventListener("click", event => {
+    if (!event.target.closest(".shipping-picker")) closeShippingPickers();
+});
+
 function closeEditor() {
+    closeShippingPickers();
     editorOverlay.classList.remove("active");
     editorOverlay.setAttribute("aria-hidden", "true");
     editingId = null;
@@ -106,6 +151,7 @@ function openEditor(address = null) {
     ["firstName", "lastName", "phone", "address", "city", "district", "country", "postalCode", "notes"].forEach(name => {
         form.elements[name].value = values[name] || "";
     });
+    shippingPickers.forEach(picker => setShippingPickerValue(picker, values.country || "Uganda"));
     form.elements.isDefault.checked = Boolean(values.isDefault);
 
     editorOverlay.classList.add("active");
@@ -304,6 +350,10 @@ editorOverlay.addEventListener("click", event => { if (event.target === editorOv
 deleteOverlay.addEventListener("click", event => { if (event.target === deleteOverlay) closeDeleteDialog(); });
 document.addEventListener("keydown", event => {
     if (event.key !== "Escape") return;
+    if (shippingPickers.some(picker => !picker.querySelector(".shipping-picker-menu").hidden)) {
+        closeShippingPickers();
+        return;
+    }
     if (deleteOverlay.classList.contains("active")) closeDeleteDialog();
     else if (editorOverlay.classList.contains("active")) closeEditor();
 });

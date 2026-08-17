@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Shipping Address | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/shipping-address.css?v=20260816-1">
+    <link rel="stylesheet" href="css/shipping-address.css?v=20260817-8">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
@@ -21,9 +21,8 @@
     <main class="shipping-page">
         <div class="shipping-heading">
             <p class="shipping-kicker">My account</p>
-            <h1>Shipping address</h1>
             <p class="shipping-security">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.8 2.9 8.1 7 10 4.1-1.9 7-5.2 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                <img src="images/Icon Folder/Sheild Icon_Green.PNG" alt="">
                 <span>Securely saved to your MPWR account</span>
             </p>
         </div>
@@ -48,32 +47,41 @@
                     <p class="shipping-kicker">Delivery details</p>
                     <h2 id="shipping-editor-title">Add new address</h2>
                 </div>
-                <button class="shipping-editor-close" type="button" aria-label="Close address form">×</button>
+                <button class="shipping-editor-close" type="button" aria-label="Close address form"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button>
             </div>
 
             <form id="shipping-address-form" novalidate>
-                <div class="shipping-form-grid two-columns">
+                <div class="shipping-form-scroll">
+                <div class="shipping-form-grid two-columns shipping-name-grid">
                     <label>First name<input name="firstName" autocomplete="given-name" required></label>
                     <label>Last name<input name="lastName" autocomplete="family-name" required></label>
                 </div>
                 <label>Phone number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="e.g. 0772 123 456" required></label>
                 <label>Address or building<input name="address" autocomplete="street-address" placeholder="Street, building or landmark" required></label>
-                <div class="shipping-form-grid two-columns">
+                <div class="shipping-form-grid two-columns shipping-location-grid">
                     <label>City / town<input name="city" autocomplete="address-level2" required></label>
                     <label>District<input name="district" autocomplete="address-level1" required></label>
                 </div>
-                <div class="shipping-form-grid two-columns">
-                    <label>Country
-                        <select name="country" autocomplete="country-name" required>
-                            <option value="Uganda">Uganda</option>
-                        </select>
-                    </label>
-                    <label>Postal code <small>(optional)</small><input name="postalCode" autocomplete="postal-code"></label>
+                <div class="shipping-form-grid two-columns shipping-country-grid">
+                    <div class="shipping-picker-field">
+                        <span class="shipping-picker-label">Country</span>
+                        <input name="country" type="hidden" value="Uganda">
+                        <div class="shipping-picker">
+                            <button class="shipping-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="shipping-picker-text">Uganda</span><i aria-hidden="true"></i></button>
+                            <div class="shipping-picker-menu" role="listbox" hidden>
+                                <button type="button" role="option" data-value="Uganda" aria-selected="true" class="selected">Uganda</button>
+                            </div>
+                        </div>
+                    </div>
+                    <label><span class="shipping-label-text">Postal code <small>(optional)</small></span><input name="postalCode" autocomplete="postal-code"></label>
                 </div>
-                <label>Delivery notes <small>(optional)</small><textarea name="notes" rows="3" placeholder="Directions, landmark or preferred delivery time"></textarea></label>
-                <label class="shipping-default-choice"><input name="isDefault" type="checkbox"><span>Use as my default shipping address</span></label>
-                <p class="shipping-form-error" role="alert"></p>
-                <button class="shipping-save" type="submit">Save address</button>
+                <label><span class="shipping-label-text">Delivery notes <small>(optional)</small></span><textarea name="notes" rows="3" placeholder="Directions, landmark or preferred delivery time"></textarea></label>
+                    <label class="shipping-default-choice"><input name="isDefault" type="checkbox"><span>Use as my default shipping address</span></label>
+                </div>
+                <div class="shipping-save-panel">
+                    <p class="shipping-form-error" role="alert"></p>
+                    <button class="shipping-save" type="submit">Save address</button>
+                </div>
             </form>
         </section>
     </div>
@@ -93,6 +101,6 @@
     <div class="shipping-toast" role="status" aria-live="polite"></div>
 
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/shipping-address.js?v=20260816-1"></script>
+    <script type="module" src="js/shipping-address.js?v=20260817-8"></script>
 </body>
 </html>
