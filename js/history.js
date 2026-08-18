@@ -646,7 +646,7 @@ function createProductCard(product, favorites) {
             <span class="price">UGX ${Number(String(product.price).replace(/[^0-9.]/g, "")).toLocaleString()}</span>
             <div class="history-product-menu">
                 <button class="history-product-menu-trigger" type="button" aria-label="Product options" aria-expanded="false">
-                    <img src="images/Icon Folder/3 Dots Icon_Gray.PNG" alt="">
+                    <img src="images/Icon Folder/3 Dots Icon_E5A484.PNG" alt="">
                 </button>
                 <div class="history-product-menu-options" role="menu" hidden>
                     <button class="history-product-add-cart" type="button" role="menuitem">
