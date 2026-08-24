@@ -261,7 +261,7 @@ function renderMethods() {
         defaultButton.disabled = method.isDefault;
         defaultButton.textContent = method.isDefault ? "Default" : "Set as default";
         defaultButton.addEventListener("click", () => setDefaultMethod(method.id));
-        const edit = actionButton("Edit payment option", `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 6.5 17.5 10.5M4 20l4.2-.9L19 8.3a2.8 2.8 0 0 0-4-4L4.9 14.5 4 20Z"/></svg>`);
+        const edit = actionButton("Edit payment option", `<img src="images/Icon Folder/Pencil Icon_Gray.PNG" alt="">`);
         edit.addEventListener("click", () => openEditor(method));
         const remove = actionButton("Delete payment option", `<img src="images/Icon Folder/Delete Icon_Gray.PNG" alt="">`);
         remove.addEventListener("click", () => openDeleteDialog(method.id));

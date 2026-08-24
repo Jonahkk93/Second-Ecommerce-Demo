@@ -616,7 +616,7 @@ body.personal-delete-confirm-open{
 
 .account-tabs{
     display:grid;
-    grid-template-columns:repeat(4, 1fr);
+    grid-template-columns:repeat(5, minmax(0, 1fr));
     margin-bottom:34px;
     border-bottom:1px solid var(--line);
 }
@@ -643,8 +643,8 @@ body.personal-delete-confirm-open{
 
 .account-tab-icon{
     display:block;
-    width:17px;
-    height:17px;
+    width:19px;
+    height:19px;
     object-fit:contain;
 }
 

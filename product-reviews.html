@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" class="site-loading-enabled">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Product Reviews | MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/product.css?v=20260824-7">
+    <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
+    <script src="js/loading-states.js?v=20260809-23" defer></script>
+    <script src="js/products.js" defer></script>
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/product-reviews.js?v=20260824-2"></script>
+</head>
+<body>
+    <header class="product-page-header">
+        <div class="product-page-header-inner">
+            <a class="product-back-btn product-reviews-back" href="product.html" aria-label="Back to product">
+                <img src="images/optimized/back.png" alt="">
+            </a>
+            <a class="product-reviews-page-title" href="index.html" aria-label="MPWR home">MPWR</a>
+        </div>
+    </header>
+
+    <main class="product-reviews-page">
+        <section class="product-reviews product-reviews-full reviews-loading-state" aria-labelledby="reviews-title">
+            <div class="product-reviews-inner">
+                <div class="reviews-heading">
+                    <div>
+                        <p class="reviews-kicker">Customer feedback</p>
+                        <h1 id="reviews-title">Reviews</h1>
+                        <p class="product-reviews-name"></p>
+                    </div>
+                    <div class="reviews-summary" aria-label="Product review summary">
+                        <span class="reviews-summary-score rating-score">0.0</span>
+                        <span class="reviews-summary-stars stars">☆☆☆☆☆</span>
+                        <span class="reviews-summary-count review-count">No reviews yet</span>
+                    </div>
+                </div>
+
+                <div class="reviews-panel">
+                    <div class="reviews-loading-placeholder" aria-hidden="true">
+                        <div class="reviews-loading-heading">
+                            <div>
+                                <span class="reviews-loading-kicker site-content-loading"></span>
+                                <span class="reviews-loading-title site-content-loading"></span>
+                            </div>
+                            <span class="reviews-loading-summary site-content-loading"></span>
+                        </div>
+                        <div class="reviews-loading-cards">
+                            <div class="reviews-loading-card">
+                                <span class="reviews-loading-name site-content-loading"></span>
+                                <span class="reviews-loading-stars site-content-loading"></span>
+                                <span class="reviews-loading-line site-content-loading"></span>
+                                <span class="reviews-loading-line is-short site-content-loading"></span>
+                                <span class="reviews-loading-date site-content-loading"></span>
+                            </div>
+                            <div class="reviews-loading-card">
+                                <span class="reviews-loading-name site-content-loading"></span>
+                                <span class="reviews-loading-stars site-content-loading"></span>
+                                <span class="reviews-loading-line site-content-loading"></span>
+                                <span class="reviews-loading-line is-short site-content-loading"></span>
+                                <span class="reviews-loading-date site-content-loading"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="review-list"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="product-bottom-bar">
+        <div class="product-bottom-bar-inner">
+
+            <button class="product-bottom-favorite">
+
+        <img
+            src="images/optimized/heart-outline.png"
+            class="product-bottom-favorite-icon"
+            alt="Favorite"
+        >
+
+        <span>Add to Favorites</span>
+
+    </button>
+
+            <div class="purchase-pill">
+
+                <button class="product-bottom-cart" type="button">
+                    Add to Cart
+                </button>
+
+                <div class="purchase-divider"></div>
+
+                <div class="quantity-selector">
+                    <button class="quantity-minus" type="button" aria-label="Decrease quantity">−</button>
+                    <span class="quantity-value" aria-live="polite">1</span>
+                    <button class="quantity-plus" type="button" aria-label="Increase quantity">+</button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

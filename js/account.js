@@ -310,7 +310,9 @@ async function loadAccount(user) {
     const pending = [];
     const returns = [];
     const review = [];
+    const reviewed = [];
     const reviewProductsAdded = new Set();
+    const reviewedProductsAdded = new Set();
 
     orders.forEach(order => {
         (order.items || []).forEach(item => {
@@ -328,6 +330,13 @@ async function loadAccount(user) {
                 review.push(entry);
                 reviewProductsAdded.add(productId);
             }
+            if (
+                reviewedProducts.has(productId) &&
+                !reviewedProductsAdded.has(productId)
+            ) {
+                reviewed.push(entry);
+                reviewedProductsAdded.add(productId);
+            }
         });
     });
 
@@ -335,6 +344,7 @@ async function loadAccount(user) {
     renderCategory("pending", pending, "You have no pending items.");
     renderCategory("returns", returns, "You have no returns.");
     renderCategory("review", review, "You have reviewed all eligible purchases.");
+    renderCategory("reviewed", reviewed, "You have not reviewed any purchases yet.");
 }
 
 document.querySelectorAll(".account-tab").forEach(tab => {

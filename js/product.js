@@ -556,6 +556,20 @@ const reviewList = document.querySelector(".review-list");
 const reviewsReadMore = document.querySelector(".reviews-read-more");
 const relatedProductsGrid = document.querySelector(".related-products-grid");
 const relatedProducts = document.querySelector(".related-products");
+const productModalOverlay = document.querySelector(".product-modal-overlay");
+const productModalImage = document.querySelector(".product-modal-image");
+const productModalImageLink = document.querySelector(".product-modal-image-link");
+const productModalTitle = document.querySelector(".product-modal-title");
+const productModalTitleLink = document.querySelector(".product-modal-title-link");
+const productModalPrice = document.querySelector(".product-modal-price");
+const productModalDescription = document.querySelector(".product-modal-description");
+const productModalReadMore = document.querySelector(".product-modal-read-more");
+const productModalOptions = document.querySelector(".product-modal-options-dynamic");
+const productModalOptionsGroup = document.querySelector(".product-modal-options-group");
+const productModalFavorite = document.querySelector(".product-modal-favorite");
+const productModalFavoriteIcon = document.querySelector(".product-modal-favorite-icon");
+const productModalFavoriteLabel = productModalFavorite?.querySelector("span");
+const productModalCart = document.querySelector(".product-modal-cart");
 const reviewText = document.querySelector("#review-text");
 const reviewSubmit = document.querySelector(".review-submit");
 const reviewStars = [...document.querySelectorAll(".review-star")];
@@ -572,7 +586,122 @@ const productReviewsInner = document.querySelector(".product-reviews-inner");
 
 let selectedReviewRating = 0;
 let currentReviewExists = false;
-let reviewsExpanded = false;
+const REVIEW_PREVIEW_LIMIT = 2;
+let selectedModalProduct = null;
+let selectedModalOptions = {};
+let selectedModalPrice = 0;
+
+function isFavoriteProduct(item) {
+    return favorites.some(favorite => String(favorite.id) === String(item.id));
+}
+
+function toggleRelatedWishlist(item, icon) {
+    const index = favorites.findIndex(favorite => String(favorite.id) === String(item.id));
+
+    if (index === -1) {
+        favorites.push({ id: String(item.id), title: item.title, price: item.price, image: item.image });
+        showToast("Added to wishlist❤️", "success");
+    } else {
+        favorites.splice(index, 1);
+        showToast("Removed from wishlist💔", "warning");
+    }
+
+    saveFavoritesToFirestore();
+    renderWishlist();
+    updateFavoriteIcon();
+    const active = isFavoriteProduct(item);
+    if (icon) icon.src = active ? "images/Heart7.PNG" : "images/optimized/heart-outline.png";
+    return active;
+}
+
+function closeRelatedProductModal() {
+    productModalOverlay?.classList.remove("active");
+    productModalOverlay?.setAttribute("aria-hidden", "true");
+    document.documentElement.classList.remove("product-modal-open");
+    document.body.classList.remove("product-modal-open");
+    selectedModalProduct = null;
+}
+
+function updateRelatedModalFavorite() {
+    if (!selectedModalProduct || !productModalFavoriteIcon) return;
+    const active = isFavoriteProduct(selectedModalProduct);
+    productModalFavoriteIcon.src = active ? "images/Heart7.PNG" : "images/optimized/heart-outline.png";
+    productModalFavorite?.setAttribute("aria-label", active ? "Remove from Favorites" : "Add to Favorites");
+    if (productModalFavoriteLabel) productModalFavoriteLabel.textContent = active ? "Remove from Favorites" : "Add to Favorites";
+}
+
+function openRelatedProductModal(item) {
+    if (!productModalOverlay || !productModalOptions) return;
+
+    selectedModalProduct = item;
+    selectedModalOptions = {};
+    const optionGroups = Array.isArray(item.options) && item.options.length
+        ? item.options
+        : [
+            item.colors?.length ? { key: "color", label: "Color", values: item.colors } : null,
+            item.sizes?.length ? { key: "size", label: item.sizeLabel || "Size", values: item.sizes } : null
+        ].filter(Boolean);
+
+    const updateVariant = () => {
+        const key = optionGroups.map(group => selectedModalOptions[group.key] || "").join("|");
+        const color = selectedModalOptions.color || "";
+        const size = selectedModalOptions.size || selectedModalOptions.length || "";
+        const variant = item.variants?.[key];
+        const images = variant?.images || variant?.gallery || item.variantGalleries?.[key] || item.variantGalleries?.[color]?.[size] || item.sizeGalleries?.[size] || item.galleries?.[color] || item.gallery || [item.image];
+        selectedModalPrice = variant?.price || item.variantPrices?.[key] || item.variantPrices?.[color]?.[size] || item.sizePrices?.[size] || item.colorPrices?.[color] || item.price;
+        productModalImage.src = images[0] || item.image;
+        productModalPrice.textContent = `UGX ${Number(selectedModalPrice).toLocaleString()}`;
+    };
+
+    productModalImage.alt = item.title;
+    productModalTitle.textContent = item.title;
+    productModalDescription.textContent = String(item.description || "Product description coming soon.").trim();
+    const detailHref = `product.html?id=${item.id}`;
+    productModalImageLink.href = detailHref;
+    productModalTitleLink.href = detailHref;
+    productModalReadMore.href = detailHref;
+    productModalOptions.replaceChildren();
+    productModalOptionsGroup.hidden = optionGroups.length === 0;
+
+    optionGroups.forEach((group, groupIndex) => {
+        selectedModalOptions[group.key] = group.values[0];
+
+        if (groupIndex > 0) {
+            const divider = document.createElement("div");
+            divider.className = "product-modal-section-divider";
+            divider.setAttribute("aria-hidden", "true");
+            productModalOptions.appendChild(divider);
+        }
+
+        const section = document.createElement("section");
+        section.className = "product-modal-option-group";
+        section.innerHTML = `<h3>${group.label}</h3><div class="product-modal-option-values"></div>`;
+        const values = section.querySelector(".product-modal-option-values");
+        if (group.values.length === 1) values.classList.add("has-one-option");
+        group.values.forEach((value, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = value;
+            button.className = "product-modal-option-btn";
+            button.classList.toggle("active", index === 0);
+            button.addEventListener("click", () => {
+                values.querySelectorAll("button").forEach(option => option.classList.remove("active"));
+                button.classList.add("active");
+                selectedModalOptions[group.key] = value;
+                updateVariant();
+            });
+            values.appendChild(button);
+        });
+        productModalOptions.appendChild(section);
+    });
+
+    updateVariant();
+    updateRelatedModalFavorite();
+    productModalOverlay.classList.add("active");
+    productModalOverlay.setAttribute("aria-hidden", "false");
+    document.documentElement.classList.add("product-modal-open");
+    document.body.classList.add("product-modal-open");
+}
 
 function renderRelatedProducts() {
     if (!product || !relatedProductsGrid) return;
@@ -580,6 +709,7 @@ function renderRelatedProducts() {
     const currentIndex = products.findIndex(item => item.id === product.id);
     const recommendations = [];
     const recommendationLimit = window.matchMedia("(max-width: 600px)").matches ? 6 : 10;
+    const savedFavorites = JSON.parse(localStorage.getItem("favorites")) || [];
 
     for (let offset = 1; recommendations.length < Math.min(recommendationLimit, products.length - 1); offset++) {
         const candidate = products[(currentIndex + offset) % products.length];
@@ -587,30 +717,107 @@ function renderRelatedProducts() {
     }
 
     relatedProductsGrid.innerHTML = recommendations.map(item => `
-        <a class="related-product-card" href="product.html?id=${encodeURIComponent(item.id)}">
-            <span class="related-product-image"><img src="${item.image}" alt="${item.title}"></span>
-            <span class="related-product-title">${item.title}</span>
-            <span class="related-product-price">UGX ${Number(item.price).toLocaleString()}</span>
-        </a>
+        <div class="product-box" data-category="${item.category || ""}" data-id="${item.id}">
+            <div class="img-box">
+                <button class="wishlist-btn" type="button" aria-label="Add to wishlist">
+                    <img src="${savedFavorites.some(favorite => String(favorite.id) === String(item.id)) ? "images/Heart7.PNG" : "images/optimized/heart-outline.png"}" class="wishlist-icon" alt="">
+                </button>
+                <img src="${item.image}" alt="${item.title}" loading="lazy" decoding="async">
+            </div>
+            <h2 class="product-title">${item.title}</h2>
+            <div class="price-and-cart">
+                <span class="price">UGX ${Number(item.price).toLocaleString()}</span>
+                <i class=""><img src="images/Plus.PNG" class="addie" alt=""></i>
+            </div>
+        </div>
     `).join("");
+
+    relatedProductsGrid.querySelectorAll(".product-box").forEach(card => {
+        const item = products.find(productItem => Number(productItem.id) === Number(card.dataset.id));
+        if (!item) return;
+        const wishlistButton = card.querySelector(".wishlist-btn");
+        const wishlistIcon = wishlistButton?.querySelector("img");
+        const addButton = card.querySelector(".addie");
+
+        card.addEventListener("click", event => {
+            if (event.target.closest(".wishlist-btn, .addie")) return;
+            window.location.href = `product.html?id=${item.id}`;
+        });
+        wishlistButton?.addEventListener("click", event => {
+            event.stopPropagation();
+            toggleRelatedWishlist(item, wishlistIcon);
+        });
+        addButton?.addEventListener("click", event => {
+            event.stopPropagation();
+            openRelatedProductModal(item);
+        });
+    });
     relatedProducts.classList.remove("related-products-loading-state");
     relatedProducts.querySelector(".related-products-loading-placeholder")?.remove();
 }
 
 renderRelatedProducts();
 
+productModalOverlay?.addEventListener("click", event => {
+    if (event.target === productModalOverlay) closeRelatedProductModal();
+});
+productModalFavorite?.addEventListener("click", () => {
+    if (!selectedModalProduct) return;
+    toggleRelatedWishlist(selectedModalProduct);
+    updateRelatedModalFavorite();
+    const cardIcon = relatedProductsGrid?.querySelector(`.product-box[data-id="${selectedModalProduct.id}"] .wishlist-btn img`);
+    if (cardIcon) cardIcon.src = isFavoriteProduct(selectedModalProduct) ? "images/Heart7.PNG" : "images/optimized/heart-outline.png";
+});
+productModalCart?.addEventListener("click", () => {
+    if (!selectedModalProduct) return;
+    const cartItem = {
+        id: selectedModalProduct.id,
+        title: selectedModalProduct.title,
+        price: selectedModalPrice,
+        image: productModalImage.src || selectedModalProduct.image,
+        selectedOptions: { ...selectedModalOptions },
+        color: selectedModalOptions.color || "",
+        size: selectedModalOptions.size || selectedModalOptions.length || "",
+        quantity: 1
+    };
+    const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+    if (cartItems.some(item => item.id === cartItem.id && sameCartSelection(item, cartItem))) {
+        showToast("This product is already in your cart⚠️", "warning");
+        return;
+    }
+    cartItems.push(cartItem);
+    saveCart(cartItems);
+    renderSavedCart();
+    updateCartBadge();
+    showToast("Added to cart🛒", "success");
+});
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && productModalOverlay?.classList.contains("active")) closeRelatedProductModal();
+});
+
 function positionReviews() {
     const isTabletOrLaptop = window.matchMedia("(min-width: 601px)").matches;
+    const isLaptop = window.matchMedia("(min-width: 901px)").matches;
 
     if (isTabletOrLaptop) {
         if (productBenefits.parentElement !== productGallery) {
             productGallery.appendChild(productBenefits);
         }
-        if (relatedProducts.parentElement !== productGallery) {
-            productGallery.appendChild(relatedProducts);
-        }
-        if (productReviews.parentElement !== productInfo) {
-            productInfo.appendChild(productReviews);
+
+        if (isLaptop) {
+            if (relatedProducts.parentElement !== productLayout) {
+                productLayout.appendChild(relatedProducts);
+            }
+            if (productReviews.parentElement !== productInfo) {
+                productInfo.appendChild(productReviews);
+            }
+        } else {
+            if (productReviews.parentElement !== productLayout) {
+                productLayout.appendChild(productReviews);
+            }
+            if (relatedProducts.parentElement !== productReviewsInner) {
+                productReviewsInner.appendChild(relatedProducts);
+            }
         }
         return;
     }
@@ -668,11 +875,45 @@ function reviewPurchasedOptions(review) {
         .map(key => options[key]);
 }
 
+function clampReviewPreview(body) {
+    const bodyText = body.querySelector(".review-preview-copy");
+    const moreLink = body.querySelector(".review-more-link");
+    const fullText = body.dataset.fullReview || "";
+    if (!bodyText || !moreLink) return;
+
+    bodyText.textContent = fullText;
+    moreLink.hidden = false;
+
+    const lineHeight = Number.parseFloat(getComputedStyle(body).lineHeight);
+    const maxHeight = lineHeight * 2 + 1;
+    if (body.scrollHeight <= maxHeight) {
+        moreLink.hidden = true;
+        return;
+    }
+
+    let low = 0;
+    let high = fullText.length;
+    while (low < high) {
+        const middle = Math.ceil((low + high) / 2);
+        bodyText.textContent = fullText.slice(0, middle).trimEnd();
+        if (body.scrollHeight <= maxHeight) {
+            low = middle;
+        } else {
+            high = middle - 1;
+        }
+    }
+
+    const fittedText = fullText.slice(0, low).trimEnd();
+    const lastWordBreak = fittedText.lastIndexOf(" ");
+    bodyText.textContent = lastWordBreak > 0
+        ? fittedText.slice(0, lastWordBreak)
+        : fittedText;
+}
+
 function renderReviewList(reviews) {
     reviewList.replaceChildren();
-    reviewsExpanded = false;
-    reviewsReadMore.hidden = reviews.length <= 2;
-    reviewsReadMore.textContent = "Read more";
+    reviewsReadMore.hidden = reviews.length <= REVIEW_PREVIEW_LIMIT;
+    reviewsReadMore.textContent = "View all";
 
     const average = reviews.length
         ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
@@ -691,10 +932,9 @@ function renderReviewList(reviews) {
     productRatingStars.textContent = averageStars;
     reviewSummaryStars.textContent = averageStars;
 
-    reviews.forEach((review, index) => {
+    reviews.slice(0, REVIEW_PREVIEW_LIMIT).forEach((review, index) => {
         const card = document.createElement("article");
         card.className = "review-card";
-        card.hidden = index >= 2;
 
         const header = document.createElement("div");
         header.className = "review-card-header";
@@ -714,8 +954,19 @@ function renderReviewList(reviews) {
             "★".repeat(Number(review.rating)) +
             "☆".repeat(5 - Number(review.rating));
 
+        const reviewTextValue = String(review.text || "").trim();
         const body = document.createElement("p");
-        body.textContent = review.text;
+        body.className = "review-preview-text";
+        body.dataset.fullReview = reviewTextValue;
+
+        const bodyText = document.createElement("span");
+        bodyText.className = "review-preview-copy";
+        bodyText.textContent = reviewTextValue;
+        const moreLink = document.createElement("a");
+        moreLink.className = "review-more-link";
+        moreLink.href = `product-reviews.html?id=${encodeURIComponent(product.id)}`;
+        moreLink.textContent = " ...more";
+        body.append(bodyText, moreLink);
 
         const date = document.createElement("time");
         date.className = "review-purchase-date";
@@ -726,7 +977,7 @@ function renderReviewList(reviews) {
 
         const clientLine = document.createElement("div");
         clientLine.className = "review-client-name";
-        clientLine.append(customer, verified, stars, date);
+        clientLine.append(customer, verified, stars);
 
         const purchasedItem = document.createElement("span");
         purchasedItem.className = "review-purchased-item";
@@ -744,7 +995,7 @@ function renderReviewList(reviews) {
             const updateButton = document.createElement("button");
             updateButton.type = "button";
             updateButton.className = "review-update-button";
-            updateButton.textContent = "Update review";
+            updateButton.textContent = "Update";
             updateButton.addEventListener("click", () => {
                 reviewCompose.hidden = false;
                 reviewForm.hidden = false;
@@ -752,7 +1003,9 @@ function renderReviewList(reviews) {
                 reviewText.focus();
                 reviewForm.scrollIntoView({ behavior: "smooth", block: "center" });
             });
-            card.appendChild(updateButton);
+            clientLine.append(updateButton, date);
+        } else {
+            clientLine.append(date);
         }
 
         if (review.attachment?.url) {
@@ -781,17 +1034,18 @@ function renderReviewList(reviews) {
         }
 
         reviewList.appendChild(card);
+        clampReviewPreview(body);
     });
     productReviews.classList.remove("reviews-loading-state");
     productReviews.querySelector(".reviews-loading-placeholder")?.remove();
 }
 
 reviewsReadMore?.addEventListener("click", () => {
-    reviewsExpanded = !reviewsExpanded;
-    [...reviewList.children].forEach((card, index) => {
-        card.hidden = !reviewsExpanded && index >= 2;
-    });
-    reviewsReadMore.textContent = reviewsExpanded ? "Show less" : "Read more";
+    window.location.href = `product-reviews.html?id=${encodeURIComponent(product.id)}`;
+});
+
+window.addEventListener("resize", () => {
+    document.querySelectorAll(".review-preview-text").forEach(clampReviewPreview);
 });
 
 async function loadProductReviews() {
