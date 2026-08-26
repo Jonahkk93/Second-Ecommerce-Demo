@@ -44,6 +44,14 @@ html.site-loading-enabled img.site-image-ready{
     transition:opacity .28s ease;
 }
 
+html.site-loading-enabled .product-box .img-box img.site-image-ready{
+    transition:0.5s;
+}
+
+html.site-loading-enabled .product-box .price-and-cart .addie.site-image-ready{
+    transition:transform .18s ease, boxshadow .25s ease, background-color .25s ease;
+}
+
 html.site-loading-enabled img.site-image-error{
     opacity:0;
 }

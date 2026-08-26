@@ -719,15 +719,18 @@ function renderRelatedProducts() {
     relatedProductsGrid.innerHTML = recommendations.map(item => `
         <div class="product-box" data-category="${item.category || ""}" data-id="${item.id}">
             <div class="img-box">
-                <button class="wishlist-btn" type="button" aria-label="Add to wishlist">
-                    <img src="${savedFavorites.some(favorite => String(favorite.id) === String(item.id)) ? "images/Heart7.PNG" : "images/optimized/heart-outline.png"}" class="wishlist-icon" alt="">
+                <button class="wishlist-btn">
+                    <img
+                        src="images/optimized/heart-outline.png"
+                        class="wishlist-icon"
+                    >
                 </button>
-                <img src="${item.image}" alt="${item.title}" loading="lazy" decoding="async">
+                <img src="${item.image}" loading="lazy" decoding="async">
             </div>
             <h2 class="product-title">${item.title}</h2>
             <div class="price-and-cart">
                 <span class="price">UGX ${Number(item.price).toLocaleString()}</span>
-                <i class=""><img src="images/Plus.PNG" class="addie" alt=""></i>
+                <i class=""><img src="images/Plus.PNG" class="addie"></i>
             </div>
         </div>
     `).join("");
@@ -738,6 +741,13 @@ function renderRelatedProducts() {
         const wishlistButton = card.querySelector(".wishlist-btn");
         const wishlistIcon = wishlistButton?.querySelector("img");
         const addButton = card.querySelector(".addie");
+        const isFavorite = savedFavorites.some(favorite => String(favorite.id) === String(item.id));
+
+        if (isFavorite) {
+            wishlistIcon.src = "images/Heart7.PNG";
+        } else {
+            wishlistIcon.src = "images/optimized/heart-outline.png";
+        }
 
         card.addEventListener("click", event => {
             if (event.target.closest(".wishlist-btn, .addie")) return;
