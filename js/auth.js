@@ -1,16 +1,16 @@
 import {
-    getAuth,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     onAuthStateChanged,
-    signOut
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    signOut,
+    sendPasswordResetEmail
+} from "./auth-api.js";
 
 import {
     doc,
     getDoc,
     setDoc
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+} from "./firestore-api.js";
 
 const auth = window.auth;
 const db = window.db;
@@ -89,6 +89,27 @@ const registerForm = document.getElementById("register-form");
 
 // Sign in form
 const signinForm = document.getElementById("signin-form");
+const forgotPassword = signinForm?.querySelector(".account-options a");
+
+forgotPassword?.addEventListener("click", async event => {
+    event.preventDefault();
+    const email = document.getElementById("signin-email").value.trim();
+    if (!email) {
+        showAuthToast("Enter your email address first.", "warning");
+        document.getElementById("signin-email").focus();
+        return;
+    }
+    try {
+        const result = await sendPasswordResetEmail(auth, email);
+        if (result.previewUrl) {
+            window.location.href = result.previewUrl;
+            return;
+        }
+        showAuthToast(result.message, "success");
+    } catch (error) {
+        showAuthToast(authErrorMessage(error), "warning");
+    }
+});
 
 registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();

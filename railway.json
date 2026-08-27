@@ -1,0 +1,17 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "apps/api/Dockerfile",
+    "watchPatterns": ["apps/api/**", "package.json", "package-lock.json", "railway.json"]
+  },
+  "deploy": {
+    "preDeployCommand": ["node apps/api/scripts/migrate-production.mjs"],
+    "healthcheckPath": "/v1/health",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5,
+    "overlapSeconds": "20",
+    "drainingSeconds": "15"
+  }
+}

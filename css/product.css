@@ -783,7 +783,7 @@ align-items: center;
 
 .product-page-title{
 
-    font-size:52px;
+    font-size:46px;
 
     font-weight:700;
 
@@ -907,7 +907,7 @@ flex-shrink:0;
 ============================= */
 
 .product-page-price{
-    font-size:32px;
+    font-size:28px;
     font-weight:700;
     color:#E5A484;
     margin:10px 0 8px;
@@ -2600,6 +2600,13 @@ transition: .25s ease;
     margin:0 auto;
 }
 
+.product-rating[hidden],
+.reviews-heading[hidden],
+.reviews-panel[hidden],
+.product-modal-reviews[hidden]{
+    display:none!important;
+}
+
 .reviews-loading-placeholder{
     display:none;
 }
@@ -4077,14 +4084,14 @@ body.product-modal-open{overflow:hidden}
     }
 
     .product-page-title{
-        font-size:32px;
+        font-size:28px;
         line-height:1.08;
         letter-spacing:-0.8px;
         margin-bottom:18px;
     }
 
     .product-page-price{
-        font-size:26px;
+        font-size:22px;
         font-weight:700;
     }
 

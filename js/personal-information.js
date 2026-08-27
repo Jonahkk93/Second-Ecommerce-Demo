@@ -3,21 +3,16 @@ import {
     onAuthStateChanged,
     updateProfile,
     verifyBeforeUpdateEmail
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+} from "./auth-api.js";
 import {
     doc,
     getDoc,
     setDoc
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import {
-    getDownloadURL,
-    ref,
-    uploadBytes
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+} from "./firestore-api.js";
+import { uploadImage } from "./media-api.js";
 
 const auth = window.auth;
 const db = window.db;
-const storage = window.storage;
 const page = document.getElementById("personal-information-page");
 const loading = document.getElementById("personal-information-loading");
 const form = document.getElementById("personal-information-form");
@@ -151,10 +146,7 @@ form.addEventListener("submit", async event => {
     try {
         const file = fileInput.files[0];
         if (file) {
-            const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-            const imageRef = ref(storage, `profiles/${currentUser.uid}/profile.${extension}`);
-            await uploadBytes(imageRef, file, { contentType: file.type });
-            currentPhotoUrl = await getDownloadURL(imageRef);
+            currentPhotoUrl = (await uploadImage(file, "profile")).url;
         }
 
         await updateProfile(currentUser, {

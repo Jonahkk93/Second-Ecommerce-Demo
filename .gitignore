@@ -1,2 +1,8 @@
 dist/
 .DS_Store
+node_modules/
+.env
+apps/api/dist/
+apps/api/.env
+.migration/
+firebase-service-account*.json

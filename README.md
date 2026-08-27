@@ -1,10 +1,15 @@
 # MPWR storefront
 
+The replacement backend lives in `apps/api`. See `apps/api/README.md` for local setup, API endpoints, delivery quoting, payments, and the Firebase migration path.
+
 ## Build and deploy
 
 Run `npm run build` before publishing. The build copies the static site into
 `dist/` and assigns one deployment version to local CSS and JavaScript URLs.
-Vercel uses this command automatically through `vercel.json`.
+The recommended deployment uses Cloudflare Pages for `dist/` and Railway for
+the API, PostgreSQL, and Redis. Pages forwards the storefront's same-origin
+`/api/*` requests to the `MPWR_API_ORIGIN` configured for its server-side
+Function. See `docs/DEPLOYMENT.md` for the exact sequence and variables.
 
 Do not edit `dist/`; it is generated and ignored by Git.
 

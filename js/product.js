@@ -1,7 +1,6 @@
 import {
-    getAuth,
     onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+} from "./auth-api.js";
 import {
     doc,
     getDoc,
@@ -12,7 +11,7 @@ import {
     query,
     where,
     serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+} from "./firestore-api.js";
 
 const auth = window.auth;
 const db = window.db;
@@ -561,6 +560,9 @@ const productModalImage = document.querySelector(".product-modal-image");
 const productModalImageLink = document.querySelector(".product-modal-image-link");
 const productModalTitle = document.querySelector(".product-modal-title");
 const productModalTitleLink = document.querySelector(".product-modal-title-link");
+const productModalReviews = document.querySelector(".product-modal-reviews");
+const productModalReviewStars = document.querySelector(".product-modal-review-stars");
+const productModalReviewSummary = document.querySelector(".product-modal-review-summary");
 const productModalPrice = document.querySelector(".product-modal-price");
 const productModalDescription = document.querySelector(".product-modal-description");
 const productModalReadMore = document.querySelector(".product-modal-read-more");
@@ -577,7 +579,10 @@ const ratingScores = [...document.querySelectorAll(".rating-score")];
 const reviewCounts = [...document.querySelectorAll(".review-count")];
 const productRatingStars = document.querySelector(".product-rating .stars");
 const reviewSummaryStars = document.querySelector(".reviews-summary-stars");
+const productRating = document.querySelector(".product-rating");
 const productReviews = document.querySelector(".product-reviews");
+const reviewsHeading = document.querySelector(".reviews-heading");
+const reviewsPanel = document.querySelector(".reviews-panel");
 const productGallery = document.querySelector(".product-gallery");
 const productLayout = document.querySelector(".product-layout");
 const productInfo = document.querySelector(".product-info");
@@ -628,6 +633,32 @@ function updateRelatedModalFavorite() {
     productModalFavoriteIcon.src = active ? "images/Heart7.PNG" : "images/optimized/heart-outline.png";
     productModalFavorite?.setAttribute("aria-label", active ? "Remove from Favorites" : "Add to Favorites");
     if (productModalFavoriteLabel) productModalFavoriteLabel.textContent = active ? "Remove from Favorites" : "Add to Favorites";
+}
+
+async function updateRelatedModalReviews(item) {
+    if (!productModalReviews || !productModalReviewStars || !productModalReviewSummary) return;
+
+    productModalReviews.hidden = true;
+
+    try {
+        const snapshot = await getDocs(query(
+            collection(db, "reviews"),
+            where("productId", "==", String(item.id))
+        ));
+        if (selectedModalProduct?.id !== item.id) return;
+
+        const ratings = snapshot.docs.map(review => Number(review.data().rating || 0));
+        if (!ratings.length) return;
+
+        const average = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+        productModalReviewStars.textContent =
+            "★".repeat(Math.round(average)) + "☆".repeat(5 - Math.round(average));
+        productModalReviewSummary.textContent =
+            `${average.toFixed(1)} · ${ratings.length} ${ratings.length === 1 ? "Review" : "Reviews"}`;
+        productModalReviews.hidden = false;
+    } catch (error) {
+        console.error("Unable to load related product reviews:", error);
+    }
 }
 
 function openRelatedProductModal(item) {
@@ -697,6 +728,7 @@ function openRelatedProductModal(item) {
 
     updateVariant();
     updateRelatedModalFavorite();
+    updateRelatedModalReviews(item);
     productModalOverlay.classList.add("active");
     productModalOverlay.setAttribute("aria-hidden", "false");
     document.documentElement.classList.add("product-modal-open");
@@ -922,6 +954,10 @@ function clampReviewPreview(body) {
 
 function renderReviewList(reviews) {
     reviewList.replaceChildren();
+    const hasReviews = reviews.length > 0;
+    productRating.hidden = !hasReviews;
+    reviewsHeading.hidden = !hasReviews;
+    reviewsPanel.hidden = !hasReviews;
     reviewsReadMore.hidden = reviews.length <= REVIEW_PREVIEW_LIMIT;
     reviewsReadMore.textContent = "View all";
 

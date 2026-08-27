@@ -1,5 +1,6 @@
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "./firestore-api.js";
+import { onAuthStateChanged } from "./auth-api.js";
+import { deliveryQuoteFor, populateUgandaDistricts } from "./shipping-config.js?v=20260827-2";
 
 const auth = window.auth;
 const db = window.db;
@@ -18,6 +19,9 @@ const leaveCheckout = document.getElementById("checkout-leave");
 const networkPicker = document.querySelector(".network-picker");
 const networkTrigger = document.querySelector(".network-picker-trigger");
 const networkMenu = document.querySelector(".network-picker-menu");
+const deliveryQuoteCard = document.getElementById("delivery-quote");
+const deliveryFeeElement = document.getElementById("delivery-fee");
+const deliverySummaryEta = document.getElementById("delivery-summary-eta");
 const visibleItemLimit = 3;
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 cart = window.normalizeMPWRItems?.(cart) || cart;
@@ -25,6 +29,8 @@ localStorage.setItem("cart", JSON.stringify(cart));
 let currentUser = null;
 let pendingExitUrl = "index.html";
 let checkoutComplete = false;
+let subtotal = 0;
+let deliveryQuote = null;
 
 function closeExitConfirmation() {
     exitOverlay.classList.remove("active");
@@ -121,6 +127,26 @@ const numberFromPrice = value => Number(String(value ?? 0).replace(/[^\d]/g, "")
 const money = value => `UGX ${value.toLocaleString()}`;
 const itemOptions = item => Object.values(item.selectedOptions || {}).filter(Boolean).join(" · ") || [item.color, item.size].filter(Boolean).join(" · ");
 
+function refreshDeliveryQuote() {
+    deliveryQuote = deliveryQuoteFor(form.elements.district.value, cart);
+    deliveryQuoteCard.hidden = !deliveryQuote;
+
+    if (!deliveryQuote) {
+        deliveryFeeElement.textContent = "Select district";
+        deliverySummaryEta.textContent = "";
+        document.getElementById("order-total").textContent = money(subtotal);
+        return;
+    }
+
+    document.getElementById("delivery-method").textContent = deliveryQuote.methodLabel;
+    document.getElementById("delivery-zone").textContent = `${deliveryQuote.district} · ${deliveryQuote.zoneName}`;
+    document.getElementById("delivery-eta").textContent = `Estimated delivery: ${deliveryQuote.etaLabel}`;
+    document.getElementById("delivery-quote-fee").textContent = money(deliveryQuote.fee);
+    deliveryFeeElement.textContent = money(deliveryQuote.fee);
+    deliverySummaryEta.textContent = deliveryQuote.etaLabel;
+    document.getElementById("order-total").textContent = money(subtotal + deliveryQuote.fee);
+}
+
 function renderSummary() {
     if (!cart.length) {
         window.location.replace("index.html");
@@ -152,9 +178,9 @@ function renderSummary() {
     itemsToggle.hidden = cart.length <= visibleItemLimit;
     itemsToggle.setAttribute("aria-expanded", "false");
     itemsToggle.querySelector(".order-items-toggle-label").textContent = `Show ${cart.length - visibleItemLimit} more item${cart.length - visibleItemLimit === 1 ? "" : "s"}`;
-    const total = cart.reduce((sum, item) => sum + numberFromPrice(item.price) * (Number(item.quantity) || 1), 0);
-    document.getElementById("subtotal").textContent = money(total);
-    document.getElementById("order-total").textContent = money(total);
+    subtotal = cart.reduce((sum, item) => sum + numberFromPrice(item.price) * (Number(item.quantity) || 1), 0);
+    document.getElementById("subtotal").textContent = money(subtotal);
+    refreshDeliveryQuote();
 }
 
 itemsToggle.addEventListener("click", () => {
@@ -224,6 +250,9 @@ form.addEventListener("input", event => {
     }
 });
 
+populateUgandaDistricts(form.elements.district);
+form.elements.district.addEventListener("change", refreshDeliveryQuote);
+
 onAuthStateChanged(auth, async user => {
     currentUser = user;
     if (!user) {
@@ -254,7 +283,10 @@ onAuthStateChanged(auth, async user => {
                 if (shippingAddress.phone || shippingAddress.phoneNumber) form.elements.phone.value = shippingAddress.phone || shippingAddress.phoneNumber;
                 if (shippingAddress.address || shippingAddress.street) form.elements.address.value = shippingAddress.address || shippingAddress.street;
                 if (shippingAddress.city) form.elements.city.value = shippingAddress.city;
-                if (shippingAddress.district || shippingAddress.region) form.elements.district.value = shippingAddress.district || shippingAddress.region;
+                if (shippingAddress.district || shippingAddress.region) {
+                    populateUgandaDistricts(form.elements.district, shippingAddress.district || shippingAddress.region);
+                    refreshDeliveryQuote();
+                }
                 if (shippingAddress.notes) form.elements.notes.value = shippingAddress.notes;
                 form.elements.mobileNumber.value ||= shippingAddress.phone || shippingAddress.phoneNumber || "";
                 form.elements.flutterwavePhone.value ||= shippingAddress.phone || shippingAddress.phoneNumber || "";
@@ -289,17 +321,45 @@ form.addEventListener("submit", async event => {
     cart = JSON.parse(localStorage.getItem("cart")) || [];
     if (!cart.length) { window.location.replace("index.html"); return; }
 
+    const data = new FormData(form);
+    deliveryQuote = deliveryQuoteFor(data.get("district"), cart);
+    if (!deliveryQuote) {
+        errorElement.textContent = "Choose a supported delivery district in Uganda.";
+        form.elements.district.focus();
+        return;
+    }
+
     submitButton.disabled = true;
     submitButton.textContent = "Placing order…";
-    const data = new FormData(form);
-    const total = cart.reduce((sum, item) => sum + numberFromPrice(item.price) * (Number(item.quantity) || 1), 0);
+    const orderSubtotal = cart.reduce((sum, item) => sum + numberFromPrice(item.price) * (Number(item.quantity) || 1), 0);
+    const total = orderSubtotal + deliveryQuote.fee;
     try {
         const order = await addDoc(collection(db, "orders"), {
             userId: currentUser.uid,
             customer: { firstName: data.get("firstName").trim(), lastName: data.get("lastName").trim(), email: data.get("email").trim(), phone: data.get("phone").trim() },
-            delivery: { address: data.get("address").trim(), city: data.get("city").trim(), district: data.get("district").trim(), notes: data.get("notes").trim() },
+            delivery: {
+                address: data.get("address").trim(),
+                city: data.get("city").trim(),
+                district: deliveryQuote.district,
+                country: "Uganda",
+                notes: data.get("notes").trim(),
+                zoneId: deliveryQuote.zoneId,
+                zoneName: deliveryQuote.zoneName,
+                method: deliveryQuote.method,
+                methodLabel: deliveryQuote.methodLabel,
+                shippingClass: deliveryQuote.shippingClass,
+                baseFee: deliveryQuote.baseFee,
+                surcharge: deliveryQuote.surcharge,
+                fee: deliveryQuote.fee,
+                minDays: deliveryQuote.minDays,
+                maxDays: deliveryQuote.maxDays,
+                etaLabel: deliveryQuote.etaLabel,
+                configVersion: deliveryQuote.configVersion
+            },
             payment: { method: data.get("paymentMethod"), network: data.get("paymentMethod") === "mobile_money" ? data.get("mobileNetwork") : null, number: data.get("paymentMethod") === "mobile_money" ? data.get("mobileNumber").trim() : null, status: "Pending" },
             items: cart,
+            subtotal: orderSubtotal,
+            deliveryFee: deliveryQuote.fee,
             total,
             status: "Pending",
             createdAt: serverTimestamp()
@@ -309,6 +369,8 @@ form.addEventListener("submit", async event => {
         document.querySelector(".checkout-form-panel").hidden = true;
         document.querySelector(".order-summary").hidden = true;
         document.getElementById("order-number").textContent = `#${order.id.slice(0, 8).toUpperCase()}`;
+        document.getElementById("success-delivery").textContent =
+            `${deliveryQuote.methodLabel} to ${deliveryQuote.district}: ${money(deliveryQuote.fee)} · ${deliveryQuote.etaLabel}`;
         document.getElementById("order-success").hidden = false;
         checkoutComplete = true;
         window.scrollTo({ top: 0, behavior: "smooth" });

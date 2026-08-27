@@ -1,7 +1,7 @@
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { getDownloadURL, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
-import { adminAuth, adminDb, adminStorage } from "./admin-firebase.js";
+import { onAuthStateChanged } from "./auth-api.js";
+import { doc, getDoc, setDoc } from "./firestore-api.js";
+import { uploadImage } from "./media-api.js";
+import { adminAuth, adminDb } from "./admin-firebase.js";
 
 const page = document.getElementById("admin-profile-page");
 const form = document.getElementById("admin-profile-form");
@@ -42,10 +42,7 @@ form.addEventListener("submit", async event => {
     try {
         const file = fileInput.files[0];
         if (file) {
-            const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-            const imageRef = ref(adminStorage, `admin-profiles/${currentUser.uid}/profile.${extension}`);
-            await uploadBytes(imageRef, file, { contentType: file.type });
-            currentPhotoUrl = await getDownloadURL(imageRef);
+            currentPhotoUrl = (await uploadImage(file, "profile")).url;
         }
 
         await setDoc(doc(adminDb, "users", currentUser.uid), {

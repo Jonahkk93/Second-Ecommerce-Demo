@@ -2,7 +2,7 @@
 import {
     onAuthStateChanged,
     signOut
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+} from "./auth-api.js";
 
 import {
     doc,
@@ -14,7 +14,7 @@ import {
     updateDoc,
     setDoc,
     serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+} from "./firestore-api.js";
 
 import { adminAuth, adminDb } from "./admin-firebase.js";
 
@@ -255,6 +255,10 @@ if (order.status === "Pending") {
 
 totalRevenue += Number(order.total) || 0;
 
+const deliveryFee = Number(order.deliveryFee ?? order.delivery?.fee ?? 0);
+const orderTotal = Number(order.total) || 0;
+const orderSubtotal = Number(order.subtotal ?? Math.max(0, orderTotal - deliveryFee));
+
 if (order.userId) {
     customers.add(order.userId);
 }
@@ -277,8 +281,10 @@ orderCard.innerHTML = `
         <p><strong>Customer:</strong> ${customerName}</p>
         <p><strong>Email:</strong> ${customerEmail}</p>
 
-        <p><strong>Total:</strong>
-        UGX ${Number(order.total).toLocaleString()}</p>
+        <p><strong>Subtotal:</strong> UGX ${orderSubtotal.toLocaleString()}</p>
+        <p><strong>Delivery:</strong> UGX ${deliveryFee.toLocaleString()}${order.delivery?.district ? ` to ${order.delivery.district}` : ""}</p>
+        <p><strong>Total:</strong> UGX ${orderTotal.toLocaleString()}</p>
+        ${order.delivery?.etaLabel ? `<p><strong>Delivery ETA:</strong> ${order.delivery.etaLabel}</p>` : ""}
         <p><strong>Order Date:</strong> ${orderDate}</p>
         <p><strong>Items:</strong> ${itemCount}</p>
 

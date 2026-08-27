@@ -8,12 +8,12 @@ import {
     getDoc,
     setDoc,
     updateDoc
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+} from "./firestore-api.js";
 
 import {
     onAuthStateChanged,
     signOut
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+} from "./auth-api.js";
 
 const auth = window.auth;
 const db = window.db;
@@ -215,6 +215,12 @@ switch (order.status) {
         statusClass = "status-pending";
 }
 
+const deliveryFee = Number(order.deliveryFee ?? order.delivery?.fee ?? 0);
+const orderTotal = Number(order.total) || 0;
+const orderSubtotal = Number(order.subtotal ?? Math.max(0, orderTotal - deliveryFee));
+const deliveryLabel = order.delivery?.methodLabel || "Delivery";
+const deliveryDestination = [order.delivery?.city, order.delivery?.district].filter(Boolean).join(", ");
+
 orderCard.innerHTML = `
     <div class="order-header">
 
@@ -238,11 +244,12 @@ orderCard.innerHTML = `
     ${itemsHTML}
 </div>
 
-
-
-    <p class="order-total">
-    Total: UGX ${Number(order.total).toLocaleString()}
-</p>
+    <div class="order-price-breakdown">
+        <p><span>Subtotal</span><strong>UGX ${orderSubtotal.toLocaleString()}</strong></p>
+        <p><span>${deliveryLabel}${deliveryDestination ? ` · ${deliveryDestination}` : ""}</span><strong>UGX ${deliveryFee.toLocaleString()}</strong></p>
+        ${order.delivery?.etaLabel ? `<small>Estimated delivery: ${order.delivery.etaLabel}</small>` : ""}
+        <p class="order-total"><span>Total</span><strong>UGX ${orderTotal.toLocaleString()}</strong></p>
+    </div>
 
 <div class="order-actions">
 

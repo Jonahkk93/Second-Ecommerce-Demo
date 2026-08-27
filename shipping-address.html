@@ -60,7 +60,7 @@
                 <label>Address or building<input name="address" autocomplete="street-address" placeholder="Street, building or landmark" required></label>
                 <div class="shipping-form-grid two-columns shipping-location-grid">
                     <label>City / town<input name="city" autocomplete="address-level2" required></label>
-                    <label>District<input name="district" autocomplete="address-level1" required></label>
+                    <label>District<select name="district" autocomplete="address-level1" required></select></label>
                 </div>
                 <div class="shipping-form-grid two-columns shipping-country-grid">
                     <div class="shipping-picker-field">
@@ -101,6 +101,6 @@
     <div class="shipping-toast" role="status" aria-live="polite"></div>
 
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/shipping-address.js?v=20260817-8"></script>
+    <script type="module" src="js/shipping-address.js?v=20260827-2"></script>
 </body>
 </html>

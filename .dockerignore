@@ -1,0 +1,9 @@
+*
+!package.json
+!package-lock.json
+!apps/
+!apps/api/
+!apps/api/**
+apps/api/.env
+apps/api/dist/
+node_modules/

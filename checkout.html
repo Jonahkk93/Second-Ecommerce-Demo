@@ -40,7 +40,17 @@
                     <label>Address or building<input name="address" autocomplete="street-address" placeholder="Street, building or landmark" required></label>
                     <div class="field-grid two-columns">
                         <label>City / town<input name="city" autocomplete="address-level2" required></label>
-                        <label>District<input name="district" autocomplete="address-level1" required></label>
+                        <label>District<select name="district" autocomplete="address-level1" required></select></label>
+                    </div>
+                    <input name="country" type="hidden" value="Uganda">
+                    <div class="delivery-quote" id="delivery-quote" aria-live="polite" hidden>
+                        <span class="delivery-quote-mark" aria-hidden="true"></span>
+                        <div>
+                            <strong id="delivery-method">Standard door delivery</strong>
+                            <p id="delivery-zone"></p>
+                            <small id="delivery-eta"></small>
+                        </div>
+                        <strong id="delivery-quote-fee">UGX 0</strong>
                     </div>
                     <label>Delivery notes <small>(optional)</small><textarea name="notes" rows="3" placeholder="Directions, preferred delivery time, etc."></textarea></label>
                 </fieldset>
@@ -106,7 +116,7 @@
                 <span class="order-items-toggle-arrow" aria-hidden="true"></span>
             </button>
             <div class="summary-row"><span>Subtotal</span><strong id="subtotal">UGX 0</strong></div>
-            <div class="summary-row"><span>Delivery</span><strong>Confirmed by phone</strong></div>
+            <div class="summary-row delivery-summary"><span>Delivery<small id="delivery-summary-eta"></small></span><strong id="delivery-fee">Select district</strong></div>
             <div class="summary-total"><span>Total</span><strong id="order-total">UGX 0</strong></div>
         </aside>
 
@@ -115,6 +125,7 @@
             <div class="eyebrow">Order received</div>
             <h1>Thank you for shopping with MPWR.</h1>
             <p>Your order <strong id="order-number"></strong> has been placed. We’ll contact you to confirm delivery and payment.</p>
+            <p class="success-delivery" id="success-delivery"></p>
             <div class="success-actions"><a href="orders.html">View my orders</a><a class="secondary" href="index.html">Continue shopping</a></div>
         </section>
     </main>
@@ -130,8 +141,8 @@
         </section>
     </div>
 
-    <script src="js/products.js"></script>
+    <script src="js/products.js?v=20260827-1"></script>
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/checkout.js?v=20260816-6"></script>
+    <script type="module" src="js/checkout.js?v=20260827-2"></script>
 </body>
 </html>

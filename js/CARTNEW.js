@@ -34,13 +34,12 @@ import {
     setDoc,
     collection,
     addDoc,
-    serverTimestamp,
-    onSnapshot
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    serverTimestamp
+} from "./firestore-api.js";
 
 import {
     onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+} from "./auth-api.js";
 
 const auth = window.auth;
 
@@ -171,6 +170,7 @@ const productModalImageLink = document.querySelector(".product-modal-image-link"
 const productModalTitle = document.querySelector(".product-modal-title");
 
 const productModalTitleLink = document.querySelector(".product-modal-title-link");
+const productModalReviews = document.querySelector(".product-modal-reviews");
 const productModalReviewStars = document.querySelector(".product-modal-review-stars");
 const productModalReviewSummary = document.querySelector(".product-modal-review-summary");
 const productModalFavorite =
@@ -1818,8 +1818,9 @@ function updateProductModalFavorite() {
 }
 
 async function updateProductModalReviews(product) {
-    if (!productModalReviewStars || !productModalReviewSummary) return;
+    if (!productModalReviews || !productModalReviewStars || !productModalReviewSummary) return;
 
+    productModalReviews.hidden = true;
     productModalReviewStars.textContent = "☆☆☆☆☆";
     productModalReviewSummary.textContent = "Loading reviews…";
 
@@ -1836,16 +1837,15 @@ async function updateProductModalReviews(product) {
             ? ratings.reduce((sum, rating) => sum + rating, 0) / count
             : 0;
 
+        if (!count) return;
+
         productModalReviewStars.textContent =
             "★".repeat(Math.round(average)) + "☆".repeat(5 - Math.round(average));
-        productModalReviewSummary.textContent = count
-            ? `${average.toFixed(1)} · ${count} ${count === 1 ? "Review" : "Reviews"}`
-            : "No reviews yet";
+        productModalReviewSummary.textContent =
+            `${average.toFixed(1)} · ${count} ${count === 1 ? "Review" : "Reviews"}`;
+        productModalReviews.hidden = false;
     } catch (error) {
         console.error("Unable to load modal reviews:", error);
-        if (selectedModalProduct?.id === product.id) {
-            productModalReviewSummary.textContent = "No reviews yet";
-        }
     }
 }
 

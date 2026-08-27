@@ -33,7 +33,7 @@ if (grid && isHomepage) {
 
     Promise.all([
         import("./firebase.js"),
-        import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js")
+        import("./firestore-api.js")
     ]).then(async ([, { doc, getDoc }]) => {
         if (!window.db) return;
         const summary = await getDoc(doc(window.db, "storefront", "popular"));

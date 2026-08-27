@@ -449,6 +449,7 @@ const optimizeGalleryMap = galleries => Object.fromEntries(
 );
 
 products.forEach(product => {
+    product.shippingClass ||= "small";
     product.image = optimizedProductImage(product.image);
     product.gallery = (product.gallery || []).map(optimizedProductImage);
     if (product.galleries) product.galleries = optimizeGalleryMap(product.galleries);
@@ -480,10 +481,14 @@ function normalizeMPWRImagePath(source, productId) {
 }
 
 function normalizeMPWRItems(items = []) {
-    return items.map(item => ({
-        ...item,
-        image: normalizeMPWRImagePath(item.image, item.id)
-    }));
+    return items.map(item => {
+        const catalogueProduct = products.find(product => String(product.id) === String(item.id));
+        return {
+            ...item,
+            image: normalizeMPWRImagePath(item.image, item.id),
+            shippingClass: item.shippingClass || catalogueProduct?.shippingClass || "small"
+        };
+    });
 }
 
 window.normalizeMPWRImagePath = normalizeMPWRImagePath;

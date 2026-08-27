@@ -1,11 +1,11 @@
 import {
     onAuthStateChanged,
     signOut
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+} from "./auth-api.js";
 import {
     doc,
     getDoc
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+} from "./firestore-api.js";
 
 const auth = window.auth;
 const db = window.db;

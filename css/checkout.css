@@ -192,6 +192,45 @@ input.is-invalid,textarea.is-invalid,select.is-invalid{
     box-shadow:0 0 0 3px rgba(200,90,90,.12)
 }
 
+.delivery-quote{
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:13px;
+    margin:0 0 18px;
+    padding:16px;
+    border:1px solid #ead6cc;
+    border-radius:13px;
+    background:linear-gradient(135deg,#fff9f5,#fff)
+}
+
+.delivery-quote:not([hidden]){
+    display:grid
+}
+
+.delivery-quote-mark{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    background:var(--accent);
+    box-shadow:inset 0 0 0 9px #fff3ed
+}
+
+.delivery-quote strong{
+    font-size:14px
+}
+
+.delivery-quote p,
+.delivery-quote small{
+    margin:3px 0 0;
+    color:var(--muted);
+    font-size:12px
+}
+
+.delivery-quote>strong:last-child{
+    color:#9c674d;
+    white-space:nowrap
+}
+
 .payment-options{
     display:grid;
     grid-template-columns:repeat(3,minmax(0,1fr));
@@ -540,6 +579,20 @@ input.is-invalid,textarea.is-invalid,select.is-invalid{
     font-weight:400
 }
 
+.delivery-summary>span{
+    display:grid;
+    gap:4px
+}
+
+.delivery-summary small{
+    color:var(--muted);
+    font-size:11px
+}
+
+.delivery-summary strong{
+    text-align:right
+}
+
 .summary-total{
     border-top:1px solid var(--line);
     margin-top:18px;
@@ -707,6 +760,14 @@ body.checkout-exit-open{
     .two-columns,.payment-options,.payment-detail-fields:not([hidden]),
     .mobile-money-fields:not([hidden]){
         grid-template-columns:1fr
+    }
+
+    .delivery-quote{
+        grid-template-columns:auto minmax(0,1fr)
+    }
+
+    .delivery-quote>strong:last-child{
+        grid-column:2
     }
 
     .order-success{

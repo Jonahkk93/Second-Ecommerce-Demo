@@ -1,6 +1,6 @@
 import { mountMPWRDrawers } from "./drawer-component.js?v=20260816-6";
-import { collection, doc, getDoc, getDocs, query, setDoc, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { collection, doc, getDoc, getDocs, query, setDoc, where } from "./firestore-api.js";
+import { onAuthStateChanged } from "./auth-api.js";
 
 mountMPWRDrawers(document.body);
 

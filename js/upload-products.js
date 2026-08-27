@@ -2,7 +2,7 @@ import {
     collection,
     setDoc,
     doc
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+} from "./firestore-api.js";
 
 const db = window.db;
 

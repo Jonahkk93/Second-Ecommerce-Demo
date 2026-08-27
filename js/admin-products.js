@@ -1,7 +1,7 @@
 
 import {
     onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+} from "./auth-api.js";
 
 import {
     collection,
@@ -9,16 +9,11 @@ import {
     getDoc,
     getDocs,
     addDoc
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import {
-    ref,
-    uploadBytes,
-    getDownloadURL
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+} from "./firestore-api.js";
+import { uploadImage } from "./media-api.js";
 
 const auth = window.auth;
 const db = window.db;
-const storage = window.storage;
 const toast = document.querySelector(".admin-products-toast");
 let toastTimer;
 
@@ -175,14 +170,7 @@ if (!imageFile) {
     return;
 }
 
-const imageRef = ref(
-    storage,
-    `products/${Date.now()}-${imageFile.name}`
-);
-
-await uploadBytes(imageRef, imageFile);
-
-const image = await getDownloadURL(imageRef);
+const image = (await uploadImage(imageFile, "product")).url;
 
     await addDoc(collection(db, "products"), {
 

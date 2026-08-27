@@ -232,7 +232,7 @@ button,select{
     width:100vw;
     max-width:1500px;
     margin:0 auto;
-    padding:143px 5% 70px
+    padding:151px 5% 70px
 }
 
 .results-toolbar{
@@ -241,13 +241,17 @@ button,select{
     align-self:stretch;
     gap:8px;
     margin:0 68px 0 54px;
-    padding:9px 0 12px;
+    padding:17px 0 12px;
     overflow-x:auto;
     background:transparent;
     scrollbar-width:none
 }
 
 .results-toolbar::-webkit-scrollbar{
+    display:none
+}
+
+.product-modal-reviews[hidden]{
     display:none
 }
 
@@ -495,7 +499,7 @@ button,select{
     }
     
     .results-main{
-        padding:116px 10px 45px
+        padding:124px 10px 45px
     }
     
     .results-toolbar{
@@ -503,7 +507,7 @@ button,select{
         align-self:center;
         gap:7px;
         margin:0;
-        padding:7px 10px 10px;
+        padding:15px 10px 10px;
         scroll-padding-left:10px
     }
     
@@ -530,12 +534,14 @@ button,select{
     
     .filter-picker-trigger,.reset-filters{
         min-height:32px;
+        justify-content:center;
+        gap:7px;
         padding:0 12px;
         font-size:12px
     }
     
     .filter-picker[data-select-id="sort-results"]{
-        min-width:96px
+        min-width:80px
     }
     
     .filter-picker[data-select-id="color-filter"]{

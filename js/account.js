@@ -1,7 +1,7 @@
 import {
     onAuthStateChanged,
     signOut
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+} from "./auth-api.js";
 import {
     collection,
     doc,
@@ -11,16 +11,11 @@ import {
     serverTimestamp,
     setDoc,
     where
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import {
-    getDownloadURL,
-    ref,
-    uploadBytes
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+} from "./firestore-api.js";
+import { uploadImage } from "./media-api.js";
 
 const auth = window.auth;
 const db = window.db;
-const storage = window.storage;
 const dashboard = document.querySelector(".account-dashboard");
 const profileOverview = document.querySelector(".account-profile-overview");
 const loading = document.querySelector(".account-loading");
@@ -233,17 +228,11 @@ reviewForm.addEventListener("submit", async event => {
         // Attachments upload after the review itself has posted, so a large
         // image or document does not hold the modal open.
         if (file) {
-            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-            const storageRef = ref(
-                storage,
-                `review-attachments/${user.uid}/${productId}/${Date.now()}-${safeName}`
-            );
-
-            uploadBytes(storageRef, file, { contentType: file.type })
-                .then(() => getDownloadURL(storageRef))
-                .then(url => setDoc(reviewRef, {
+            uploadImage(file, "review")
+                .then(upload => setDoc(reviewRef, {
                     attachment: {
-                        url,
+                        url: upload.url,
+                        key: upload.key,
                         name: file.name,
                         type: file.type
                     },

@@ -1,5 +1,6 @@
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { doc, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { onAuthStateChanged } from "./auth-api.js";
+import { doc, getDoc, serverTimestamp, setDoc } from "./firestore-api.js";
+import { populateUgandaDistricts } from "./shipping-config.js?v=20260827-2";
 
 const auth = window.auth;
 const db = window.db;
@@ -19,6 +20,8 @@ const deleteCancel = document.querySelector(".shipping-delete-cancel");
 const deleteConfirm = document.querySelector(".shipping-delete-confirm");
 const toast = document.querySelector(".shipping-toast");
 const shippingPickers = [...document.querySelectorAll(".shipping-picker")];
+
+populateUgandaDistricts(form.elements.district);
 
 let currentUser = null;
 let profile = {};
@@ -148,6 +151,7 @@ function openEditor(address = null) {
         isDefault: addresses.length === 0
     };
     const values = { ...defaults, ...(address || {}) };
+    populateUgandaDistricts(form.elements.district, values.district || "");
     ["firstName", "lastName", "phone", "address", "city", "district", "country", "postalCode", "notes"].forEach(name => {
         form.elements[name].value = values[name] || "";
     });

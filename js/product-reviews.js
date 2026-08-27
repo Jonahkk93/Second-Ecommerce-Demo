@@ -3,7 +3,7 @@ import {
     getDocs,
     query,
     where
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+} from "./firestore-api.js";
 
 const db = window.db;
 const params = new URLSearchParams(window.location.search);

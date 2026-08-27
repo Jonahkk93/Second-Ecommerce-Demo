@@ -1,0 +1,37 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: apps/api/postgres.Dockerfile
+    environment:
+      POSTGRES_DB: mpwr
+      POSTGRES_USER: mpwr
+      POSTGRES_PASSWORD: mpwr_local
+    ports: ["5432:5432"]
+    volumes:
+      - mpwr_postgres:/var/lib/postgresql/data
+      - ./apps/api/drizzle/0001_initial.sql:/docker-entrypoint-initdb.d/0001_initial.sql:ro
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: ["mpwr_redis:/data"]
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      WEB_ORIGIN: http://127.0.0.1:5501
+      DATABASE_URL: postgresql://mpwr:mpwr_local@postgres:5432/mpwr
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: local-development-secret-change-before-production
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      FLW_SECRET_KEY: ${FLW_SECRET_KEY:-}
+      FLW_SECRET_HASH: ${FLW_SECRET_HASH:-}
+      FLW_REDIRECT_URL: http://127.0.0.1:5501/payment-complete.html
+    depends_on: [postgres, redis]
+    ports: ["3000:3000"]
+volumes:
+  mpwr_postgres:
+  mpwr_redis:

@@ -2,10 +2,18 @@
   "name": "mpwr-storefront",
   "private": true,
   "type": "module",
+  "workspaces": ["apps/api"],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
-    "build": "node scripts/build-site.mjs"
+    "build": "node scripts/build-site.mjs",
+    "api:dev": "npm --workspace apps/api run dev",
+    "api:build": "npm --workspace apps/api run build",
+    "api:migrate": "npm --workspace apps/api run db:migrate",
+    "api:import-products": "npm --workspace apps/api run import:products --",
+    "firebase:export": "npm --workspace apps/api run firebase:export --",
+    "firebase:import": "npm --workspace apps/api run firebase:import --",
+    "media:migrate-r2": "npm --workspace apps/api run media:migrate-r2 --"
   }
 }
