@@ -1,16 +1,16 @@
 # MPWR API
 
-The API is a standalone TypeScript service built with NestJS/Fastify, PostgreSQL, Redis, Google Maps Platform, Flutterwave, Resend, and Cloudflare R2. Storefront data, authentication, and uploaded media are handled by the MPWR stack; Firebase is only retained as a temporary migration source.
+The API is a standalone TypeScript service built with NestJS/Fastify, PostgreSQL, Redis, Google Maps Platform, Pesapal API 3.0, Resend, and Cloudflare R2. Storefront data, authentication, and uploaded media are handled by the MPWR stack; Firebase is only retained as a temporary migration source.
 
 ## Local setup
 
 1. Install Node.js 22 and Docker Desktop.
-2. Copy `.env.example` to `.env` and fill in the Google Maps, Flutterwave, and production email secrets.
+2. Copy `.env.example` to `.env` and fill in the Google Maps, Pesapal sandbox, and production email secrets.
 3. Start infrastructure with `docker compose up postgres redis -d`.
 4. Run `npm install`, `npm run api:migrate`, and `npm run api:dev` from the repository root.
 5. Import the existing static catalogue with `npm run api:import-products -- ../../js/products.js`.
 
-Enable the Google Geocoding API and Routes API. Restrict the server key to those APIs and to the production server IPs. Never put `GOOGLE_MAPS_API_KEY`, `FLW_SECRET_KEY`, `FLW_SECRET_HASH`, or `JWT_SECRET` in browser code.
+Enable the Google Geocoding API and Routes API. Restrict the server key to those APIs and to the production server IPs. Never put `GOOGLE_MAPS_API_KEY`, `PESAPAL_CONSUMER_KEY`, `PESAPAL_CONSUMER_SECRET`, or `JWT_SECRET` in browser code.
 
 ## Checkout flow
 
@@ -18,8 +18,8 @@ Enable the Google Geocoding API and Routes API. Restrict the server key to those
 2. Send UUID product IDs and an Uganda destination to `POST /v1/delivery/quotes`.
 3. The server reloads product prices, verifies the address is in Uganda, computes road distance from Kisaasi, selects the distance/size rate, and creates a 20-minute quote.
 4. Create the order through `POST /v1/orders` with the returned `quoteId`.
-5. Initialize Flutterwave through `POST /v1/payments/flutterwave/:orderId` and redirect to `checkoutUrl`.
-6. Flutterwave calls `POST /v1/payments/webhooks/flutterwave`; the API verifies the HMAC signature and transaction details before marking the payment successful and the order processing.
+5. Initialize hosted checkout through `POST /v1/payments/initialize/:orderId` and redirect to `checkoutUrl`.
+6. Pesapal calls `POST /v1/payments/webhooks/pesapal`; the API retrieves the transaction directly from Pesapal and verifies its reference, amount, currency, and completion state before marking the order as processing.
 
 ## Main endpoints
 
@@ -36,7 +36,8 @@ Enable the Google Geocoding API and Routes API. Restrict the server key to those
 - `GET /v1/products`, `GET /v1/products/:id`
 - `POST /v1/delivery/quotes`
 - `POST /v1/orders`, `GET /v1/orders`, `GET /v1/orders/:id`
-- `POST /v1/payments/flutterwave/:orderId`, `GET /v1/payments/:orderId`
+- `POST /v1/payments/initialize/:orderId`, `GET /v1/payments/:orderId`
+- `POST /v1/payments/webhooks/pesapal`
 - `GET|POST|PATCH /v1/admin/products`
 - `GET /v1/orders/admin/all`, `PATCH /v1/orders/:id/status`
 - `GET /v1/delivery/admin/rates`, `PATCH /v1/delivery/admin/rates/:id`
@@ -70,6 +71,6 @@ Run `npm run media:migrate-r2` after configuring R2 to copy unique Firebase-host
 - Run PostgreSQL and Redis as managed services with private networking, backups, and TLS.
 - Deploy the API separately from the static storefront and set `WEB_ORIGIN` to the exact storefront origin.
 - Run migrations before releasing a new API image.
-- Configure the Flutterwave webhook URL and secret hash in the Flutterwave dashboard.
+- Register the production Pesapal IPN URL and configure its returned IPN ID in Railway.
 - Firebase Authentication can be disabled after existing users have been notified to reset their passwords.
 - Revoke and remove Firebase credentials after the final data and media reconciliation is complete.

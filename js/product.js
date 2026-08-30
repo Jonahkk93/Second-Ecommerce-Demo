@@ -3,6 +3,7 @@ import {
 } from "./auth-api.js";
 import {
     doc,
+    deleteDoc,
     getDoc,
     getDocs,
     setDoc,
@@ -12,6 +13,8 @@ import {
     where,
     serverTimestamp
 } from "./firestore-api.js";
+import { openReviewLightbox } from "./review-lightbox.js";
+import { deleteImage, uploadImage } from "./media-api.js";
 
 const auth = window.auth;
 const db = window.db;
@@ -573,7 +576,10 @@ const productModalFavoriteIcon = document.querySelector(".product-modal-favorite
 const productModalFavoriteLabel = productModalFavorite?.querySelector("span");
 const productModalCart = document.querySelector(".product-modal-cart");
 const reviewText = document.querySelector("#review-text");
+const reviewImage = document.querySelector("#review-image");
+const reviewImageSelection = document.querySelector(".review-image-selection");
 const reviewSubmit = document.querySelector(".review-submit");
+const reviewDelete = document.querySelector(".review-delete-button");
 const reviewStars = [...document.querySelectorAll(".review-star")];
 const ratingScores = [...document.querySelectorAll(".rating-score")];
 const reviewCounts = [...document.querySelectorAll(".review-count")];
@@ -591,7 +597,12 @@ const productReviewsInner = document.querySelector(".product-reviews-inner");
 
 let selectedReviewRating = 0;
 let currentReviewExists = false;
+let currentReviewAttachments = [];
+let initialReviewAttachments = [];
+let reviewAttachmentsChanged = false;
+let reviewPreviewUrls = [];
 const REVIEW_PREVIEW_LIMIT = 2;
+const REVIEW_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 let selectedModalProduct = null;
 let selectedModalOptions = {};
 let selectedModalPrice = 0;
@@ -917,6 +928,82 @@ function reviewPurchasedOptions(review) {
         .map(key => options[key]);
 }
 
+function reviewAttachments(value) {
+    const attachment = value?.attachment || value;
+    if (Array.isArray(attachment?.items)) return attachment.items.filter(item => item?.url).slice(0, 5);
+    return attachment?.url ? [attachment] : [];
+}
+
+function setReviewImagePreview(files = [], attachments = []) {
+    reviewPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    reviewPreviewUrls = [];
+    reviewImageSelection.replaceChildren();
+    const showingFiles = files.length > 0;
+    const previews = showingFiles
+        ? files.map(file => {
+            const url = URL.createObjectURL(file);
+            reviewPreviewUrls.push(url);
+            return { url, name: file.name };
+        })
+        : attachments;
+    previews.forEach((preview, index) => {
+        const item = document.createElement("div");
+        item.className = "review-image-preview-item";
+        const image = document.createElement("img");
+        image.className = "review-image-preview";
+        image.src = preview.url;
+        image.alt = `Review photo ${index + 1}`;
+        const name = document.createElement("span");
+        name.textContent = preview.name || `Photo ${index + 1}`;
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "review-image-remove";
+        remove.setAttribute("aria-label", `Remove ${preview.name || `photo ${index + 1}`}`);
+        const removeIcon = document.createElement("img");
+        removeIcon.src = "images/Icon Folder/Close Icon_333.PNG";
+        removeIcon.alt = "";
+        remove.appendChild(removeIcon);
+        remove.addEventListener("click", () => {
+            if (showingFiles) {
+                const transfer = new DataTransfer();
+                files.forEach((file, fileIndex) => {
+                    if (fileIndex !== index) transfer.items.add(file);
+                });
+                reviewImage.files = transfer.files;
+                setReviewImagePreview([...reviewImage.files], currentReviewAttachments);
+                return;
+            }
+            currentReviewAttachments = currentReviewAttachments.filter((_, attachmentIndex) => attachmentIndex !== index);
+            reviewAttachmentsChanged = true;
+            setReviewImagePreview([], currentReviewAttachments);
+        });
+        item.append(image, remove, name);
+        reviewImageSelection.appendChild(item);
+    });
+    reviewImageSelection.hidden = !previews.length;
+}
+
+function reviewImageError(file) {
+    if (!file) return "";
+    if (!REVIEW_IMAGE_TYPES.has(file.type)) return "Use a JPEG, PNG, WebP, or GIF image.";
+    if (file.size > 5 * 1024 * 1024) return "Review photos must be smaller than 5 MB.";
+    return "";
+}
+
+reviewImage?.addEventListener("change", () => {
+    const files = [...reviewImage.files];
+    const error = files.length > 5
+        ? "You can add up to 5 review photos."
+        : files.map(reviewImageError).find(Boolean);
+    if (error) {
+        reviewImage.value = "";
+        setReviewImagePreview([], currentReviewAttachments);
+        showToast(error, "warning");
+        return;
+    }
+    setReviewImagePreview(files, currentReviewAttachments);
+});
+
 function clampReviewPreview(body) {
     const bodyText = body.querySelector(".review-preview-copy");
     const moreLink = body.querySelector(".review-more-link");
@@ -1045,6 +1132,7 @@ function renderReviewList(reviews) {
             updateButton.addEventListener("click", () => {
                 reviewCompose.hidden = false;
                 reviewForm.hidden = false;
+                reviewDelete.hidden = false;
                 reviewSubmit.textContent = "Update review";
                 reviewText.focus();
                 reviewForm.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1054,29 +1142,45 @@ function renderReviewList(reviews) {
             clientLine.append(date);
         }
 
-        if (review.attachment?.url) {
-            if (review.attachment.type?.startsWith("image/")) {
-                const attachmentLink = document.createElement("a");
-                attachmentLink.href = review.attachment.url;
-                attachmentLink.target = "_blank";
-                attachmentLink.rel = "noopener";
+        const attachments = reviewAttachments(review);
+        if (attachments.length) {
+            const attachmentGallery = document.createElement("div");
+            attachmentGallery.className = "review-attachments";
 
-                const attachmentImage = document.createElement("img");
-                attachmentImage.className = "review-attachment-image";
-                attachmentImage.src = review.attachment.url;
-                attachmentImage.alt = review.attachment.name || "Review attachment";
-                attachmentLink.appendChild(attachmentImage);
-                card.appendChild(attachmentLink);
-            } else {
-                const attachmentLink = document.createElement("a");
-                attachmentLink.className = "review-attachment-file";
-                attachmentLink.href = review.attachment.url;
-                attachmentLink.target = "_blank";
-                attachmentLink.rel = "noopener";
-                attachmentLink.textContent =
-                    `View attachment: ${review.attachment.name || "File"}`;
-                card.appendChild(attachmentLink);
-            }
+            const imageAttachments = attachments.filter(attachment => attachment.type?.startsWith("image/"));
+            attachments.forEach(attachment => {
+                if (attachment.type?.startsWith("image/")) {
+                    const imageIndex = imageAttachments.indexOf(attachment);
+                    const attachmentLink = document.createElement("button");
+                    attachmentLink.type = "button";
+                    attachmentLink.className = "review-attachment-button";
+                    attachmentLink.setAttribute("aria-label", `Open review photo ${imageIndex + 1} of ${imageAttachments.length}`);
+
+                    const attachmentImage = document.createElement("img");
+                    attachmentImage.className = "review-attachment-image";
+                    attachmentImage.src = attachment.url;
+                    attachmentImage.alt = attachment.name || `Review photo ${index + 1}`;
+                    attachmentLink.appendChild(attachmentImage);
+                    attachmentLink.addEventListener("click", () => openReviewLightbox({
+                        images: imageAttachments,
+                        index: imageIndex,
+                        review,
+                        trigger: attachmentLink
+                    }));
+                    attachmentGallery.appendChild(attachmentLink);
+                } else {
+                    const attachmentLink = document.createElement("a");
+                    attachmentLink.className = "review-attachment-file";
+                    attachmentLink.href = attachment.url;
+                    attachmentLink.target = "_blank";
+                    attachmentLink.rel = "noopener";
+                    attachmentLink.textContent =
+                        `View attachment: ${attachment.name || "File"}`;
+                    attachmentGallery.appendChild(attachmentLink);
+                }
+            });
+
+            card.appendChild(attachmentGallery);
         }
 
         reviewList.appendChild(card);
@@ -1128,11 +1232,54 @@ async function customerPurchasedProduct(user) {
     });
 }
 
+async function deleteReview(button) {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const attachments = [...currentReviewAttachments];
+    button.disabled = true;
+    button.querySelector("span").textContent = "Deleting…";
+
+    try {
+        await deleteDoc(doc(db, "reviews", `${user.uid}_${product.id}`));
+        await Promise.all(attachments
+            .filter(attachment => attachment.key)
+            .map(attachment => deleteImage(attachment.key).catch(error =>
+                console.warn("Deleted review photo could not be removed:", error)
+            )));
+
+        currentReviewExists = false;
+        currentReviewAttachments = [];
+        initialReviewAttachments = [];
+        reviewAttachmentsChanged = false;
+        reviewImage.value = "";
+        setReviewImagePreview();
+        reviewDelete.hidden = true;
+        showToast("Review deleted.", "success");
+        await Promise.all([loadProductReviews(), initializeReviewForm(user)]);
+    } catch (error) {
+        console.error("Unable to delete review:", error);
+        button.disabled = false;
+        button.querySelector("span").textContent = "Delete review";
+        showToast(error?.message || "Your review could not be deleted.", "warning");
+    }
+}
+
+reviewDelete?.addEventListener("click", () => {
+    requestItemDeletion("review", () => deleteReview(reviewDelete));
+});
+
 async function initializeReviewForm(user) {
     reviewCompose.hidden = true;
     reviewForm.hidden = true;
     setReviewRating(0);
     reviewText.value = "";
+    reviewImage.value = "";
+    currentReviewAttachments = [];
+    initialReviewAttachments = [];
+    reviewAttachmentsChanged = false;
+    setReviewImagePreview();
+    reviewDelete.hidden = true;
     currentReviewExists = false;
 
     if (!user) {
@@ -1151,9 +1298,13 @@ async function initializeReviewForm(user) {
         if (existing.exists()) {
             const data = existing.data();
             currentReviewExists = true;
+            currentReviewAttachments = reviewAttachments(data);
+            initialReviewAttachments = [...currentReviewAttachments];
             reviewText.value = data.text || "";
+            setReviewImagePreview([], currentReviewAttachments);
             setReviewRating(Number(data.rating || 0));
             reviewSubmit.textContent = "Update review";
+            reviewDelete.hidden = false;
             reviewForm.hidden = true;
             reviewCompose.hidden = true;
         } else {
@@ -1172,16 +1323,30 @@ reviewForm?.addEventListener("submit", async event => {
     event.preventDefault();
     const user = auth.currentUser;
     const text = reviewText.value.trim();
+    const files = [...reviewImage.files];
 
     if (!user || !selectedReviewRating || !text) {
         showToast("Choose a rating and write your review.", "warning");
         return;
     }
+    if (files.length > 5) {
+        showToast("You can add up to 5 review photos.", "warning");
+        return;
+    }
+    const imageError = files.map(reviewImageError).find(Boolean);
+    if (imageError) {
+        showToast(imageError, "warning");
+        return;
+    }
 
     reviewSubmit.disabled = true;
-    reviewSubmit.textContent = currentReviewExists ? "Updating…" : "Posting…";
+    reviewSubmit.textContent = files.length ? "Uploading photos…" : currentReviewExists ? "Updating…" : "Posting…";
+    const uploadedImages = [];
 
     try {
+        for (const file of files) {
+            uploadedImages.push({ file, upload: await uploadImage(file, "review") });
+        }
         const reviewRef = doc(db, "reviews", `${user.uid}_${product.id}`);
         const payload = {
             productId: String(product.id),
@@ -1194,9 +1359,35 @@ reviewForm?.addEventListener("submit", async event => {
             verifiedPurchase: true,
             updatedAt: serverTimestamp()
         };
+        if (uploadedImages.length) {
+            payload.attachment = {
+                items: uploadedImages.map(({ file, upload }) => ({
+                    url: upload.url,
+                    key: upload.key,
+                    name: file.name,
+                    type: upload.contentType
+                }))
+            };
+        } else if (reviewAttachmentsChanged) {
+            payload.attachment = { items: currentReviewAttachments };
+        }
         if (!currentReviewExists) payload.createdAt = serverTimestamp();
 
         await setDoc(reviewRef, payload, { merge: true });
+        const previousAttachments = initialReviewAttachments;
+        if (uploadedImages.length || reviewAttachmentsChanged) {
+            currentReviewAttachments = payload.attachment.items;
+            reviewImage.value = "";
+            setReviewImagePreview([], currentReviewAttachments);
+            const currentKeys = new Set(currentReviewAttachments.map(attachment => attachment.key));
+            previousAttachments
+                .filter(attachment => attachment.key && !currentKeys.has(attachment.key))
+                .forEach(attachment => deleteImage(attachment.key).catch(error =>
+                    console.warn("Old review photo could not be removed:", error)
+                ));
+            initialReviewAttachments = [...currentReviewAttachments];
+            reviewAttachmentsChanged = false;
+        }
         currentReviewExists = true;
         reviewSubmit.textContent = "Update review";
         showToast("Review published.", "success");
@@ -1206,9 +1397,14 @@ reviewForm?.addEventListener("submit", async event => {
             reviewCompose.hidden = true;
         }
     } catch (error) {
+        await Promise.all(uploadedImages.map(({ upload }) =>
+            deleteImage(upload.key).catch(cleanupError =>
+                console.warn("Unused review photo could not be removed:", cleanupError)
+            )
+        ));
         console.error("Unable to save review:", error);
         reviewSubmit.textContent = currentReviewExists ? "Update review" : "Post review";
-        showToast("Your review could not be saved.", "warning");
+        showToast(error?.message || "Your review could not be saved.", "warning");
     } finally {
         reviewSubmit.disabled = false;
     }
@@ -1253,9 +1449,18 @@ function requestItemDeletion(source, action, icon = null) {
     confirmingDeleteIcon = icon;
     if (icon) icon.src = "images/Icon Folder/Delete Icon_d9534f.PNG";
     const deletingWholeCart = source === "cart-all";
-    deleteItemConfirmOverlay.querySelector("h2").textContent = deletingWholeCart ? "Delete All Items" : "Delete Item";
-    deleteItemConfirmMessage.textContent = deletingWholeCart ? "Are you sure you want to delete all items from your cart?" : `Are you sure you want to delete this item from your ${source}?`;
-    deleteItemConfirm.textContent = deletingWholeCart ? "Delete All" : "Delete Item";
+    const deletingReview = source === "review";
+    deleteItemConfirmOverlay.querySelector("h2").textContent = deletingWholeCart
+        ? "Delete All Items"
+        : deletingReview ? "Delete Review" : "Delete Item";
+    deleteItemConfirmMessage.textContent = deletingWholeCart
+        ? "Are you sure you want to delete all items from your cart?"
+        : deletingReview
+            ? "Delete this review and its photos? This cannot be undone."
+            : `Are you sure you want to delete this item from your ${source}?`;
+    deleteItemConfirm.textContent = deletingWholeCart
+        ? "Delete All"
+        : deletingReview ? "Delete Review" : "Delete Item";
     deleteItemConfirmOverlay.classList.add("active");
 }
 

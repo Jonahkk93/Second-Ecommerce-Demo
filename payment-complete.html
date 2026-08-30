@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment status | MPWR</title>
+    <link rel="stylesheet" href="css/payment-complete.css">
+</head>
+<body>
+    <header><a href="index.html" aria-label="MPWR home">MPWR</a></header>
+    <main>
+        <section class="payment-result" aria-live="polite" aria-busy="true">
+            <div class="payment-result-mark" aria-hidden="true"><span></span></div>
+            <p class="payment-result-kicker">Secure checkout</p>
+            <h1 id="payment-result-title">Confirming your payment</h1>
+            <p id="payment-result-message">Please keep this page open while we verify the result with the payment provider.</p>
+            <p class="payment-result-reference" id="payment-result-reference"></p>
+            <div class="payment-result-actions" id="payment-result-actions" hidden>
+                <a class="primary" href="orders.html">View my orders</a>
+                <a href="index.html">Continue shopping</a>
+            </div>
+        </section>
+    </main>
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/payment-complete.js"></script>
+</body>
+</html>

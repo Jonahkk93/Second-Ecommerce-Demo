@@ -4,6 +4,7 @@ import {
     query,
     where
 } from "./firestore-api.js";
+import { openReviewLightbox } from "./review-lightbox.js";
 
 const db = window.db;
 const params = new URLSearchParams(window.location.search);
@@ -75,6 +76,14 @@ function showToast(message, type = "success") {
     toast.timeout = setTimeout(() => {
         toast.classList.remove("show");
     }, 2500);
+}
+
+function reviewAttachments(review) {
+    const attachment = review?.attachment || review;
+    if (Array.isArray(attachment?.items)) {
+        return attachment.items.filter(item => item?.url).slice(0, 5);
+    }
+    return attachment?.url ? [attachment] : [];
 }
 
 function currentFavorites() {
@@ -185,25 +194,45 @@ function renderReviewList(reviews) {
         header.append(reviewerDetails);
         card.append(header, body);
 
-        if (review.attachment?.url) {
-            const attachmentLink = document.createElement("a");
-            attachmentLink.href = review.attachment.url;
-            attachmentLink.target = "_blank";
-            attachmentLink.rel = "noopener";
+        const attachments = reviewAttachments(review);
+        if (attachments.length) {
+            const attachmentGallery = document.createElement("div");
+            attachmentGallery.className = "review-attachments";
 
-            if (review.attachment.type?.startsWith("image/")) {
-                const attachmentImage = document.createElement("img");
-                attachmentImage.className = "review-attachment-image";
-                attachmentImage.src = review.attachment.url;
-                attachmentImage.alt = review.attachment.name || "Review attachment";
-                attachmentLink.appendChild(attachmentImage);
-            } else {
-                attachmentLink.className = "review-attachment-file";
-                attachmentLink.textContent =
-                    `View attachment: ${review.attachment.name || "File"}`;
-            }
+            const imageAttachments = attachments.filter(attachment => attachment.type?.startsWith("image/"));
+            attachments.forEach(attachment => {
+                let attachmentLink;
+                if (attachment.type?.startsWith("image/")) {
+                    const imageIndex = imageAttachments.indexOf(attachment);
+                    attachmentLink = document.createElement("button");
+                    attachmentLink.type = "button";
+                    attachmentLink.className = "review-attachment-button";
+                    attachmentLink.setAttribute("aria-label", `Open review photo ${imageIndex + 1} of ${imageAttachments.length}`);
+                    const attachmentImage = document.createElement("img");
+                    attachmentImage.className = "review-attachment-image";
+                    attachmentImage.src = attachment.url;
+                    attachmentImage.alt = attachment.name || `Review photo ${imageIndex + 1}`;
+                    attachmentLink.appendChild(attachmentImage);
+                    attachmentLink.addEventListener("click", () => openReviewLightbox({
+                        images: imageAttachments,
+                        index: imageIndex,
+                        review,
+                        trigger: attachmentLink
+                    }));
+                } else {
+                    attachmentLink = document.createElement("a");
+                    attachmentLink.href = attachment.url;
+                    attachmentLink.target = "_blank";
+                    attachmentLink.rel = "noopener";
+                    attachmentLink.className = "review-attachment-file";
+                    attachmentLink.textContent =
+                        `View attachment: ${attachment.name || "File"}`;
+                }
 
-            card.appendChild(attachmentLink);
+                attachmentGallery.appendChild(attachmentLink);
+            });
+
+            card.appendChild(attachmentGallery);
         }
 
         reviewList.appendChild(card);

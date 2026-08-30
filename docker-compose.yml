@@ -27,9 +27,12 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: local-development-secret-change-before-production
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
-      FLW_SECRET_KEY: ${FLW_SECRET_KEY:-}
-      FLW_SECRET_HASH: ${FLW_SECRET_HASH:-}
-      FLW_REDIRECT_URL: http://127.0.0.1:5501/payment-complete.html
+      PESAPAL_ENV: sandbox
+      PESAPAL_CONSUMER_KEY: ${PESAPAL_CONSUMER_KEY:-}
+      PESAPAL_CONSUMER_SECRET: ${PESAPAL_CONSUMER_SECRET:-}
+      PESAPAL_IPN_ID: ${PESAPAL_IPN_ID:-}
+      PESAPAL_CALLBACK_URL: http://127.0.0.1:5501/payment-complete.html
+      PESAPAL_CANCELLATION_URL: http://127.0.0.1:5501/checkout.html
     depends_on: [postgres, redis]
     ports: ["3000:3000"]
 volumes:

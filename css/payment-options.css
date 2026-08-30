@@ -237,13 +237,13 @@ button{
 
 .payment-method-icon>img[src*="Airtel Icon"],
 .payment-method-icon>img[src*="Momo logo"],
-.payment-method-icon>img[src*="Flutterwave Logo"]{
+.payment-method-icon>img[src*="Mobile Money"]{
     border-radius:10px
 }
 
 .payment-picker-option>img[src*="Airtel Icon"],
 .payment-picker-option>img[src*="Momo logo"],
-.payment-picker-option>img[src*="Flutterwave Logo"]{
+.payment-picker-option>img[src*="Mobile Money"]{
     border-radius:6px
 }
 

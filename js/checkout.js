@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "./firestore-api.js";
+import { addDoc, collection, doc, getDoc, initializePayment, serverTimestamp, setDoc } from "./firestore-api.js";
 import { onAuthStateChanged } from "./auth-api.js";
 import { deliveryQuoteFor, populateUgandaDistricts } from "./shipping-config.js?v=20260827-2";
 
@@ -9,16 +9,11 @@ const itemsContainer = document.getElementById("checkout-items");
 const errorElement = document.getElementById("form-error");
 const submitButton = document.getElementById("place-order");
 const mobileFields = document.getElementById("mobile-money-fields");
-const creditCardFields = document.getElementById("credit-card-fields");
-const flutterwaveFields = document.getElementById("flutterwave-fields");
 const itemsToggle = document.getElementById("order-items-toggle");
 const checkoutBack = document.getElementById("checkout-back");
 const exitOverlay = document.getElementById("checkout-exit-overlay");
 const stayAtCheckout = document.getElementById("checkout-stay");
 const leaveCheckout = document.getElementById("checkout-leave");
-const networkPicker = document.querySelector(".network-picker");
-const networkTrigger = document.querySelector(".network-picker-trigger");
-const networkMenu = document.querySelector(".network-picker-menu");
 const deliveryQuoteCard = document.getElementById("delivery-quote");
 const deliveryFeeElement = document.getElementById("delivery-fee");
 const deliverySummaryEta = document.getElementById("delivery-summary-eta");
@@ -80,48 +75,8 @@ window.addEventListener("popstate", () => {
 
 
 function closeNetworkPicker() {
-    networkMenu.hidden = true;
-    networkTrigger.setAttribute("aria-expanded", "false");
+    return;
 }
-
-function setNetworkOption(option) {
-    if (!option) return;
-    form.elements.mobileNetwork.value = option.dataset.value;
-    networkTrigger.querySelector(".network-picker-text").textContent = option.textContent.trim();
-    const optionImage = option.querySelector("img");
-    const triggerImage = networkTrigger.querySelector("img");
-    if (optionImage && triggerImage) triggerImage.src = optionImage.src;
-    networkMenu.querySelectorAll("button").forEach(button => {
-        const selected = button === option;
-        button.classList.toggle("selected", selected);
-        button.setAttribute("aria-selected", String(selected));
-    });
-}
-
-networkTrigger.addEventListener("click", event => {
-    event.stopPropagation();
-    const willOpen = networkMenu.hidden;
-    networkMenu.hidden = !willOpen;
-    networkTrigger.setAttribute("aria-expanded", String(willOpen));
-    if (willOpen) networkMenu.querySelector(".selected")?.focus();
-});
-
-networkMenu.querySelectorAll("button").forEach(option => {
-    option.addEventListener("click", event => {
-        event.stopPropagation();
-        setNetworkOption(option);
-        closeNetworkPicker();
-        networkTrigger.focus();
-    });
-});
-
-networkPicker.addEventListener("keydown", event => {
-    if (event.key === "Escape") { closeNetworkPicker(); networkTrigger.focus(); }
-});
-
-document.addEventListener("click", event => {
-    if (!event.target.closest(".network-picker")) closeNetworkPicker();
-});
 
 const numberFromPrice = value => Number(String(value ?? 0).replace(/[^\d]/g, "")) || 0;
 const money = value => `UGX ${value.toLocaleString()}`;
@@ -196,21 +151,10 @@ itemsToggle.addEventListener("click", () => {
 
 function updatePaymentFields() {
     const method = form.elements.paymentMethod.value;
-    const mobileSelected = method === "mobile_money";
-    const cardSelected = method === "credit_card";
-    const flutterwaveSelected = method === "flutterwave";
+    const mobileSelected = method === "mtn_momo" || method === "airtel_money";
 
     mobileFields.hidden = !mobileSelected;
-    creditCardFields.hidden = !cardSelected;
-    flutterwaveFields.hidden = !flutterwaveSelected;
-
     form.elements.mobileNumber.required = mobileSelected;
-    ["cardholderName", "cardNumber", "cardExpiry", "cardCvv"].forEach(name => {
-        form.elements[name].required = cardSelected;
-    });
-    ["flutterwaveEmail", "flutterwavePhone"].forEach(name => {
-        form.elements[name].required = flutterwaveSelected;
-    });
     if (!mobileSelected) closeNetworkPicker();
 }
 
@@ -289,23 +233,17 @@ onAuthStateChanged(auth, async user => {
                 }
                 if (shippingAddress.notes) form.elements.notes.value = shippingAddress.notes;
                 form.elements.mobileNumber.value ||= shippingAddress.phone || shippingAddress.phoneNumber || "";
-                form.elements.flutterwavePhone.value ||= shippingAddress.phone || shippingAddress.phoneNumber || "";
             }
             const savedPaymentMethods = Array.isArray(data.paymentMethods) ? data.paymentMethods : [];
             const paymentMethod = savedPaymentMethods.find(method => method.isDefault) || savedPaymentMethods[0];
             if (paymentMethod) {
-                const checkoutType = paymentMethod.type === "card" ? "credit_card" : paymentMethod.type;
+                const checkoutType = paymentMethod.type === "mobile_money"
+                    ? (paymentMethod.network === "Airtel" ? "airtel_money" : "mtn_momo")
+                    : paymentMethod.type;
                 const paymentRadio = form.querySelector(`input[name="paymentMethod"][value="${checkoutType}"]`);
                 if (paymentRadio) paymentRadio.checked = true;
-                if (paymentMethod.type === "card") {
-                    form.elements.cardholderName.value = paymentMethod.cardholderName || "";
-                } else if (paymentMethod.type === "flutterwave") {
-                    form.elements.flutterwaveEmail.value = paymentMethod.email || user.email || "";
-                    form.elements.flutterwavePhone.value = paymentMethod.phone || "";
-                } else if (paymentMethod.type === "mobile_money") {
-                    const network = paymentMethod.network === "Airtel" ? "Airtel" : "MTN";
+                if (["mobile_money", "mtn_momo", "airtel_money"].includes(paymentMethod.type)) {
                     form.elements.mobileNumber.value = paymentMethod.phone || "";
-                    setNetworkOption(networkMenu.querySelector(`[data-value="${network}"]`));
                 }
                 updatePaymentFields();
             }
@@ -330,55 +268,64 @@ form.addEventListener("submit", async event => {
     }
 
     submitButton.disabled = true;
-    submitButton.textContent = "Placing order…";
+    submitButton.textContent = "Preparing secure payment…";
     const orderSubtotal = cart.reduce((sum, item) => sum + numberFromPrice(item.price) * (Number(item.quantity) || 1), 0);
     const total = orderSubtotal + deliveryQuote.fee;
     try {
-        const order = await addDoc(collection(db, "orders"), {
-            userId: currentUser.uid,
-            customer: { firstName: data.get("firstName").trim(), lastName: data.get("lastName").trim(), email: data.get("email").trim(), phone: data.get("phone").trim() },
-            delivery: {
-                address: data.get("address").trim(),
-                city: data.get("city").trim(),
-                district: deliveryQuote.district,
-                country: "Uganda",
-                notes: data.get("notes").trim(),
-                zoneId: deliveryQuote.zoneId,
-                zoneName: deliveryQuote.zoneName,
-                method: deliveryQuote.method,
-                methodLabel: deliveryQuote.methodLabel,
-                shippingClass: deliveryQuote.shippingClass,
-                baseFee: deliveryQuote.baseFee,
-                surcharge: deliveryQuote.surcharge,
-                fee: deliveryQuote.fee,
-                minDays: deliveryQuote.minDays,
-                maxDays: deliveryQuote.maxDays,
-                etaLabel: deliveryQuote.etaLabel,
-                configVersion: deliveryQuote.configVersion
-            },
-            payment: { method: data.get("paymentMethod"), network: data.get("paymentMethod") === "mobile_money" ? data.get("mobileNetwork") : null, number: data.get("paymentMethod") === "mobile_money" ? data.get("mobileNumber").trim() : null, status: "Pending" },
-            items: cart,
-            subtotal: orderSubtotal,
-            deliveryFee: deliveryQuote.fee,
-            total,
-            status: "Pending",
-            createdAt: serverTimestamp()
-        });
-        localStorage.setItem("cart", "[]");
-        await setDoc(doc(db, "carts", currentUser.uid), { items: [] });
-        document.querySelector(".checkout-form-panel").hidden = true;
-        document.querySelector(".order-summary").hidden = true;
-        document.getElementById("order-number").textContent = `#${order.id.slice(0, 8).toUpperCase()}`;
-        document.getElementById("success-delivery").textContent =
-            `${deliveryQuote.methodLabel} to ${deliveryQuote.district}: ${money(deliveryQuote.fee)} · ${deliveryQuote.etaLabel}`;
-        document.getElementById("order-success").hidden = false;
+        const pendingOwner = sessionStorage.getItem("mpwrPendingPaymentUser");
+        const pendingCart = sessionStorage.getItem("mpwrPendingPaymentCart");
+        const cartSnapshot = JSON.stringify(cart);
+        if ((pendingOwner && pendingOwner !== currentUser.uid) || (pendingCart && pendingCart !== cartSnapshot)) {
+            sessionStorage.removeItem("mpwrPendingPaymentOrder");
+            sessionStorage.removeItem("mpwrPendingPaymentUser");
+            sessionStorage.removeItem("mpwrPendingPaymentCart");
+        }
+        let orderId = sessionStorage.getItem("mpwrPendingPaymentOrder");
+        if (!orderId) {
+            const order = await addDoc(collection(db, "orders"), {
+                userId: currentUser.uid,
+                customer: { firstName: data.get("firstName").trim(), lastName: data.get("lastName").trim(), email: data.get("email").trim(), phone: data.get("phone").trim() },
+                delivery: {
+                    address: data.get("address").trim(),
+                    city: data.get("city").trim(),
+                    district: deliveryQuote.district,
+                    country: "Uganda",
+                    notes: data.get("notes").trim(),
+                    zoneId: deliveryQuote.zoneId,
+                    zoneName: deliveryQuote.zoneName,
+                    method: deliveryQuote.method,
+                    methodLabel: deliveryQuote.methodLabel,
+                    shippingClass: deliveryQuote.shippingClass,
+                    baseFee: deliveryQuote.baseFee,
+                    surcharge: deliveryQuote.surcharge,
+                    fee: deliveryQuote.fee,
+                    minDays: deliveryQuote.minDays,
+                    maxDays: deliveryQuote.maxDays,
+                    etaLabel: deliveryQuote.etaLabel,
+                    configVersion: deliveryQuote.configVersion
+                },
+                payment: { method: data.get("paymentMethod"), number: data.get("paymentMethod") === "card" ? null : data.get("mobileNumber").trim(), status: "Pending" },
+                items: cart,
+                subtotal: orderSubtotal,
+                deliveryFee: deliveryQuote.fee,
+                total,
+                status: "Pending",
+                createdAt: serverTimestamp()
+            });
+            orderId = order.id;
+            sessionStorage.setItem("mpwrPendingPaymentOrder", orderId);
+            sessionStorage.setItem("mpwrPendingPaymentUser", currentUser.uid);
+            sessionStorage.setItem("mpwrPendingPaymentCart", cartSnapshot);
+        }
+        const payment = await initializePayment(orderId, data.get("paymentMethod"));
+        if (!payment.checkoutUrl) throw new Error("Payment checkout URL was not returned");
         checkoutComplete = true;
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.location.assign(payment.checkoutUrl);
     } catch (error) {
         console.error("Checkout failed", error);
-        errorElement.textContent = "We couldn’t place your order. Please check your connection and try again.";
+        errorElement.textContent = "We couldn’t start the secure payment. Please check your connection and try again.";
         submitButton.disabled = false;
-        submitButton.textContent = "Place order";
+        submitButton.textContent = "Continue to secure payment";
     }
 });
 

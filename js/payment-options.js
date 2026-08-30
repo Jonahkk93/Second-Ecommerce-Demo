@@ -40,31 +40,25 @@ function createId() {
 
 /* Only these display/preference fields may ever be persisted. */
 function normalizeMethod(method, index = 0) {
-    const type = ["card", "flutterwave", "mobile_money"].includes(method.type) ? method.type : "card";
+    const migratedType = method.type === "mobile_money"
+        ? (method.network === "Airtel" ? "airtel_money" : "mtn_momo")
+        : method.type;
+    const type = ["card", "mtn_momo", "airtel_money"].includes(migratedType) ? migratedType : "card";
     return {
         id: String(method.id || `saved-${index}`),
         type,
         isDefault: Boolean(method.isDefault),
-        ...(type === "card" ? {
-            cardholderName: String(method.cardholderName || "").trim(),
-            brand: String(method.brand || "Card").trim(),
-            last4: String(method.last4 || "").replace(/\D/g, "").slice(-4),
-            expiry: String(method.expiry || "").trim()
-        } : {}),
-        ...(type === "flutterwave" ? {
-            email: String(method.email || "").trim(),
-            phone: String(method.phone || "").trim()
-        } : {}),
-        ...(type === "mobile_money" ? {
-            network: method.network === "Airtel" ? "Airtel" : "MTN",
+        ...(type !== "card" ? {
             phone: String(method.phone || "").trim()
         } : {})
     };
 }
 
 function normalizeMethods(data) {
-    const saved = Array.isArray(data.paymentMethods) ? data.paymentMethods.map(normalizeMethod) : [];
-    const valid = saved.filter(method => method.type !== "card" || method.last4);
+    const saved = Array.isArray(data.paymentMethods)
+        ? data.paymentMethods.filter(method => method.type !== "flutterwave").map(normalizeMethod)
+        : [];
+    const valid = saved.filter(method => method.type === "card" || method.phone);
     if (valid.length && !valid.some(method => method.isDefault)) valid[0].isDefault = true;
     let foundDefault = false;
     valid.forEach(method => {
@@ -163,14 +157,8 @@ function openEditor(method = null) {
     editorTitle.textContent = method ? "Edit payment option" : "Add payment option";
     setPickerValue(document.querySelector('[data-payment-picker="type"]'), method?.type || "card");
     const defaultPhone = profile.phone || profile.phoneNumber || "";
-    form.elements.cardholderName.value = method?.cardholderName || `${profile.firstName || ""} ${profile.lastName || ""}`.trim();
-    form.elements.cardNumber.value = "";
-    form.elements.cardNumber.placeholder = method?.last4 ? `Saved card ending ${method.last4}` : "1234 5678 9012 3456";
-    form.elements.cardExpiry.value = method?.expiry || "";
-    form.elements.flutterwaveEmail.value = method?.email || currentUser?.email || "";
-    form.elements.flutterwavePhone.value = method?.type === "flutterwave" ? method.phone : defaultPhone;
-    setPickerValue(document.querySelector('[data-payment-picker="network"]'), method?.network || "MTN");
-    form.elements.mobileNumber.value = method?.type === "mobile_money" ? method.phone : defaultPhone;
+    form.elements.mtnNumber.value = method?.type === "mtn_momo" ? method.phone : defaultPhone;
+    form.elements.airtelNumber.value = method?.type === "airtel_money" ? method.phone : defaultPhone;
     form.elements.isDefault.checked = Boolean(method?.isDefault || methods.length === 0);
     updateFields();
     editorOverlay.classList.add("active");
@@ -195,26 +183,19 @@ function openDeleteDialog(id) {
 }
 
 function methodCopy(method) {
-    if (method.type === "mobile_money") return {
-        title:`${method.network} ${method.network === "MTN" ? "MoMo" : "Money"}`,
+    if (method.type === "mtn_momo" || method.type === "airtel_money") return {
+        title:method.type === "mtn_momo" ? "MTN MoMo" : "Airtel Money",
         detail:method.phone,
-        icon:method.network,
-        iconImage:method.network === "Airtel"
+        icon:method.type === "mtn_momo" ? "MTN" : "Airtel",
+        iconImage:method.type === "airtel_money"
             ? "images/Icon Folder/Airtel Icon.PNG"
             : "images/Icon Folder/Momo logo.jpg",
-        iconAlt:method.network === "Airtel" ? "Airtel" : "MTN MoMo"
-    };
-    if (method.type === "flutterwave") return {
-        title:"Flutterwave",
-        detail:[method.email,method.phone].filter(Boolean).join(" • "),
-        icon:"FW",
-        iconImage:"images/Icon Folder/Flutterwave Logo.PNG",
-        iconAlt:"Flutterwave"
+        iconAlt:method.type === "airtel_money" ? "Airtel Money" : "MTN MoMo"
     };
     return {
-        title:`${method.brand} ending in ${method.last4}`,
-        detail:[method.cardholderName,method.expiry && `Expires ${method.expiry}`].filter(Boolean).join(" • "),
-        icon:method.brand,
+        title:"Credit / debit card",
+        detail:"Enter securely when paying",
+        icon:"Card",
         iconImage:"images/Icon Folder/Visa_Mastercard Icon 2.PNG",
         iconAlt:"Visa and Mastercard"
     };
@@ -289,25 +270,6 @@ async function setDefaultMethod(id) {
     catch (error) { console.error(error); methods = previous; renderMethods(); showToast("Could not update the payment option"); }
 }
 
-function cardBrand(number) {
-    if (/^4/.test(number)) return "Visa";
-    if (/^(5[1-5]|2[2-7])/.test(number)) return "Mastercard";
-    if (/^3[47]/.test(number)) return "Amex";
-    return "Card";
-}
-
-function luhnValid(number) {
-    let sum = 0;
-    let double = false;
-    for (let index = number.length - 1; index >= 0; index -= 1) {
-        let digit = Number(number[index]);
-        if (double && (digit *= 2) > 9) digit -= 9;
-        sum += digit;
-        double = !double;
-    }
-    return number.length >= 13 && number.length <= 19 && sum % 10 === 0;
-}
-
 function fieldInvalid(field, invalid) {
     field.classList.toggle("is-invalid", invalid);
     return invalid;
@@ -316,39 +278,14 @@ function fieldInvalid(field, invalid) {
 function paymentFromForm() {
     const data = new FormData(form);
     const type = data.get("type");
-    const existing = methods.find(method => method.id === editingId);
     const base = { id:editingId || createId(), type, isDefault:data.get("isDefault") === "on" || methods.length === 0 };
-    let invalid = false;
-    if (type === "card") {
-        const number = String(data.get("cardNumber") || "").replace(/\D/g, "");
-        const expiry = String(data.get("cardExpiry") || "").trim();
-        const holder = String(data.get("cardholderName") || "").trim();
-        invalid = fieldInvalid(form.elements.cardholderName,!holder) || invalid;
-        invalid = fieldInvalid(form.elements.cardNumber,!number && !(existing?.type === "card" && existing.last4) || Boolean(number && !luhnValid(number))) || invalid;
-        invalid = fieldInvalid(form.elements.cardExpiry,!/^(0[1-9]|1[0-2])\s*\/\s*\d{2}$/.test(expiry)) || invalid;
-        if (invalid) return null;
-        return normalizeMethod({ ...base,cardholderName:holder,brand:number ? cardBrand(number) : existing.brand,last4:number ? number.slice(-4) : existing.last4,expiry });
-    }
-    if (type === "flutterwave") {
-        const email = String(data.get("flutterwaveEmail") || "").trim();
-        const phone = String(data.get("flutterwavePhone") || "").trim();
-        invalid = fieldInvalid(form.elements.flutterwaveEmail,!email || !form.elements.flutterwaveEmail.checkValidity()) || invalid;
-        invalid = fieldInvalid(form.elements.flutterwavePhone,phone.replace(/\D/g,"").length < 9) || invalid;
-        return invalid ? null : normalizeMethod({ ...base,email,phone });
-    }
-    const phone = String(data.get("mobileNumber") || "").trim();
-    invalid = fieldInvalid(form.elements.mobileNumber,phone.replace(/\D/g,"").length < 9);
-    return invalid ? null : normalizeMethod({ ...base,network:data.get("mobileNetwork"),phone });
+    if (type === "card") return normalizeMethod(base);
+    const field = type === "airtel_money" ? form.elements.airtelNumber : form.elements.mtnNumber;
+    const phone = String(field.value || "").trim();
+    const invalid = fieldInvalid(field, phone.replace(/\D/g, "").length < 9);
+    return invalid ? null : normalizeMethod({ ...base, phone });
 }
 
-form.elements.cardNumber.addEventListener("input", event => {
-    const digits = event.target.value.replace(/\D/g,"").slice(0,19);
-    event.target.value = digits.replace(/(.{4})/g,"$1 ").trim();
-});
-form.elements.cardExpiry.addEventListener("input", event => {
-    const digits = event.target.value.replace(/\D/g,"").slice(0,4);
-    event.target.value = digits.length > 2 ? `${digits.slice(0,2)} / ${digits.slice(2)}` : digits;
-});
 form.addEventListener("input", event => event.target.classList?.remove("is-invalid"));
 form.addEventListener("submit", async event => {
     event.preventDefault();

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Purchases | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/account.css?v=20260816-27">
+    <link rel="stylesheet" href="css/account.css?v=20260830-11">
     <link rel="stylesheet" href="css/signout-confirm.css">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
@@ -97,9 +97,9 @@
 
                 <label for="account-review-comment">Your review</label>
                 <textarea id="account-review-comment" maxlength="800" required placeholder="Share your experience with this product"></textarea>
-                <label for="account-review-file">Add an image or file <span>(optional)</span></label>
-                <input id="account-review-file" type="file" accept="image/*,.pdf,.doc,.docx">
-                <p class="account-review-file-name"></p>
+                <label class="account-review-file-button" for="account-review-file"><span class="account-review-file-icon" aria-hidden="true"><img class="account-review-file-icon-default" src="images/Icon Folder/Plus Icon_333.PNG" alt=""><img class="account-review-file-icon-gray" src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></span><span class="account-review-file-label">Add Photos</span><span class="account-review-upload-note">(optional, maximum 5 photos and 5 MB each)</span></label>
+                <input id="account-review-file" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
+                <div class="account-review-image-selection" hidden></div>
                 <button class="account-review-submit" type="submit">Post review</button>
                 <p class="account-review-error" aria-live="polite"></p>
             </form>
@@ -108,7 +108,7 @@
 
     <script src="js/products.js"></script>
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/account.js?v=20260816-3"></script>
+    <script type="module" src="js/account.js?v=20260830-3"></script>
     <script src="js/signout-confirm.js"></script>
 </body>
 </html>

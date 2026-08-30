@@ -288,10 +288,9 @@ input.is-invalid,textarea.is-invalid,select.is-invalid{
 
 .payment-card-content>img[src*="Airtel Icon"],
 .payment-card-content>img[src*="Momo logo"],
-.payment-card-content>img[src*="Flutterwave Logo"],
 .network-option img[src*="Airtel Icon"],
 .network-option img[src*="Momo logo"],
-.network-option img[src*="Flutterwave Logo"]{
+.network-option img[src*="Mobile Money"]{
     border-radius:10px
 }
 

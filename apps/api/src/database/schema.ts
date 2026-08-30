@@ -63,7 +63,7 @@ export const orderItems = pgTable("order_items", {
 }, t => [index("order_items_order_idx").on(t.orderId)]);
 
 export const payments = pgTable("payments", {
-  id: uuid("id").defaultRandom().primaryKey(), orderId: uuid("order_id").references(() => orders.id).notNull(), provider: text("provider").default("flutterwave").notNull(), providerReference: text("provider_reference"), transactionId: text("transaction_id"), status: paymentStatus("status").default("pending").notNull(), amount: integer("amount").notNull(), currency: text("currency").default("UGX").notNull(), checkoutUrl: text("checkout_url"), metadata: jsonb("metadata").default({}).notNull(), ...timestamps
+  id: uuid("id").defaultRandom().primaryKey(), orderId: uuid("order_id").references(() => orders.id).notNull(), provider: text("provider").default("pesapal").notNull(), providerReference: text("provider_reference"), transactionId: text("transaction_id"), status: paymentStatus("status").default("pending").notNull(), amount: integer("amount").notNull(), currency: text("currency").default("UGX").notNull(), checkoutUrl: text("checkout_url"), metadata: jsonb("metadata").default({}).notNull(), ...timestamps
 }, t => [uniqueIndex("payments_order_unique").on(t.orderId), uniqueIndex("payments_reference_unique").on(t.providerReference)]);
 
 export const paymentEvents = pgTable("payment_events", {

@@ -14,7 +14,7 @@
 
     <link
         rel="stylesheet"
-        href="css/product.css?v=20260825-14">
+        href="css/product.css?v=20260830-18">
         <link rel="stylesheet" href="css/Larke.css">
         <link rel="stylesheet" href="css/password-toggle.css">
     
@@ -428,7 +428,15 @@
                     </fieldset>
                     <label for="review-text">Your review</label>
                     <textarea id="review-text" maxlength="800" required placeholder="Share your experience with this product"></textarea>
-                    <button type="submit" class="review-submit">Post review</button>
+                    <label class="review-file-button" for="review-image"><span class="review-file-icon" aria-hidden="true"><img class="review-file-icon-default" src="images/Icon Folder/Plus Icon_333.PNG" alt=""><img class="review-file-icon-gray" src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></span><span class="review-file-label">Add Photos</span><span class="review-upload-note">(optional, maximum 5)</span></label>
+                    <input id="review-image" class="review-image-input" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
+                    <div class="review-image-selection" hidden></div>
+                    <div class="review-form-actions">
+                        <button type="submit" class="review-submit">Post review</button>
+                        <button type="button" class="review-delete-button" aria-label="Delete review" hidden>
+                            <span>Delete review</span>
+                        </button>
+                    </div>
                 </form>
             </div>
 
@@ -616,7 +624,7 @@
 
 <script type="module" src="js/auth.js"></script>
 
-<script type="module" src="js/product.js?v=20260825-1"></script>
+<script type="module" src="js/product.js?v=20260830-8"></script>
 
 <script src="js/password-toggle.js"></script>
 

@@ -29,18 +29,17 @@
         <section class="payment-empty" hidden>
             <img src="images/Icon Folder/Credit Card 2_Gray.PNG" alt="">
             <h2>No saved payment options</h2>
-            <p>Add a preferred card, Flutterwave contact, or Mobile Money number for faster checkout.</p>
+            <p>Add your preferred card or Mobile Money option for faster checkout.</p>
         </section>
 
         <section class="payment-supported" aria-labelledby="supported-payment-title">
             <div>
                 <p class="payment-kicker">Accepted at checkout</p>
-                <h2 id="supported-payment-title">Cards, Flutterwave &amp; Mobile Money</h2>
-                <p>MPWR supports Visa and Mastercard, Flutterwave, MTN MoMo, and Airtel Money.</p>
+                <h2 id="supported-payment-title">Cards &amp; Mobile Money</h2>
+                <p>MPWR supports Visa and Mastercard, MTN MoMo, and Airtel Money.</p>
             </div>
             <div class="payment-provider-list" aria-label="Supported payment providers">
                 <span><img src="images/Icon Folder/Visa_Mastercard Icon 2.PNG" alt="">Visa &amp; Mastercard</span>
-                <span><img src="images/Icon Folder/Flutterwave Logo.PNG" alt="">Flutterwave</span>
                 <span><img src="images/Icon Folder/Momo logo.jpg" alt="">MTN MoMo</span>
                 <span><img src="images/Icon Folder/Airtel Icon.PNG" alt="">Airtel Money</span>
             </div>
@@ -49,7 +48,7 @@
         <section class="payment-information">
             <article>
                 <img class="payment-info-icon" src="images/Icon Folder/Sheild Icon_Green.PNG" alt="">
-                <div><h2>Payment Security</h2><p>Full card numbers and security codes are never saved to your MPWR profile. Card verification remains protected within checkout.</p></div>
+                <div><h2>Payment Security</h2><p>Full card numbers, PINs, and security codes are entered only on the secure hosted payment page and are never saved by MPWR.</p></div>
             </article>
             <article>
                 <img class="payment-info-icon" src="images/Icon Folder/Padlock Icon_Green.PNG" alt="">
@@ -74,37 +73,22 @@
                         <button class="payment-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="payment-picker-option"><img src="images/Icon Folder/Visa_Mastercard Icon 2.PNG" alt=""><span class="payment-picker-text">Credit / debit card</span></span><i aria-hidden="true"></i></button>
                         <div class="payment-picker-menu" role="listbox" hidden>
                             <button type="button" role="option" data-value="card" aria-selected="true" class="selected"><span class="payment-picker-option"><img src="images/Icon Folder/Visa_Mastercard Icon 2.PNG" alt=""><span>Credit / debit card</span></span></button>
-                            <button type="button" role="option" data-value="flutterwave" aria-selected="false"><span class="payment-picker-option"><img src="images/Icon Folder/Flutterwave Logo.PNG" alt=""><span>Flutterwave</span></span></button>
-                            <button type="button" role="option" data-value="mobile_money" aria-selected="false"><span class="payment-picker-option"><img src="images/Icon Folder/Mobile Money Options.PNG" alt=""><span>Mobile Money</span></span></button>
+                            <button type="button" role="option" data-value="mtn_momo" aria-selected="false"><span class="payment-picker-option"><img src="images/Icon Folder/Momo logo.jpg" alt=""><span>MTN MoMo</span></span></button>
+                            <button type="button" role="option" data-value="airtel_money" aria-selected="false"><span class="payment-picker-option"><img src="images/Icon Folder/Airtel Icon.PNG" alt=""><span>Airtel Money</span></span></button>
                         </div>
                     </div>
                 </div>
 
                 <div class="payment-fields" data-payment-fields="card">
-                    <label>Name on card<input name="cardholderName" autocomplete="cc-name"></label>
-                    <label>Card number<input name="cardNumber" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="1234 5678 9012 3456"></label>
-                    <label>Expiry date<input name="cardExpiry" inputmode="numeric" autocomplete="cc-exp" maxlength="7" placeholder="MM / YY"></label>
-                    <p class="payment-safe-note">Only the card brand, expiry date, and last four digits are saved. Enter the full card details again when paying.</p>
+                    <p class="payment-safe-note">Your card details will be entered securely when you pay. MPWR saves only this preference.</p>
                 </div>
 
-                <div class="payment-fields" data-payment-fields="flutterwave" hidden>
-                    <label>Flutterwave email<input name="flutterwaveEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
-                    <label>Flutterwave phone<input name="flutterwavePhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="07XX XXX XXX"></label>
+                <div class="payment-fields" data-payment-fields="mtn_momo" hidden>
+                    <label>MTN MoMo number<input name="mtnNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="077X XXX XXX"></label>
                 </div>
 
-                <div class="payment-fields" data-payment-fields="mobile_money" hidden>
-                    <div class="payment-picker-field">
-                        <span class="payment-picker-label">Network</span>
-                        <input name="mobileNetwork" type="hidden" value="MTN">
-                        <div class="payment-picker" data-payment-picker="network">
-                            <button class="payment-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="payment-picker-option"><img src="images/Icon Folder/Momo logo.jpg" alt=""><span class="payment-picker-text">MTN MoMo</span></span><i aria-hidden="true"></i></button>
-                            <div class="payment-picker-menu" role="listbox" hidden>
-                                <button type="button" role="option" data-value="MTN" aria-selected="true" class="selected"><span class="payment-picker-option"><img src="images/Icon Folder/Momo logo.jpg" alt=""><span>MTN MoMo</span></span></button>
-                                <button type="button" role="option" data-value="Airtel" aria-selected="false"><span class="payment-picker-option"><img src="images/Icon Folder/Airtel Icon.PNG" alt=""><span>Airtel Money</span></span></button>
-                            </div>
-                        </div>
-                    </div>
-                    <label>Mobile Money number<input name="mobileNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="07XX XXX XXX"></label>
+                <div class="payment-fields" data-payment-fields="airtel_money" hidden>
+                    <label>Airtel Money number<input name="airtelNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="070X XXX XXX"></label>
                 </div>
 
                 <label class="payment-default-choice"><input name="isDefault" type="checkbox"><span>Use as my default payment option</span></label>
@@ -125,6 +109,6 @@
     <div class="payment-toast" role="status" aria-live="polite"></div>
 
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/payment-options.js?v=20260817-1"></script>
+    <script type="module" src="js/payment-options.js?v=20260829-1"></script>
 </body>
 </html>

@@ -38,6 +38,14 @@ async function request(path, options = {}) {
     return hydrate(payload);
 }
 
+export function initializePayment(orderId, method) {
+    return request(`/payments/initialize/${encodeURIComponent(orderId)}`, { method: "POST", body: { method }, db: window.db });
+}
+
+export function getPaymentStatus(orderId) {
+    return request(`/payments/${encodeURIComponent(orderId)}`, { db: window.db });
+}
+
 export function collection(db, name) { return { kind: "collection", db, name, constraints: [] }; }
 export function doc(first, second, third) {
     if (first?.kind === "collection") return { kind: "document", db: first.db, name: first.name, id: second || crypto.randomUUID() };
@@ -106,4 +114,16 @@ export async function updateDoc(reference, data) {
     throw new Error(`Unsupported update operation for ${reference.name}`);
 }
 
-export async function deleteDoc() { throw new Error("Delete is not available through the Firestore compatibility layer"); }
+export async function deleteDoc(reference) {
+    if (reference.name === "reviews") {
+        const uid = (reference.db?.auth || window.auth)?.currentUser?.uid || "";
+        const productId = reference.id.startsWith(`${uid}_`)
+            ? reference.id.slice(uid.length + 1)
+            : reference.id;
+        return request(`/reviews/${encodeURIComponent(productId)}`, {
+            method: "DELETE",
+            db: reference.db
+        });
+    }
+    throw new Error(`Delete is not available for ${reference.name}`);
+}

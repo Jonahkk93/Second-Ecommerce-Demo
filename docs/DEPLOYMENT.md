@@ -8,7 +8,7 @@ The production layout is:
 - Railway Redis: rate limiting and short-lived state
 - Cloudflare R2: product, profile, and review images
 - Resend: account verification and password-reset email
-- Flutterwave: checkout and payment webhooks
+- Pesapal Uganda: hosted card and Mobile Money checkout with IPN notifications
 
 Do not paste secrets into Git, Cloudflare Pages, or browser JavaScript. API-only
 secrets belong in the Railway API service variables.
@@ -20,6 +20,7 @@ secrets belong in the Railway API service variables.
 3. Verify the production sending domain in Resend.
 4. Connect a custom domain to the R2 bucket before public launch. The `r2.dev`
    address is suitable for development only.
+5. Open a Pesapal Uganda business account and obtain API 3.0 sandbox credentials.
 
 ## 2. Create the Cloudflare Pages project
 
@@ -76,9 +77,12 @@ REDIS_URL=${{Redis.REDIS_URL}}
 JWT_SECRET=<at-least-32-random-characters>
 WEB_ORIGIN=https://<project>.pages.dev
 GOOGLE_MAPS_API_KEY=<server-key>
-FLW_SECRET_KEY=<flutterwave-secret-key>
-FLW_SECRET_HASH=<flutterwave-webhook-secret-hash>
-FLW_REDIRECT_URL=https://<project>.pages.dev/payment-complete.html
+PESAPAL_ENV=sandbox
+PESAPAL_CONSUMER_KEY=<pesapal-consumer-key>
+PESAPAL_CONSUMER_SECRET=<pesapal-consumer-secret>
+PESAPAL_IPN_ID=<registered-pesapal-ipn-id>
+PESAPAL_CALLBACK_URL=https://<project>.pages.dev/payment-complete.html
+PESAPAL_CANCELLATION_URL=https://<project>.pages.dev/checkout.html
 RESEND_API_KEY=<resend-api-key>
 AUTH_EMAIL_FROM=MPWR <accounts@your-domain.example>
 R2_ACCOUNT_ID=<cloudflare-account-id>
@@ -103,14 +107,17 @@ openssl rand -base64 48
 1. Generate the Railway API public domain.
 2. Set Cloudflare Pages `MPWR_API_ORIGIN` to that origin without `/v1`, then redeploy.
 3. Set Railway `WEB_ORIGIN` to the exact Pages origin, then redeploy the API.
-4. In Flutterwave, set the webhook URL to
-   `https://<railway-api-domain>/v1/payments/webhooks/flutterwave`.
-5. Confirm the Flutterwave secret hash matches `FLW_SECRET_HASH`.
-6. Set the Flutterwave redirect URL to the final storefront payment-complete
-   page.
+4. Register `https://<railway-api-domain>/v1/payments/webhooks/pesapal` as a
+   `POST` IPN URL through Pesapal API 3.0 and copy the returned `ipn_id` into
+   Railway as `PESAPAL_IPN_ID`.
+5. Keep `PESAPAL_ENV=sandbox` until sandbox checkout, callback, IPN, failure,
+   cancellation, and retry tests all pass.
+6. After Pesapal activates the merchant account, replace the sandbox consumer
+   credentials with live credentials and set `PESAPAL_ENV=production`.
 
 When a custom storefront domain is connected, replace the temporary Pages
-origin in `WEB_ORIGIN` and `FLW_REDIRECT_URL`, then redeploy both services. Keep
+origin in `WEB_ORIGIN`, `PESAPAL_CALLBACK_URL`, and
+`PESAPAL_CANCELLATION_URL`, then redeploy both services. Keep
 the browser API path at `/api/v1`; only update `MPWR_API_ORIGIN` if Railway's
 origin changes.
 
@@ -123,7 +130,7 @@ Verify all of the following before accepting real payments:
 - Password reset succeeds without contacting Firebase.
 - Product, profile, and review uploads return the custom R2 media domain.
 - A Uganda delivery quote uses road distance from Kisaasi.
-- A Flutterwave test payment updates the order only after webhook verification.
+- A Pesapal sandbox payment updates the order only after server-side status verification.
 - PostgreSQL backups and restore testing are enabled.
 - Railway logs and alerting are monitored.
 - Firebase export counts match PostgreSQL and R2 migration counts before old
@@ -146,3 +153,5 @@ production data manually.
 - Cloudflare Pages Functions: https://developers.cloudflare.com/pages/functions/get-started/
 - Cloudflare Pages Function routing: https://developers.cloudflare.com/pages/functions/routing/
 - Cloudflare R2 public buckets and custom domains: https://developers.cloudflare.com/r2/buckets/public-buckets/
+- Pesapal API 3.0: https://developer.pesapal.com/how-to-integrate/e-commerce/api-30-json/api-reference
+- Pesapal IPN registration: https://developer.pesapal.com/how-to-integrate/e-commerce/api-30-json/registeripnurl

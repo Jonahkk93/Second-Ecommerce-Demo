@@ -12,7 +12,7 @@ import {
     setDoc,
     where
 } from "./firestore-api.js";
-import { uploadImage } from "./media-api.js";
+import { deleteImage, uploadImage } from "./media-api.js";
 
 const auth = window.auth;
 const db = window.db;
@@ -25,7 +25,7 @@ const reviewModalClose = document.querySelector(".account-review-close");
 const reviewForm = document.querySelector("#account-review-form");
 const reviewComment = document.querySelector("#account-review-comment");
 const reviewFile = document.querySelector("#account-review-file");
-const reviewFileName = document.querySelector(".account-review-file-name");
+const reviewImageSelection = document.querySelector(".account-review-image-selection");
 const reviewProductName = document.querySelector(".account-review-product");
 const reviewError = document.querySelector(".account-review-error");
 const reviewSubmit = document.querySelector(".account-review-submit");
@@ -33,6 +33,8 @@ const reviewStars = [...document.querySelectorAll(".account-review-stars button"
 
 let currentReviewItem = null;
 let currentReviewRating = 0;
+let accountReviewPreviewUrls = [];
+const REVIEW_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 function initialsPicture(firstName, lastName, email = "") {
     const initials = `${firstName?.[0] || ""}${lastName?.[0] || ""}` || email[0] || "M";
@@ -139,7 +141,7 @@ function openReviewModal(item) {
     setAccountReviewRating(0);
     reviewComment.value = "";
     reviewFile.value = "";
-    reviewFileName.textContent = "";
+    setAccountReviewImagePreview();
     reviewError.textContent = "";
     reviewProductName.textContent = item.title || "Purchased product";
     reviewOverlay.classList.add("active");
@@ -159,9 +161,65 @@ reviewStars.forEach(star => {
     );
 });
 
+function setAccountReviewImagePreview(files = []) {
+    accountReviewPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    accountReviewPreviewUrls = [];
+    reviewImageSelection.replaceChildren();
+    files.forEach((file, index) => {
+        const item = document.createElement("div");
+        item.className = "account-review-image-preview-item";
+        const image = document.createElement("img");
+        image.className = "account-review-image-preview";
+        const imageUrl = URL.createObjectURL(file);
+        accountReviewPreviewUrls.push(imageUrl);
+        image.src = imageUrl;
+        image.alt = `Review photo ${index + 1}`;
+        const name = document.createElement("span");
+        name.textContent = file.name;
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "account-review-image-remove";
+        remove.setAttribute("aria-label", `Remove ${file.name}`);
+        const removeIcon = document.createElement("img");
+        removeIcon.src = "images/Icon Folder/Close Icon_333.PNG";
+        removeIcon.alt = "";
+        remove.appendChild(removeIcon);
+        remove.addEventListener("click", () => {
+            const transfer = new DataTransfer();
+            files.forEach((selectedFile, fileIndex) => {
+                if (fileIndex !== index) transfer.items.add(selectedFile);
+            });
+            reviewFile.files = transfer.files;
+            setAccountReviewImagePreview([...reviewFile.files]);
+        });
+        item.append(image, remove, name);
+        reviewImageSelection.appendChild(item);
+    });
+    reviewImageSelection.hidden = !files.length;
+}
+
 reviewFile.addEventListener("change", () => {
-    const file = reviewFile.files[0];
-    reviewFileName.textContent = file ? file.name : "";
+    const files = [...reviewFile.files];
+    if (files.length > 5) {
+        reviewFile.value = "";
+        setAccountReviewImagePreview();
+        reviewError.textContent = "You can add up to 5 review photos.";
+        return;
+    }
+    if (files.some(file => !REVIEW_IMAGE_TYPES.has(file.type))) {
+        reviewFile.value = "";
+        setAccountReviewImagePreview();
+        reviewError.textContent = "Use JPEG, PNG, WebP, or GIF images.";
+        return;
+    }
+    if (files.some(file => file.size > 5 * 1024 * 1024)) {
+        reviewFile.value = "";
+        setAccountReviewImagePreview();
+        reviewError.textContent = "Each review photo must be smaller than 5 MB.";
+        return;
+    }
+    reviewError.textContent = "";
+    setAccountReviewImagePreview(files);
 });
 
 reviewModalClose.addEventListener("click", closeReviewModal);
@@ -173,22 +231,34 @@ reviewForm.addEventListener("submit", async event => {
     event.preventDefault();
     const user = auth.currentUser;
     const comment = reviewComment.value.trim();
-    const file = reviewFile.files[0];
+    const files = [...reviewFile.files];
 
     reviewError.textContent = "";
     if (!user || !currentReviewItem || !currentReviewRating || !comment) {
         reviewError.textContent = "Choose a star rating and write your review.";
         return;
     }
-    if (file && file.size > 5 * 1024 * 1024) {
-        reviewError.textContent = "Attachments must be smaller than 5 MB.";
+    if (files.length > 5) {
+        reviewError.textContent = "You can add up to 5 review photos.";
+        return;
+    }
+    if (files.some(file => file.size > 5 * 1024 * 1024)) {
+        reviewError.textContent = "Each review photo must be smaller than 5 MB.";
+        return;
+    }
+    if (files.some(file => !REVIEW_IMAGE_TYPES.has(file.type))) {
+        reviewError.textContent = "Use JPEG, PNG, WebP, or GIF images.";
         return;
     }
 
     reviewSubmit.disabled = true;
-    reviewSubmit.textContent = "Posting…";
+    reviewSubmit.textContent = files.length ? "Uploading photos…" : "Posting…";
+    const uploadedImages = [];
 
     try {
+        for (const file of files) {
+            uploadedImages.push({ file, upload: await uploadImage(file, "review") });
+        }
         const reviewRef = doc(
             db,
             "reviews",
@@ -210,7 +280,16 @@ reviewForm.addEventListener("submit", async event => {
             customerName: user.displayName || user.email?.split("@")[0] || "MPWR customer",
             rating: currentReviewRating,
             text: comment,
-            attachment: null,
+            ...(uploadedImages.length ? {
+                attachment: {
+                    items: uploadedImages.map(({ file, upload }) => ({
+                        url: upload.url,
+                        key: upload.key,
+                        name: file.name,
+                        type: upload.contentType
+                    }))
+                }
+            } : {}),
             verifiedPurchase: true,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
@@ -225,26 +304,14 @@ reviewForm.addEventListener("submit", async event => {
             console.warn("Account sections could not refresh:", error);
         });
 
-        // Attachments upload after the review itself has posted, so a large
-        // image or document does not hold the modal open.
-        if (file) {
-            uploadImage(file, "review")
-                .then(upload => setDoc(reviewRef, {
-                    attachment: {
-                        url: upload.url,
-                        key: upload.key,
-                        name: file.name,
-                        type: file.type
-                    },
-                    updatedAt: serverTimestamp()
-                }, { merge: true }))
-                .catch(error => {
-                    console.warn("Review attachment could not upload:", error);
-                });
-        }
     } catch (error) {
+        await Promise.all(uploadedImages.map(({ upload }) =>
+            deleteImage(upload.key).catch(cleanupError =>
+                console.warn("Unused review photo could not be removed:", cleanupError)
+            )
+        ));
         console.error("Unable to publish review:", error);
-        reviewError.textContent = "Your review could not be posted.";
+        reviewError.textContent = error?.message || "Your review could not be posted.";
     } finally {
         reviewSubmit.disabled = false;
         reviewSubmit.textContent = "Post review";

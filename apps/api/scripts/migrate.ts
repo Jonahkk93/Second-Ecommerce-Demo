@@ -8,7 +8,7 @@ async function main() {
   if (!connectionString) throw new Error("DATABASE_URL is required");
   const pool = new Pool({ connectionString });
   try {
-    for (const file of ["0001_initial.sql", "0002_firestore_replacement.sql", "0003_local_auth.sql", "0004_auth_tokens.sql"]) {
+    for (const file of ["0001_initial.sql", "0002_firestore_replacement.sql", "0003_local_auth.sql", "0004_auth_tokens.sql", "0005_pesapal_payments.sql"]) {
       const sql = await readFile(resolve(process.cwd(), "drizzle", file), "utf8");
       await pool.query(sql);
     }

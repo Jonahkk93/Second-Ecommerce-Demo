@@ -851,13 +851,15 @@ body.review-modal-open{
 }
 
 #account-review-form legend,
-#account-review-form > label{
+#account-review-form > label,
+.account-review-upload-heading{
     display:block;
     margin:16px 0 8px;
     font-weight:700;
 }
 
-#account-review-form label span{
+#account-review-form label span,
+.account-review-upload-heading span{
     color:var(--muted);
     font-size:12px;
     font-weight:400;
@@ -888,17 +890,150 @@ body.review-modal-open{
     resize:vertical;
     border:1px solid var(--line);
     border-radius:12px;
-    font:inherit;
+    font-family:inherit;
+    font-size:16px;
+    line-height:1.4;
 }
 
 #account-review-file{
-    width:100%;
-    padding:12px;
-    border:1px dashed #ccc;
-    border-radius:12px;
-    background:var(--soft);
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip:rect(0 0 0 0);
+    clip-path:inset(50%);
+    white-space:nowrap;
 }
 
+.account-review-file-button{
+    display:inline-flex !important;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:nowrap;
+    gap:0;
+    width:auto;
+    min-height:32px;
+    margin:16px 0 4px !important;
+    padding:2px 0;
+    border:0;
+    background:transparent;
+    color:var(--ink);
+    line-height:1;
+    white-space:nowrap;
+    cursor:pointer;
+    transition:color .2s ease;
+}
+
+.account-review-file-icon{
+    position:relative;
+    display:block;
+    flex:0 0 13px;
+    width:13px;
+    height:13px;
+}
+
+.account-review-file-icon img{
+    position:absolute;
+    inset:0;
+    display:block;
+    width:13px;
+    height:13px;
+    object-fit:contain;
+}
+
+.account-review-file-icon .account-review-file-icon-gray{
+    display:none;
+}
+
+.account-review-file-label{
+    display:block;
+    margin-left:10px;
+    color:inherit !important;
+    font-size:15px !important;
+    line-height:1;
+}
+
+.account-review-upload-note{
+    display:block;
+    margin-left:6px;
+    color:var(--muted);
+    font-size:12px !important;
+    font-weight:400;
+    line-height:1;
+}
+
+.account-review-image-selection{
+    display:flex;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:10px;
+}
+
+.account-review-image-selection[hidden]{display:none}
+
+.account-review-image-preview-item{
+    position:relative;
+    display:grid;
+    width:64px;
+    gap:4px;
+}
+
+.account-review-image-preview{
+    width:56px;
+    height:56px;
+    border-radius:10px;
+    object-fit:cover;
+}
+
+.account-review-image-preview-item > span{
+    overflow:hidden;
+    color:var(--muted);
+    font-size:12px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.account-review-image-remove{
+    position:absolute;
+    top:-5px;
+    right:3px;
+    display:grid;
+    place-items:center;
+    width:18px;
+    height:18px;
+    padding:3px;
+    border:0;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:0 1px 5px rgba(0,0,0,.2);
+    cursor:pointer;
+}
+
+.account-review-image-remove img{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+.account-review-file-button:hover,
+.account-review-file-button:active,
+.account-review-file-button:has(+ #account-review-file:focus){
+    color:#b5b5b5;
+}
+
+.account-review-file-button:hover .account-review-file-icon-default,
+.account-review-file-button:active .account-review-file-icon-default,
+.account-review-file-button:has(+ #account-review-file:focus) .account-review-file-icon-default{
+    display:none;
+}
+
+.account-review-file-button:hover .account-review-file-icon-gray,
+.account-review-file-button:active .account-review-file-icon-gray,
+.account-review-file-button:has(+ #account-review-file:focus) .account-review-file-icon-gray{
+    display:block;
+}
 .account-review-file-name,
 .account-review-error{
     min-height:18px;
