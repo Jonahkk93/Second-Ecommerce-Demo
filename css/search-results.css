@@ -78,7 +78,8 @@ button,select{
     position:relative;
     display:flex;
     align-items:center;
-    max-width:1050px;
+    min-width:0;
+    max-width:none;
     height:46px;
     flex:1;
     border:1px solid #ddd;
@@ -142,6 +143,11 @@ button,select{
     position:relative;
     display:flex;
     width:30px;
+    height:30px;
+    flex:0 0 30px;
+    align-items:center;
+    justify-content:center;
+    padding-right:0;
     cursor:pointer;
     transition:transform .25s ease,opacity .25s ease
 }
@@ -160,12 +166,11 @@ button,select{
     position:absolute;
     top:0;
     right:-6px;
-    width:auto;
-    min-width:20px;
+    width:20px;
     height:20px;
-    padding:1px 5px 0;
+    padding:1px 0 0;
     background:#E5A484;
-    border-radius:999px;
+    border-radius:50%;
     font-size:12px;
     line-height:1;
     box-sizing:border-box;
@@ -180,6 +185,9 @@ button,select{
 
 #wishlist-nav-icon{
     display:flex;
+    width:42px;
+    height:42px;
+    flex:0 0 42px;
     align-items:center;
     justify-content:center;
     cursor:pointer;
@@ -426,7 +434,9 @@ button,select{
 }
 
 .results-grid{
-    margin-top:20px
+    width:100%;
+    margin:20px 0 0;
+    justify-content:start
 }
 
 .no-results{
@@ -444,7 +454,7 @@ button,select{
     .results-header{
         height:auto;
         min-height:0;
-        padding:11px 10px 0;
+        padding:11px 16px 0;
         background:#fff;
         backdrop-filter:none;
         -webkit-backdrop-filter:none
@@ -455,9 +465,9 @@ button,select{
     }
     
     .product-back-btn{
-        width:36px;
-        height:42px;
-        flex-basis:36px
+        width:24px;
+        height:44px;
+        flex-basis:24px
     }
     
     .product-back-btn img{
@@ -466,7 +476,9 @@ button,select{
     }
     
     .results-search{
-        height:44px
+        height:44px;
+        margin-right:6px;
+        margin-left:6px
     }
 
     .results-search input{
@@ -480,7 +492,8 @@ button,select{
         min-width:24px;
         min-height:24px;
         aspect-ratio:auto;
-        border-radius:0
+        border-radius:0;
+        padding-right:0
     }
     
     .wishlist-nav-image,
@@ -488,27 +501,32 @@ button,select{
         width:22px;
         height:22px
     }
+
+    .cart-image{
+        width:24px;
+        height:24px
+    }
     
     #cart-icon .cart-item-count{
         top:-2px;
         right:-5px;
-        min-width:16px;
+        width:16px;
         height:16px;
-        padding:1px 4px 0;
+        padding:1px 0 0;
         font-size:10px
     }
     
     .results-main{
-        padding:124px 10px 45px
+        padding:124px 16px 45px
     }
     
     .results-toolbar{
-        width:calc(100% + 20px);
+        width:calc(100% + 32px);
         align-self:center;
         gap:7px;
         margin:0;
-        padding:15px 10px 10px;
-        scroll-padding-left:10px
+        padding:15px 16px 10px;
+        scroll-padding-left:16px
     }
     
     .filter-loading{

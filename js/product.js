@@ -1159,7 +1159,7 @@ function renderReviewList(reviews) {
                     const attachmentImage = document.createElement("img");
                     attachmentImage.className = "review-attachment-image";
                     attachmentImage.src = attachment.url;
-                    attachmentImage.alt = attachment.name || `Review photo ${index + 1}`;
+                    attachmentImage.alt = attachment.name || `Review photo ${imageIndex + 1}`;
                     attachmentLink.appendChild(attachmentImage);
                     attachmentLink.addEventListener("click", () => openReviewLightbox({
                         images: imageAttachments,

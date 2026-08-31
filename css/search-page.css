@@ -38,10 +38,14 @@ html.site-loading-enabled:not(.site-page-ready) .search-chip{overflow:hidden;col
 .recent-empty{color:#888;font-size:14px}
 .suggested-searches-section{margin-top:34px}
 
-.search-results-section{width:min(82vw,1220px);margin:42px auto 0}
+.search-results-section{width:100%;margin:42px 0 0}
 .results-kicker{margin-bottom:4px;color:#E5A484;font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase}
 .results-count{color:#888;font-size:14px}
-.search-results.product-content{margin-top:20px}
+.search-results.product-content{
+    width:100%;
+    margin:20px 0 0;
+    justify-content:start;
+}
 
 @media(max-width:600px){.search-page-header{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none}}
 .search-empty{padding:70px 20px;text-align:center;color:#777}
