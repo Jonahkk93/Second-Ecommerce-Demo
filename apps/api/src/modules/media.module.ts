@@ -7,11 +7,14 @@ import { FastifyRequest } from "fastify";
 import type { MultipartFile } from "@fastify/multipart";
 import { AuthGuard, AuthUser, CurrentUser } from "../common/auth";
 
-const imageTypes: Record<string, { extension: string; signature: (buffer: Buffer) => boolean }> = {
-  "image/jpeg": { extension: "jpg", signature: buffer => buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff },
-  "image/png": { extension: "png", signature: buffer => buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
-  "image/webp": { extension: "webp", signature: buffer => buffer.subarray(0, 4).toString() === "RIFF" && buffer.subarray(8, 12).toString() === "WEBP" },
-  "image/gif": { extension: "gif", signature: buffer => ["GIF87a", "GIF89a"].includes(buffer.subarray(0, 6).toString()) }
+const mediaTypes: Record<string, { extension: string; kind: "image" | "video"; signature: (buffer: Buffer) => boolean }> = {
+  "image/jpeg": { extension: "jpg", kind: "image", signature: buffer => buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff },
+  "image/png": { extension: "png", kind: "image", signature: buffer => buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
+  "image/webp": { extension: "webp", kind: "image", signature: buffer => buffer.subarray(0, 4).toString() === "RIFF" && buffer.subarray(8, 12).toString() === "WEBP" },
+  "image/gif": { extension: "gif", kind: "image", signature: buffer => ["GIF87a", "GIF89a"].includes(buffer.subarray(0, 6).toString()) },
+  "video/mp4": { extension: "mp4", kind: "video", signature: buffer => buffer.subarray(4, 8).toString() === "ftyp" },
+  "video/quicktime": { extension: "mov", kind: "video", signature: buffer => buffer.subarray(4, 8).toString() === "ftyp" },
+  "video/webm": { extension: "webm", kind: "video", signature: buffer => buffer.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])) }
 };
 
 class DeleteMediaDto { @IsString() key!: string; }
@@ -43,12 +46,13 @@ class MediaService {
     this.assertConfigured();
     if (!["profile", "review", "product"].includes(purpose)) throw new UnsupportedMediaTypeException("Unsupported media purpose");
     if (purpose === "product" && user.role !== "admin") throw new ForbiddenException("Admin access required for product images");
-    const file = await request.file({ limits: { files: 1, fileSize: 5 * 1024 * 1024 } });
-    if (!file) throw new UnsupportedMediaTypeException("Image file is required");
-    const type = imageTypes[file.mimetype];
-    if (!type) throw new UnsupportedMediaTypeException("Use a JPEG, PNG, WebP, or GIF image");
+    const maxFileSize = purpose === "product" ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    const file = await request.file({ limits: { files: 1, fileSize: maxFileSize } });
+    if (!file) throw new UnsupportedMediaTypeException("Media file is required");
+    const type = mediaTypes[file.mimetype];
+    if (!type || (type.kind === "video" && purpose !== "product")) throw new UnsupportedMediaTypeException(purpose === "product" ? "Use JPEG, PNG, WebP, GIF, MP4, MOV, or WebM media" : "Use a JPEG, PNG, WebP, or GIF image");
     const buffer = await file.toBuffer();
-    if (!type.signature(buffer)) throw new UnsupportedMediaTypeException("Image contents do not match its file type");
+    if (!type.signature(buffer)) throw new UnsupportedMediaTypeException("Media contents do not match its file type");
     const key = `${purpose}/${user.sub}/${randomUUID()}.${type.extension}`;
     await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: buffer, ContentType: file.mimetype, CacheControl: "public, max-age=31536000, immutable", Metadata: { originalName: encodeURIComponent(file.filename).slice(0, 900) } }));
     return { key, url: `${this.publicBaseUrl}/${key}`, contentType: file.mimetype, size: buffer.length };

@@ -493,3 +493,154 @@ function normalizeMPWRItems(items = []) {
 
 window.normalizeMPWRImagePath = normalizeMPWRImagePath;
 window.normalizeMPWRItems = normalizeMPWRItems;
+
+function apiProduct(row) {
+    const metadata = row?.metadata && typeof row.metadata === "object" ? row.metadata : {};
+    const image = row.imageUrl || metadata.image || "";
+    return {
+        ...metadata,
+        id: String(row.legacyId || row.id),
+        apiId: row.id,
+        title: row.title || "Product",
+        price: Number(row.price) || 0,
+        image,
+        gallery: Array.isArray(metadata.gallery) && metadata.gallery.length
+            ? metadata.gallery
+            : image ? [image] : [],
+        description: row.description || "Product description coming soon.",
+        shippingClass: row.class || row.shippingClass || "small",
+        category: metadata.category || "",
+        colors: Array.isArray(metadata.colors) ? metadata.colors : [],
+        sizes: Array.isArray(metadata.sizes) ? metadata.sizes : [],
+        videos: Array.isArray(metadata.videos) ? metadata.videos : []
+    };
+}
+
+function createCatalogueCard(product) {
+    const card = document.createElement("div");
+    card.className = "product-box";
+    card.dataset.id = String(product.id);
+
+    const imageBox = document.createElement("div");
+    imageBox.className = "img-box";
+
+    const wishlistButton = document.createElement("button");
+    wishlistButton.className = "wishlist-btn";
+    wishlistButton.type = "button";
+    wishlistButton.setAttribute("aria-label", `Add ${product.title} to wishlist`);
+
+    const wishlistIcon = document.createElement("img");
+    wishlistIcon.src = "images/optimized/heart-outline.png";
+    wishlistIcon.className = "wishlist-icon";
+    wishlistIcon.alt = "";
+    wishlistButton.appendChild(wishlistIcon);
+
+    const productImage = document.createElement("img");
+    productImage.src = product.image;
+    productImage.alt = product.title;
+    productImage.loading = "lazy";
+    productImage.decoding = "async";
+    imageBox.append(wishlistButton, productImage);
+
+    const title = document.createElement("h2");
+    title.className = "product-title";
+    title.textContent = product.title;
+
+    const priceAndCart = document.createElement("div");
+    priceAndCart.className = "price-and-cart";
+    const price = document.createElement("span");
+    price.className = "price";
+    price.textContent = `UGX ${Number(product.price).toLocaleString()}`;
+    const addWrapper = document.createElement("i");
+    const addIcon = document.createElement("img");
+    addIcon.src = "images/Plus.PNG";
+    addIcon.className = "addie";
+    addIcon.alt = "View product";
+    addWrapper.appendChild(addIcon);
+    priceAndCart.append(price, addWrapper);
+
+    card.append(imageBox, title, priceAndCart);
+    return card;
+}
+
+function syncCatalogueCards() {
+    const grid = document.querySelector("#products > .product-content");
+    if (!grid) return;
+
+    const cards = new Map(
+        [...grid.querySelectorAll(":scope > .product-box")]
+            .map(card => [String(card.dataset.id), card])
+    );
+
+    const activeProductIds = new Set(products.map(product => String(product.id)));
+    cards.forEach((card, id) => {
+        if (!activeProductIds.has(id)) card.remove();
+    });
+
+    products.forEach(product => {
+        let card = cards.get(String(product.id));
+        if (!product.category && card?.dataset.category) product.category = card.dataset.category;
+        product.category ||= "products";
+
+        if (!card) {
+            card = createCatalogueCard(product);
+            grid.appendChild(card);
+        } else {
+            const image = card.querySelector(".img-box > img:not(.wishlist-icon)");
+            if (image && product.image) image.src = product.image;
+            if (image) image.alt = product.title;
+            const title = card.querySelector(".product-title");
+            if (title) title.textContent = product.title;
+            const price = card.querySelector(".price");
+            if (price) price.textContent = `UGX ${Number(product.price).toLocaleString()}`;
+        }
+
+        card.dataset.category = product.category;
+    });
+}
+
+const catalogueHost = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+    ? "http://127.0.0.1:3000/v1"
+    : "/api/v1";
+
+window.MPWRCatalogueReady = fetch(`${catalogueHost}/products`, { credentials: "include" })
+    .then(async response => {
+        if (!response.ok) throw new Error(`Catalogue request failed (${response.status})`);
+        const rows = await response.json();
+        const existingProducts = new Map(products.map(product => [String(product.id), product]));
+        const liveProducts = (Array.isArray(rows) ? rows : []).map(apiProduct).map(product => {
+            const existing = existingProducts.get(String(product.id));
+            const cardCategory = document.querySelector(`.product-box[data-id="${CSS.escape(String(product.id))}"]`)?.dataset.category;
+            return {
+                ...(existing || {}),
+                ...product,
+                category: product.category || existing?.category || cardCategory || "products"
+            };
+        });
+
+        // Once the API responds successfully it is the source of truth. This
+        // removes deleted or unpublished legacy products instead of retaining
+        // their hard-coded fallback cards.
+        products.splice(0, products.length, ...liveProducts);
+
+        syncCatalogueCards();
+        return products;
+    })
+    .catch(error => {
+        console.warn("Using the built-in catalogue because the live catalogue is unavailable.", error);
+        syncCatalogueCards();
+        return products;
+    });
+
+// Keep an already-open storefront tab synchronized with catalogue changes made
+// in MPWR Management. A reload also re-runs category and search rendering.
+const reloadForCatalogueChange = () => window.location.reload();
+window.addEventListener("storage", event => {
+    if (event.key === "mpwrCatalogueRevision" && event.newValue) reloadForCatalogueChange();
+});
+if ("BroadcastChannel" in window) {
+    const catalogueChannel = new BroadcastChannel("mpwr-catalogue");
+    catalogueChannel.addEventListener("message", event => {
+        if (event.data?.type === "catalogue-changed") reloadForCatalogueChange();
+    });
+}

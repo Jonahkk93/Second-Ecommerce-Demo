@@ -1,5 +1,7 @@
 import { mountMPWRDrawers } from "./drawer-component.js?v=20260816-6";
 
+await (window.MPWRCatalogueReady || Promise.resolve(window.products));
+
 let firebaseServicesPromise;
 let commerceSyncQueue = Promise.resolve();
 
@@ -739,7 +741,15 @@ function matchingProducts() {
         .map(match => match.product);
 }
 
-const baseMatches = matchingProducts();
+const relevanceMatches = matchingProducts();
+const baseMatches = window.MPWRDiscovery
+    ? window.MPWRDiscovery.rank(relevanceMatches, {
+        context: `search-results-${query.toLowerCase()}`,
+        baseOrderWeight: 0.82,
+        explorationWeight: 0.14,
+        personalizationWeight: 0.04
+    })
+    : relevanceMatches;
 
 function render() {
     let matches = baseMatches.filter(product => {
@@ -749,7 +759,13 @@ function render() {
     });
     if (sortResults.value === "low") matches.sort((a,b) => Number(a.price) - Number(b.price));
     if (sortResults.value === "high") matches.sort((a,b) => Number(b.price) - Number(a.price));
-    if (sortResults.value === "popular") matches.sort((a,b) => Number(a.id) - Number(b.id));
+    if (sortResults.value === "popular" && window.MPWRDiscovery) {
+        matches = window.MPWRDiscovery.rank(matches, {
+            context: `search-popular-${query.toLowerCase()}`,
+            baseOrderWeight: 0.2,
+            explorationWeight: 0.62
+        });
+    } else if (sortResults.value === "popular") matches.sort((a,b) => Number(a.id) - Number(b.id));
     resultsGrid.replaceChildren(...matches.map(resultCard));
     resultsGrid.hidden = matches.length === 0;
     noResults.hidden = matches.length > 0;

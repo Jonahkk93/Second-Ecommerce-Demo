@@ -5,15 +5,9 @@ import {
     signOut
 } from "./auth-api.js";
 
-import {
-    doc,
-    getDoc
-} from "./firestore-api.js";
-
-import { adminAuth, adminDb } from "./admin-firebase.js";
+import { adminAuth } from "./admin-firebase.js";
 
 const auth = adminAuth;
-const db = adminDb;
 const loginForm = document.getElementById("admin-login-form");
 const loginButton = document.getElementById("admin-login-button");
 const loginError = document.getElementById("admin-login-error");
@@ -47,8 +41,7 @@ function friendlyLoginError(error) {
 }
 
 async function isAdministrator(user) {
-    const userDoc = await getDoc(doc(db, "users", user.uid));
-    return userDoc.exists() && userDoc.data().role === "admin";
+    return user?.role === "admin";
 }
 
 loginForm.addEventListener("submit", async event => {

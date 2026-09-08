@@ -63,7 +63,7 @@ function snapshot(id, data) {
 function constraint(reference, field) { return reference.constraints?.find(item => item.kind === "where" && item.field === field); }
 
 function normalizeRow(collectionName, row) {
-    if (collectionName === "products") return { ...row, id: row.legacyId || row.id, image: row.imageUrl || row.image, shippingClass: row.class || row.shippingClass, ...(row.metadata || {}) };
+    if (["products", "deletedProducts"].includes(collectionName)) return { ...row, apiId: row.id, id: row.legacyId || row.id, image: row.imageUrl || row.image, shippingClass: row.class || row.shippingClass, ...(row.metadata || {}) };
     if (collectionName === "orders") { const status = String(row.status || "pending"); return { ...row, status: status.charAt(0).toUpperCase() + status.slice(1), payment: row.delivery?.payment || row.payment || { status: "Pending" } }; }
     return row;
 }
@@ -84,6 +84,7 @@ export async function getDocs(reference) {
     if (reference.name === "reviews") { const product = constraint(reference, "productId"); const user = constraint(reference, "userId"); rows = product ? await request(`/reviews?productId=${encodeURIComponent(product.value)}`, { auth: false }) : user ? await request("/reviews/mine", { db: reference.db }) : []; }
     if (reference.name === "orders") rows = reference.db?.kind === "admin" ? await request("/orders/admin/all", { db: reference.db }) : await request("/orders", { db: reference.db });
     if (reference.name === "products") rows = reference.db?.kind === "admin" ? await request("/admin/products", { db: reference.db }) : await request("/products", { auth: false });
+    if (reference.name === "deletedProducts") rows = await request("/admin/products/deleted", { db: reference.db });
     const docs = rows.map(row => { const normalized = normalizeRow(reference.name, row); return snapshot(normalized.legacyId || normalized.id, normalized); });
     return { docs, empty: docs.length === 0, size: docs.length, forEach(callback) { docs.forEach(callback); } };
 }
@@ -99,7 +100,22 @@ export async function setDoc(reference, data) {
 
 function normalizeProduct(data, legacyId) {
     const title = String(data.title || "Product");
-    return { legacyId: String(legacyId || data.id || Date.now()), title, slug: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${legacyId || Date.now()}`, description: data.description || "", price: Number(data.price) || 0, imageUrl: data.image || data.imageUrl || "", shippingClass: data.shippingClass || "small", metadata: { colors: data.colors || [], sizes: data.sizes || [] } };
+    const id = String(legacyId || data.id || Date.now());
+    return { legacyId: id, title, slug: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${id}`, description: data.description || "", price: Number(data.price) || 0, imageUrl: data.image || data.imageUrl || "", shippingClass: data.shippingClass || "small", weightGrams: Number(data.weightGrams) || undefined, active: data.active !== false, metadata: { colors: data.colors || [], sizes: data.sizes || [], category: data.category || "products", gallery: data.gallery || [], videos: data.videos || [], sku: data.sku || "", stock: Math.max(0, Number(data.stock) || 0), compareAtPrice: Math.max(0, Number(data.compareAtPrice) || 0), featured: Boolean(data.featured) } };
+}
+
+function normalizeProductUpdate(data) {
+    const body = {};
+    if (data.title !== undefined) body.title = String(data.title);
+    if (data.slug !== undefined) body.slug = String(data.slug);
+    if (data.description !== undefined) body.description = String(data.description);
+    if (data.price !== undefined) body.price = Number(data.price) || 0;
+    if (data.image !== undefined || data.imageUrl !== undefined) body.imageUrl = data.image || data.imageUrl || "";
+    if (data.shippingClass !== undefined) body.shippingClass = data.shippingClass;
+    if (data.weightGrams !== undefined) body.weightGrams = Math.max(0, Number(data.weightGrams) || 0);
+    if (data.active !== undefined) body.active = Boolean(data.active);
+    if (data.metadata !== undefined) body.metadata = data.metadata;
+    return body;
 }
 
 export async function addDoc(reference, data) {
@@ -111,10 +127,14 @@ export async function addDoc(reference, data) {
 export async function updateDoc(reference, data) {
     if (reference.name === "orders") return request(`/orders/${encodeURIComponent(reference.id)}/status`, { method: "PATCH", body: { status: String(data.status || "pending").toLowerCase() }, db: reference.db });
     if (reference.name === "users") return setDoc(reference, data);
+    if (reference.name === "products") return request(`/admin/products/${encodeURIComponent(reference.id)}`, { method: "PATCH", body: normalizeProductUpdate(data), db: reference.db });
+    if (reference.name === "deletedProducts") return request(`/admin/products/${encodeURIComponent(reference.id)}/restore`, { method: "POST", body: {}, db: reference.db });
     throw new Error(`Unsupported update operation for ${reference.name}`);
 }
 
 export async function deleteDoc(reference) {
+    if (reference.name === "products") return request(`/admin/products/${encodeURIComponent(reference.id)}`, { method: "DELETE", db: reference.db });
+    if (reference.name === "deletedProducts") return request(`/admin/products/${encodeURIComponent(reference.id)}/permanent`, { method: "DELETE", db: reference.db });
     if (reference.name === "reviews") {
         const uid = (reference.db?.auth || window.auth)?.currentUser?.uid || "";
         const productId = reference.id.startsWith(`${uid}_`)

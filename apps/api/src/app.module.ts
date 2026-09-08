@@ -13,9 +13,10 @@ import { AddressesModule } from "./modules/addresses.module";
 import { validateEnvironment } from "./config";
 import { CustomerDataModule } from "./modules/customer-data.module";
 import { MediaModule } from "./modules/media.module";
+import { AnalyticsModule } from "./modules/analytics.module";
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }), JwtModule.register({ global: true }), CommonModule, DatabaseModule, AuthModule, AddressesModule, CustomerDataModule, MediaModule, ProductsModule, DeliveryModule, OrdersModule, PaymentsModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }), JwtModule.register({ global: true }), CommonModule, DatabaseModule, AuthModule, AddressesModule, CustomerDataModule, MediaModule, ProductsModule, DeliveryModule, OrdersModule, PaymentsModule, AnalyticsModule],
   controllers: [HealthController]
 })
 export class AppModule {}

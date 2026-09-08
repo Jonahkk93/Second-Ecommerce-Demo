@@ -11,14 +11,29 @@ services:
     volumes:
       - mpwr_postgres:/var/lib/postgresql/data
       - ./apps/api/drizzle/0001_initial.sql:/docker-entrypoint-initdb.d/0001_initial.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mpwr -d mpwr"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
     volumes: ["mpwr_redis:/data"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    command: ["sh", "-c", "node apps/api/scripts/migrate-production.mjs && npm --workspace apps/api run start"]
+    env_file:
+      - ./apps/api/.env
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -33,8 +48,13 @@ services:
       PESAPAL_IPN_ID: ${PESAPAL_IPN_ID:-}
       PESAPAL_CALLBACK_URL: http://127.0.0.1:5501/payment-complete.html
       PESAPAL_CANCELLATION_URL: http://127.0.0.1:5501/checkout.html
-    depends_on: [postgres, redis]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports: ["3000:3000"]
+    restart: unless-stopped
 volumes:
   mpwr_postgres:
   mpwr_redis:

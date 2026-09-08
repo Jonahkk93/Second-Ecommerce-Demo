@@ -41,6 +41,8 @@ import {
     onAuthStateChanged
 } from "./auth-api.js";
 
+await (window.MPWRCatalogueReady || Promise.resolve(window.products));
+
 const auth = window.auth;
 
 const db = window.db;

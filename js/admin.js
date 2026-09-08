@@ -32,6 +32,17 @@ const adminSignout = document.getElementById("admin-signout");
 const statusConfirm = document.getElementById("admin-status-confirm");
 const statusConfirmName = document.getElementById("admin-status-confirm-name");
 const statusConfirmCancel = statusConfirm.querySelector(".admin-status-cancel");
+const dashboardNavLink = document.querySelector('.admin-side-nav a[href="admin.html"]');
+const ordersNavLink = document.querySelector('.admin-side-nav a[href="#orders"]');
+
+function syncAdminNavSelection() {
+    const ordersSelected = window.location.hash === "#orders";
+    dashboardNavLink?.classList.toggle("active", !ordersSelected);
+    ordersNavLink?.classList.toggle("active", ordersSelected);
+}
+
+syncAdminNavSelection();
+window.addEventListener("hashchange", syncAdminNavSelection);
 
 const BESTSELLER_WINDOW_DAYS = 30;
 
@@ -53,7 +64,7 @@ async function publishBestsellers(orders) {
     const products = [...totals.entries()]
         .map(([id, unitsSold]) => ({ id, unitsSold }))
         .sort((a, b) => b.unitsSold - a.unitsSold || a.id.localeCompare(b.id))
-        .slice(0, 6);
+        .slice(0, 10);
 
     await setDoc(doc(db, "storefront", "popular"), {
         products,
@@ -467,15 +478,18 @@ filterButtons.forEach(button => {
 
 });
 
-function showAdminToast(message){
+function showAdminToast(message, type = "success"){
 
     const toast = document.getElementById("admin-toast");
+    if (!toast) return;
 
+    clearTimeout(toast.timeout);
     toast.textContent = message;
-
+    toast.className = type;
+    void toast.offsetWidth;
     toast.classList.add("show");
 
-    setTimeout(() => {
+    toast.timeout = setTimeout(() => {
         toast.classList.remove("show");
     }, 2500);
 
@@ -515,3 +529,7 @@ function filterOrders() {
     });
 
 }
+
+document.querySelectorAll(".admin-side-nav [data-coming-soon]").forEach(button => {
+    button.addEventListener("click", () => showAdminToast(`${button.dataset.comingSoon} management is the next workspace to connect.`));
+});

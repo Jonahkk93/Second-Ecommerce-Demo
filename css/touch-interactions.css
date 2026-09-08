@@ -61,6 +61,14 @@ summary{
     transition:none !important;
 }
 
+/* Keep the category Home link's press feedback consistent with the nav icons. */
+@media (hover:none), (pointer:coarse){
+    a.category-nav-home:active{
+        transform:scale(.92) !important;
+        transition:transform .25s ease !important;
+    }
+}
+
 /* Gallery arrows rely on this transform for vertical centering. */
 .gallery-arrow:hover,
 .gallery-arrow:focus,

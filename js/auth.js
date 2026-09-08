@@ -167,8 +167,16 @@ signinForm.addEventListener("submit", async (e) => {
 
     const email = document.getElementById("signin-email").value.trim();
     const password = document.getElementById("signin-password").value;
+    const submitButton = signinForm.querySelector('[type="submit"]');
+
+    if (!email || !password) {
+        showAuthToast("Enter your email and password.", "warning");
+        return;
+    }
 
     try {
+        submitButton.disabled = true;
+        submitButton.setAttribute("aria-busy", "true");
         await signInWithEmailAndPassword(auth, email, password);
 
         showAuthToast("Welcome Back!", "success");
@@ -177,6 +185,9 @@ signinForm.addEventListener("submit", async (e) => {
 
     } catch (error) {
         showAuthToast(authErrorMessage(error), "warning");
+    } finally {
+        submitButton.disabled = false;
+        submitButton.removeAttribute("aria-busy");
     }
 });
 

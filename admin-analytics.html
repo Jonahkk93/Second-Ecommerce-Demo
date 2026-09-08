@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" class="site-loading-enabled">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics · MPWR Management</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260908-11">
+    <link rel="stylesheet" href="css/admin-analytics.css?v=20260907-1">
+    <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
+    <script src="js/loading-states.js?v=20260809-23" defer></script>
+</head>
+<body>
+<div class="management-shell" id="analytics-app" hidden>
+    <aside class="management-sidebar">
+        <a class="management-brand" href="admin.html"><span>MPWR</span><small>Management</small></a>
+        <nav class="management-nav" aria-label="Management sections">
+            <a class="management-nav-item" href="admin.html"><span><img src="images/Icon Folder/Dashboard Icon_Light Gray.PNG" alt=""></span> Dashboard</a>
+            <a class="management-nav-item" href="admin.html#orders"><span><img src="images/Icon Folder/Order status_Light Gray.PNG" alt=""></span> Orders</a>
+            <a class="management-nav-item" href="admin-products.html"><span>▦</span> Products</a>
+            <button class="management-nav-item" data-coming-soon="Customers" type="button"><span><img src="images/Icon Folder/Customers Icon_Light Gray.PNG" alt=""></span> Customers</button>
+            <a class="management-nav-item" href="admin-reviews.html"><span><img src="images/Icon Folder/Reviews Icon_Light Gray.PNG" alt=""></span> Reviews</a>
+            <a class="management-nav-item active" href="admin-analytics.html"><span><img src="images/Icon Folder/Analytics Icon_Light Gray.PNG" alt=""></span> Analytics</a>
+            <button class="management-nav-item" data-coming-soon="Marketing" type="button"><span><img src="images/Icon Folder/Marketing Icon_Light Gray.PNG" alt=""></span> Marketing</button>
+            <button class="management-nav-item" data-coming-soon="Coupons" type="button"><span>◇</span> Coupons</button>
+            <button class="management-nav-item" data-coming-soon="Settings" type="button"><span><img src="images/Icon Folder/Settings Icon_Light Gray.PNG" alt=""></span> Settings</button>
+            <a class="management-nav-item" href="index.html" target="_blank"><span>↗</span> View website</a>
+        </nav>
+    </aside>
+
+    <main class="management-main analytics-main">
+        <header class="management-topbar analytics-topbar">
+            <div><p class="eyebrow">Store performance</p><h1>Analytics</h1><p id="report-period">Loading report…</p></div>
+            <div class="analytics-actions">
+                <label><span>Reporting period</span><select id="analytics-range"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option></select></label>
+                <button class="secondary-button" id="export-report" type="button">Export CSV</button>
+            </div>
+        </header>
+
+        <section class="analytics-metrics" aria-label="Analytics summary">
+            <article><span>Total revenue</span><strong id="metric-revenue">UGX 0</strong><small id="change-revenue"></small></article>
+            <article><span>Orders</span><strong id="metric-orders">0</strong><small id="change-orders"></small></article>
+            <article><span>Average order value</span><strong id="metric-aov">UGX 0</strong><small id="change-aov"></small></article>
+            <article><span>Fulfilment rate</span><strong id="metric-fulfilment">0%</strong><small id="change-fulfilment"></small></article>
+            <article><span>New customers</span><strong id="metric-customers">0</strong><small id="change-customers"></small></article>
+        </section>
+
+        <section class="analytics-grid">
+            <article class="analytics-card chart-card wide-card"><div class="card-heading"><div><span>Revenue over time</span><small>Non-cancelled order value</small></div><strong id="revenue-total-label"></strong></div><div id="revenue-chart" class="line-chart"></div></article>
+            <article class="analytics-card chart-card"><div class="card-heading"><div><span>Orders over time</span><small>Orders placed by day</small></div></div><div id="orders-chart" class="line-chart"></div></article>
+            <article class="analytics-card status-card"><div class="card-heading"><div><span>Orders by status</span><small>Current reporting period</small></div></div><div class="donut-layout"><div id="status-donut" class="status-donut"><strong id="status-total">0</strong><small>Total</small></div><div id="status-legend" class="status-legend"></div></div></article>
+            <article class="analytics-card category-card"><div class="card-heading"><div><span>Sales by category</span><small>Revenue contribution</small></div></div><div id="category-bars" class="category-bars"></div></article>
+            <article class="analytics-card table-card wide-card"><div class="card-heading"><div><span>Top-selling products</span><small>Ranked by revenue</small></div></div><div class="analytics-table-wrap"><table><thead><tr><th>Product</th><th>Units sold</th><th>Revenue</th><th>% of total</th></tr></thead><tbody id="top-products"></tbody></table></div></article>
+            <article class="analytics-card table-card"><div class="card-heading"><div><span>Recent orders</span><small>Latest activity in this period</small></div><a href="admin.html#orders">View orders</a></div><div class="analytics-table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead><tbody id="recent-orders"></tbody></table></div></article>
+        </section>
+    </main>
+</div>
+<div class="analytics-loading" id="analytics-loading"><div class="loading-spinner"></div><p>Preparing your report…</p></div>
+<div class="admin-products-toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/admin-analytics.js?v=20260908-2"></script>
+</body>
+</html>

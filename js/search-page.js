@@ -1,3 +1,6 @@
+(async () => {
+await (window.MPWRCatalogueReady || Promise.resolve(window.products));
+
 const searchInput = document.querySelector("#page-search-input");
 const searchForm = document.querySelector(".search-form");
 const searchResults = document.querySelector(".search-results");
@@ -376,9 +379,19 @@ function productCard(product) {
 
 function renderResults(query = "") {
     const normalized = query.trim().toLowerCase();
-    const matches = normalized
+    let matches = normalized
         ? products.filter(product => searchableText(product).includes(normalized))
-        : products.slice(0,12);
+        : products;
+    if (window.MPWRDiscovery) {
+        matches = window.MPWRDiscovery.rank(matches, {
+            context: normalized ? `search-preview-${normalized}` : "search-popular-picks",
+            limit: normalized ? matches.length : 12,
+            baseOrderWeight: normalized ? 0.7 : 0.12,
+            explorationWeight: normalized ? 0.22 : 0.72
+        });
+    } else if (!normalized) {
+        matches = matches.slice(0,12);
+    }
     searchResults.replaceChildren(...matches.map(productCard));
     searchEmpty.hidden = matches.length > 0;
     searchResults.hidden = matches.length === 0;
@@ -461,3 +474,4 @@ if (document.documentElement.classList.contains("site-page-ready")) {
     document.addEventListener("site:ready",finishSearchDiscoveryLoading,{once:true});
 }
 requestAnimationFrame(() => searchInput.focus());
+})();

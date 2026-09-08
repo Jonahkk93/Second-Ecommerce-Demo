@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" class="site-loading-enabled">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviews · MPWR Management</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260908-11">
+    <link rel="stylesheet" href="css/admin-reviews.css?v=20260908-21">
+    <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
+    <script src="js/loading-states.js?v=20260809-23" defer></script>
+</head>
+<body>
+<div class="management-shell" id="reviews-app" hidden>
+    <aside class="management-sidebar">
+        <a class="management-brand" href="admin.html"><span>MPWR</span><small>Management</small></a>
+        <nav class="management-nav" aria-label="Management sections">
+            <a class="management-nav-item" href="admin.html"><span><img src="images/Icon Folder/Dashboard Icon_Light Gray.PNG" alt=""></span> Dashboard</a>
+            <a class="management-nav-item" href="admin.html#orders"><span><img src="images/Icon Folder/Order status_Light Gray.PNG" alt=""></span> Orders</a>
+            <a class="management-nav-item" href="admin-products.html"><span>▦</span> Products</a>
+            <button class="management-nav-item" data-coming-soon="Customers" type="button"><span><img src="images/Icon Folder/Customers Icon_Light Gray.PNG" alt=""></span> Customers</button>
+            <a class="management-nav-item active" href="admin-reviews.html"><span><img src="images/Icon Folder/Reviews Icon_Light Gray.PNG" alt=""></span> Reviews</a>
+            <a class="management-nav-item" href="admin-analytics.html"><span><img src="images/Icon Folder/Analytics Icon_Light Gray.PNG" alt=""></span> Analytics</a>
+            <button class="management-nav-item" data-coming-soon="Marketing" type="button"><span><img src="images/Icon Folder/Marketing Icon_Light Gray.PNG" alt=""></span> Marketing</button>
+            <button class="management-nav-item" data-coming-soon="Coupons" type="button"><span>◇</span> Coupons</button>
+            <button class="management-nav-item" data-coming-soon="Settings" type="button"><span><img src="images/Icon Folder/Settings Icon_Light Gray.PNG" alt=""></span> Settings</button>
+            <a class="management-nav-item" href="index.html" target="_blank"><span>↗</span> View website</a>
+        </nav>
+    </aside>
+    <main class="management-main reviews-main">
+        <header class="management-topbar reviews-topbar"><div><p class="eyebrow">Customer feedback</p><h1>Reviews</h1><p>Read feedback and respond publicly as MPWR.</p></div></header>
+        <section class="review-metrics">
+            <article><span>Total reviews</span><strong id="reviews-total">0</strong></article>
+            <article><span>Average rating</span><strong id="reviews-average">0.0</strong></article>
+            <article><span>Awaiting reply / To be Seen</span><strong id="reviews-unanswered">0</strong></article>
+            <article><span>Five-star reviews</span><strong id="reviews-five-star">0</strong></article>
+        </section>
+        <div class="reviews-toolbar">
+            <label class="search-field"><span><img src="images/Icon Folder/Search Icon_Gray.PNG" alt=""></span><input type="search" id="review-search" placeholder="Search customer, product or review…"></label>
+            <select id="rating-filter" aria-label="Filter by rating"><option value="all">All ratings</option><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select>
+            <select id="reply-filter" aria-label="Filter by reply status"><option value="all">All reviews</option><option value="unanswered">Awaiting reply / To be Seen</option><option value="answered">Replied</option></select>
+        </div>
+        <div class="review-results-heading"><strong id="review-result-count">0 reviews</strong><span>Newest first</span></div>
+        <section id="admin-review-list" class="admin-review-list"></section>
+        <div class="empty-state hidden" id="reviews-empty"><strong>No reviews found</strong><span>New customer reviews will appear here automatically.</span></div>
+    </main>
+</div>
+<div class="confirm-modal hidden" id="seen-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="seen-confirm-title" aria-describedby="seen-confirm-message">
+    <div class="confirm-card">
+        <h2 id="seen-confirm-title">Mark review as seen?</h2>
+        <p id="seen-confirm-message">This review will be removed from "Awaiting reply / To be Seen"</p>
+        <div><button class="secondary-button" id="cancel-seen" type="button">Cancel</button><button class="primary-button" id="confirm-seen" type="button">Mark as seen</button></div>
+    </div>
+</div>
+<div class="analytics-loading" id="reviews-loading"><div class="loading-spinner"></div><p>Loading customer reviews…</p></div>
+<div class="admin-products-toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/admin-reviews.js?v=20260908-12"></script>
+</body>
+</html>

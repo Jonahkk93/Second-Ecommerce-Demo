@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Inject, Module, NotFoundException, Param, Patch, Put, Query, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { IsArray, IsInt, IsObject, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsArray, IsBoolean, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 import { and, desc, eq, ne, or } from "drizzle-orm";
 import { AdminGuard, AuthGuard, AuthUser, CurrentUser } from "../common/auth";
 import { DB, Database } from "../database/database.module";
@@ -23,6 +23,8 @@ class ReviewDto {
   @IsOptional() @IsObject() attachment?: Record<string, unknown>;
 }
 class ReviewAttachmentDto { @IsObject() attachment!: Record<string, unknown>; }
+class ReviewReplyDto { @IsString() @MaxLength(1200) reply!: string; }
+class ReviewSeenDto { @IsBoolean() seen!: boolean; }
 class SettingDto { @IsObject() value!: Record<string, unknown>; }
 type StoredReviewAttachment =
   | { key: string; url: string; type: string; name: string }
@@ -80,13 +82,37 @@ class ReviewsController {
     if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(type)) throw new BadRequestException("Use a JPEG, PNG, WebP, or GIF image");
     return { key, url, type, name };
   }
-  private selection = { id: reviews.id, userId: reviews.userId, productId: products.legacyId, productTitle: products.title, customerName: reviews.customerName, rating: reviews.rating, text: reviews.text, purchasedOptions: reviews.purchasedOptions, attachment: reviews.attachment, verifiedPurchase: reviews.verifiedPurchase, createdAt: reviews.createdAt, updatedAt: reviews.updatedAt };
+  private selection = { id: reviews.id, userId: reviews.userId, productId: products.legacyId, productTitle: products.title, customerName: reviews.customerName, rating: reviews.rating, text: reviews.text, purchasedOptions: reviews.purchasedOptions, attachment: reviews.attachment, verifiedPurchase: reviews.verifiedPurchase, adminReply: reviews.adminReply, adminRepliedAt: reviews.adminRepliedAt, createdAt: reviews.createdAt, updatedAt: reviews.updatedAt };
   @Get() async list(@Query("productId") productId: string) { const product = await resolveProduct(this.db, productId); return this.db.select(this.selection).from(reviews).innerJoin(products, eq(reviews.productId, products.id)).where(eq(reviews.productId, product.id)).orderBy(desc(reviews.createdAt)); }
   @UseGuards(AuthGuard) @Get("mine") listMine(@CurrentUser() user: AuthUser) { return this.db.select(this.selection).from(reviews).innerJoin(products, eq(reviews.productId, products.id)).where(eq(reviews.userId, user.sub)).orderBy(desc(reviews.createdAt)); }
   @UseGuards(AuthGuard) @Get("mine/:productId") async mine(@CurrentUser() user: AuthUser, @Param("productId") productId: string) { const product = await resolveProduct(this.db, productId); const [review] = await this.db.select().from(reviews).where(and(eq(reviews.userId, user.sub), eq(reviews.productId, product.id))).limit(1); return review || null; }
   @UseGuards(AuthGuard) @Put(":productId") async save(@CurrentUser() user: AuthUser, @Param("productId") productId: string, @Body() dto: ReviewDto) { const product = await resolveProduct(this.db, productId); const [purchase] = await this.db.select({ id: orderItems.id }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id)).where(and(eq(orders.userId, user.sub), eq(orderItems.productId, product.id), ne(orders.status, "cancelled"))).limit(1); if (!purchase) throw new ForbiddenException("Only customers who purchased this product can review it"); const [account] = await this.db.select().from(users).where(eq(users.id, user.sub)).limit(1); const values = { userId: user.sub, productId: product.id, customerName: dto.customerName || `${account.firstName} ${account.lastName}`.trim(), rating: dto.rating, text: dto.text, purchasedOptions: dto.purchasedOptions || {}, ...(dto.attachment ? { attachment: this.reviewAttachment(user, dto.attachment) } : {}), verifiedPurchase: true }; const [review] = await this.db.insert(reviews).values(values).onConflictDoUpdate({ target: [reviews.userId, reviews.productId], set: { ...values, updatedAt: new Date() } }).returning(); return review; }
   @UseGuards(AuthGuard) @Patch(":productId/attachment") async attachment(@CurrentUser() user: AuthUser, @Param("productId") productId: string, @Body() dto: ReviewAttachmentDto) { const product = await resolveProduct(this.db, productId); const [review] = await this.db.update(reviews).set({ attachment: this.reviewAttachment(user, dto.attachment), updatedAt: new Date() }).where(and(eq(reviews.userId, user.sub), eq(reviews.productId, product.id))).returning(); if (!review) throw new NotFoundException("Review not found"); return review; }
   @UseGuards(AuthGuard) @Delete(":productId") async remove(@CurrentUser() user: AuthUser, @Param("productId") productId: string) { const product = await resolveProduct(this.db, productId); const [review] = await this.db.delete(reviews).where(and(eq(reviews.userId, user.sub), eq(reviews.productId, product.id))).returning({ attachment: reviews.attachment }); if (!review) throw new NotFoundException("Review not found"); return review; }
+}
+
+@UseGuards(AdminGuard)
+@Controller("admin/reviews")
+class AdminReviewsController {
+  constructor(@Inject(DB) private db: Database) {}
+  private selection = { id: reviews.id, userId: reviews.userId, customerEmail: users.email, productId: products.legacyId, productTitle: products.title, productImage: products.imageUrl, customerName: reviews.customerName, rating: reviews.rating, text: reviews.text, purchasedOptions: reviews.purchasedOptions, attachment: reviews.attachment, verifiedPurchase: reviews.verifiedPurchase, adminReply: reviews.adminReply, adminRepliedAt: reviews.adminRepliedAt, adminSeenAt: reviews.adminSeenAt, createdAt: reviews.createdAt, updatedAt: reviews.updatedAt };
+
+  @Get() list() {
+    return this.db.select(this.selection).from(reviews).innerJoin(products, eq(reviews.productId, products.id)).innerJoin(users, eq(reviews.userId, users.id)).orderBy(desc(reviews.createdAt));
+  }
+
+  @Patch(":id/reply") async reply(@CurrentUser() admin: AuthUser, @Param("id") id: string, @Body() dto: ReviewReplyDto) {
+    const reply = dto.reply.trim();
+    const [review] = await this.db.update(reviews).set({ adminReply: reply || null, adminRepliedAt: reply ? new Date() : null, adminRepliedBy: reply ? admin.sub : null, updatedAt: new Date() }).where(eq(reviews.id, id)).returning();
+    if (!review) throw new NotFoundException("Review not found");
+    return review;
+  }
+
+  @Patch(":id/seen") async seen(@CurrentUser() admin: AuthUser, @Param("id") id: string, @Body() dto: ReviewSeenDto) {
+    const [review] = await this.db.update(reviews).set({ adminSeenAt: dto.seen ? new Date() : null, adminSeenBy: dto.seen ? admin.sub : null, updatedAt: new Date() }).where(eq(reviews.id, id)).returning();
+    if (!review) throw new NotFoundException("Review not found");
+    return review;
+  }
 }
 
 @Controller("storefront")
@@ -103,5 +129,5 @@ class AdminUsersController {
   @Get(":identifier") async one(@Param("identifier") identifier: string) { const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier); const [user] = await this.db.select().from(users).where(isUuid ? or(eq(users.id, identifier), eq(users.firebaseUid, identifier)) : eq(users.firebaseUid, identifier)).limit(1); if (!user) throw new NotFoundException("User not found"); return user; }
 }
 
-@Module({ controllers: [ProfileController, CartController, FavoritesController, ReviewsController, StorefrontController, AdminUsersController] })
+@Module({ controllers: [ProfileController, CartController, FavoritesController, ReviewsController, AdminReviewsController, StorefrontController, AdminUsersController] })
 export class CustomerDataModule {}

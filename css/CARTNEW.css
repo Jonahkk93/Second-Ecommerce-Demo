@@ -182,6 +182,42 @@ header{
     background-image:url("../images/Icon Folder/Back Icon_Gray.PNG");
 }
 
+.category-nav-home{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:28px;
+    height:28px;
+    flex:0 0 28px;
+    cursor:pointer;
+    transition:.25s ease;
+}
+
+.category-nav-home img{
+    display:block;
+    width:24px;
+    height:24px;
+    object-fit:contain;
+}
+
+.category-nav-home:hover{
+    transform:scale(1.08);
+    opacity:.8;
+}
+
+.category-nav-home:focus-visible{
+    outline:2px solid #E5A484;
+    outline-offset:3px;
+}
+
+#search-icon:active,
+#wishlist-nav-icon:active,
+#cart-icon:active,
+#account-icon:active,
+.category-nav-home:active{
+    transform:scale(.92);
+}
+
 .category-page header{
     height:78px;
     padding-top:0;
@@ -211,6 +247,17 @@ header{
 
     .category-page .nav-icons{
         gap:10px;
+    }
+
+    .category-page .category-nav-home{
+        width:24px;
+        height:24px;
+        flex-basis:24px;
+    }
+
+    .category-page .category-nav-home img{
+        width:20px;
+        height:20px;
     }
 
     .category-page .search-image{
@@ -650,12 +697,31 @@ header{
     transform: translateY(-1px);
 }
 
+.category-sidebar-home .sidebar-item-icon{
+    box-sizing:border-box;
+    padding:5px;
+}
+
 .menu2 a:hover,
 .menu2 a:focus-visible,
 .menu2 a:active{
     padding-left: 22px;
     background: #ededed;
     outline: none;
+}
+
+.menu2 a[aria-current="page"]{
+    padding-left:22px;
+    color:#333;
+    background:#f5e5dd;
+    box-shadow:inset 4px 0 0 #E5A484;
+    font-weight:700;
+}
+
+.menu2 a[aria-current="page"]:hover,
+.menu2 a[aria-current="page"]:focus-visible,
+.menu2 a[aria-current="page"]:active{
+    background:#f1ddd3;
 }
 
 .social_media{

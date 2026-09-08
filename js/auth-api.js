@@ -2,12 +2,22 @@ const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const API_ROOT = window.MPWR_API_URL || (localHost ? "http://127.0.0.1:3000/v1" : "/api/v1");
 
 async function request(path, options = {}) {
-    const response = await fetch(`${API_ROOT}${path}`, {
-        method: options.method || "GET",
-        credentials: "include",
-        headers: options.body ? { "Content-Type": "application/json" } : undefined,
-        body: options.body ? JSON.stringify(options.body) : undefined
-    });
+    let response;
+    try {
+        response = await fetch(`${API_ROOT}${path}`, {
+            method: options.method || "GET",
+            credentials: "include",
+            headers: options.body ? { "Content-Type": "application/json" } : undefined,
+            body: options.body ? JSON.stringify(options.body) : undefined
+        });
+    } catch (cause) {
+        const error = new Error(localHost
+            ? "The sign-in service is not running. Start the MPWR API and try again."
+            : "The sign-in service is temporarily unavailable. Please try again.");
+        error.code = "auth/network-request-failed";
+        error.cause = cause;
+        throw error;
+    }
     const payload = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) {
         const error = new Error(payload?.message || `Authentication request failed (${response.status})`);
@@ -33,10 +43,18 @@ export function createAuth() {
     const auth = {
         currentUser: null,
         listeners: new Set(),
+        revision: 0,
         ready: null,
         async refresh() {
-            try { auth.currentUser = localUser(await request("/auth/me"), auth); }
-            catch (error) { if (error.code === "auth/invalid-credential") auth.currentUser = null; else throw error; }
+            const startingRevision = auth.revision;
+            let refreshedUser = null;
+            try { refreshedUser = localUser(await request("/auth/me"), auth); }
+            catch (error) {
+                if (error.code !== "auth/invalid-credential" && error.code !== "auth/network-request-failed") throw error;
+            }
+            // A login/register may finish while the initial session check is in
+            // flight. Never let that older response erase the new account.
+            if (startingRevision === auth.revision) auth.currentUser = refreshedUser;
             return auth.currentUser;
         },
         notify() { auth.listeners.forEach(listener => listener(auth.currentUser)); }
@@ -46,6 +64,7 @@ export function createAuth() {
 }
 
 async function applySession(auth, payload) {
+    auth.revision += 1;
     auth.currentUser = localUser(payload.user, auth);
     auth.notify();
     return { user: auth.currentUser, ...payload };
@@ -62,6 +81,7 @@ export async function signInWithEmailAndPassword(auth, email, password) {
 
 export async function signOut(auth) {
     await request("/auth/logout", { method: "POST" });
+    auth.revision += 1;
     auth.currentUser = null;
     auth.notify();
 }

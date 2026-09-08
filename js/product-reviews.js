@@ -6,10 +6,12 @@ import {
 } from "./firestore-api.js";
 import { openReviewLightbox } from "./review-lightbox.js";
 
+await (window.MPWRCatalogueReady || Promise.resolve(window.products));
+
 const db = window.db;
 const params = new URLSearchParams(window.location.search);
-const productId = Number(params.get("id"));
-const product = products.find(item => item.id === productId);
+const productId = params.get("id");
+const product = products.find(item => String(item.id) === String(productId));
 
 const backLink = document.querySelector(".product-reviews-back");
 const pageTitle = document.querySelector(".product-reviews-page-title");
@@ -235,12 +237,37 @@ function renderReviewList(reviews) {
             card.appendChild(attachmentGallery);
         }
 
+        if (String(review.adminReply || "").trim()) {
+            const reply = document.createElement("div");
+            reply.className = "review-admin-reply";
+            const replyHeading = document.createElement("div");
+            const replyAuthor = document.createElement("strong");
+            replyAuthor.className = "review-admin-reply-author";
+            const replyAuthorLabel = document.createElement("span");
+            replyAuthorLabel.textContent = "Response from MPWR";
+            const replyVerified = document.createElement("img");
+            replyVerified.className = "review-admin-reply-verified";
+            replyVerified.src = "images/Icon Folder/Verified Purchase Icon_333.PNG";
+            replyVerified.alt = "Verified MPWR";
+            replyAuthor.append(replyAuthorLabel, replyVerified);
+            const replyDate = document.createElement("time");
+            replyDate.textContent = reviewDate(review.adminRepliedAt);
+            replyHeading.append(replyAuthor, replyDate);
+            const replyText = document.createElement("p");
+            replyText.textContent = review.adminReply;
+            reply.append(replyHeading, replyText);
+            card.appendChild(reply);
+        }
+
         reviewList.appendChild(card);
     });
 
     productReviews.classList.remove("reviews-loading-state");
     productReviews.querySelector(".reviews-loading-placeholder")?.remove();
 }
+
+window.addEventListener("storage", event => { if (event.key === "mpwrReviewRevision" && event.newValue) window.location.reload(); });
+if ("BroadcastChannel" in window) new BroadcastChannel("mpwr-reviews").addEventListener("message", event => { if (event.data?.type === "reviews-changed") window.location.reload(); });
 
 async function loadProductReviews() {
     if (!product) {

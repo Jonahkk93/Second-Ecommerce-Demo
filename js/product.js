@@ -16,6 +16,8 @@ import {
 import { openReviewLightbox } from "./review-lightbox.js";
 import { deleteImage, uploadImage } from "./media-api.js";
 
+await (window.MPWRCatalogueReady || Promise.resolve(window.products));
+
 const auth = window.auth;
 const db = window.db;
 
@@ -29,8 +31,8 @@ const updateProductHeaderMode = () => {
 window.addEventListener("scroll", updateProductHeaderMode, { passive: true });
 updateProductHeaderMode();
 
-const productId = Number(params.get("id"));
-const product = products.find(item => item.id === productId);
+const productId = params.get("id");
+const product = products.find(item => String(item.id) === String(productId));
 
 function recordProductVisit(item) {
     if (!item) return;
@@ -115,6 +117,7 @@ sliderContainer?.classList.toggle(
 
 const thumbnailsContainer =
     document.querySelector(".product-thumbnails");
+const productVideosContainer = document.querySelector(".product-videos");
 
 // =========================
 // PRODUCT IMAGE SLIDER
@@ -264,6 +267,28 @@ function renderProductGallery(images) {
 
     currentSlide = 0;
     updateSlider(false);
+}
+
+function renderProductVideos(videos = []) {
+    const validVideos = (Array.isArray(videos) ? videos : [])
+        .filter(video => video?.url);
+    productVideosContainer.replaceChildren();
+    productVideosContainer.hidden = validVideos.length === 0;
+
+    validVideos.forEach((item, index) => {
+        const video = document.createElement("video");
+        video.className = "product-video";
+        video.controls = true;
+        video.preload = "metadata";
+        video.playsInline = true;
+        video.setAttribute("aria-label", item.name || `Product video ${index + 1}`);
+
+        const source = document.createElement("source");
+        source.src = item.url;
+        if (item.type) source.type = item.type;
+        video.appendChild(source);
+        productVideosContainer.appendChild(video);
+    });
 }
 
 [galleryPrevious, galleryNext].filter(Boolean).forEach(control => {
@@ -749,15 +774,17 @@ function openRelatedProductModal(item) {
 function renderRelatedProducts() {
     if (!product || !relatedProductsGrid) return;
 
-    const currentIndex = products.findIndex(item => item.id === product.id);
-    const recommendations = [];
     const recommendationLimit = window.matchMedia("(max-width: 600px)").matches ? 6 : 10;
     const savedFavorites = JSON.parse(localStorage.getItem("favorites")) || [];
-
-    for (let offset = 1; recommendations.length < Math.min(recommendationLimit, products.length - 1); offset++) {
-        const candidate = products[(currentIndex + offset) % products.length];
-        if (candidate.id !== product.id) recommendations.push(candidate);
-    }
+    const candidates = products.filter(candidate => candidate.id !== product.id);
+    const recommendations = window.MPWRDiscovery
+        ? window.MPWRDiscovery.rank(candidates, {
+            context: `related-product-${product.id}`,
+            limit: recommendationLimit,
+            baseOrderWeight: 0.08,
+            explorationWeight: 0.76
+        })
+        : candidates.slice(0, recommendationLimit);
 
     relatedProductsGrid.innerHTML = recommendations.map(item => `
         <div class="product-box" data-category="${item.category || ""}" data-id="${item.id}">
@@ -1183,6 +1210,28 @@ function renderReviewList(reviews) {
             card.appendChild(attachmentGallery);
         }
 
+        if (String(review.adminReply || "").trim()) {
+            const reply = document.createElement("div");
+            reply.className = "review-admin-reply";
+            const replyHeading = document.createElement("div");
+            const replyAuthor = document.createElement("strong");
+            replyAuthor.className = "review-admin-reply-author";
+            const replyAuthorLabel = document.createElement("span");
+            replyAuthorLabel.textContent = "Response from MPWR";
+            const replyVerified = document.createElement("img");
+            replyVerified.className = "review-admin-reply-verified";
+            replyVerified.src = "images/Icon Folder/Verified Purchase Icon_333.PNG";
+            replyVerified.alt = "Verified MPWR";
+            replyAuthor.append(replyAuthorLabel, replyVerified);
+            const replyDate = document.createElement("time");
+            replyDate.textContent = reviewDate(review.adminRepliedAt);
+            replyHeading.append(replyAuthor, replyDate);
+            const replyText = document.createElement("p");
+            replyText.textContent = review.adminReply;
+            reply.append(replyHeading, replyText);
+            card.appendChild(reply);
+        }
+
         reviewList.appendChild(card);
         clampReviewPreview(body);
     });
@@ -1193,6 +1242,9 @@ function renderReviewList(reviews) {
 reviewsReadMore?.addEventListener("click", () => {
     window.location.href = `product-reviews.html?id=${encodeURIComponent(product.id)}`;
 });
+
+window.addEventListener("storage", event => { if (event.key === "mpwrReviewRevision" && event.newValue) window.location.reload(); });
+if ("BroadcastChannel" in window) new BroadcastChannel("mpwr-reviews").addEventListener("message", event => { if (event.data?.type === "reviews-changed") window.location.reload(); });
 
 window.addEventListener("resize", () => {
     document.querySelectorAll(".review-preview-text").forEach(clampReviewPreview);
@@ -2035,6 +2087,7 @@ function updateFavoriteIcon() {
 
 if (product) {
     renderProductGallery(product.gallery || [product.image]);
+    renderProductVideos(product.videos);
     optionsPanel.hidden = optionGroups.length === 0;
 
     productTitle.textContent = product.title;
