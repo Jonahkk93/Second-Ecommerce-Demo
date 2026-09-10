@@ -1,0 +1,151 @@
+.discount-shop {
+    padding-top: 64px;
+}
+
+.discount-section-heading {
+    position: relative;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.discount-section-heading .section-title {
+    margin-bottom: 0;
+}
+
+.discount-view-all {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    color: #9c674d;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transform: translateY(-50%);
+}
+
+.discount-view-all:hover,
+.discount-view-all:focus-visible {
+    text-decoration: underline;
+}
+
+.discount-eyebrow {
+    margin: 0 0 8px;
+    color: #9c674d;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.discount-product-box .img-box {
+    overflow: hidden;
+}
+
+.discount-badge {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 4px 8px;
+    border-radius: 7px;
+    background: #E5A484;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .25px;
+    box-shadow: 0 4px 12px rgba(156, 103, 77, .16);
+}
+
+.discount-price-group {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.discount-product-box .price-and-cart .price {
+    color: #9c674d;
+    font-weight: 700;
+}
+
+.original-price {
+    color: #999;
+    font-size: 12px;
+    line-height: 1.2;
+    text-decoration: line-through;
+}
+
+.discounts-page #products,
+.discounts-page .home-category-sections {
+    display: none !important;
+}
+
+.discounts-page .discount-shop {
+    min-height: 65vh;
+    padding-top: 136px;
+}
+
+.discounts-page .discount-view-all {
+    display: none;
+}
+
+.category-page:not(.discounts-page) .discount-shop {
+    display: none;
+}
+
+.discount-empty-state {
+    grid-column: 1 / -1;
+    margin: 40px 0;
+    color: #777;
+    text-align: center;
+}
+
+@media screen and (max-width: 600px) {
+    .discount-shop {
+        padding-top: 48px;
+    }
+
+    .discount-section-heading {
+        margin-bottom: 24px;
+    }
+
+    .discount-view-all {
+        top: auto;
+        right: 4px;
+        bottom: 3px;
+        font-size: 12px;
+        transform: none;
+    }
+
+    .discounts-page .discount-shop {
+        padding-top: 108px;
+    }
+
+    .discount-eyebrow {
+        font-size: 11px;
+        letter-spacing: 1.3px;
+    }
+
+    .discount-badge {
+        top: 9px;
+        right: 9px;
+        min-height: 24px;
+        padding: 4px 8px;
+        border-radius: 7px;
+        font-size: 10px;
+    }
+
+    .discount-product-box .price-and-cart .price {
+        font-size: 13px;
+    }
+
+    .original-price {
+        font-size: 10px;
+    }
+}

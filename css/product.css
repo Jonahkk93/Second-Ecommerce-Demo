@@ -5504,3 +5504,91 @@ html.site-loading-enabled :is(
     padding:0;
     box-sizing:border-box;
 }
+/* Consistent discounted pricing on product, modal, cart and wishlist views. */
+.mpwr-price-pair {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    line-height: 1.15;
+}
+
+.product-modal-price .mpwr-price-pair.is-modal-price {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.product-modal-price .is-modal-price .mpwr-original-price {
+    order: 1;
+}
+
+.product-modal-price .is-modal-price .mpwr-sale-price {
+    order: 2;
+}
+
+.mpwr-sale-price {
+    color: #E5A484;
+    font-weight: 600;
+}
+
+.mpwr-original-price {
+    color: #999;
+    font-size: .78em;
+    font-weight: 400;
+    line-height: 1;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+.product-page-price .is-product-page-price {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.product-page-price .is-product-page-price .mpwr-original-price {
+    order: 1;
+}
+
+.product-page-price .is-product-page-price .mpwr-sale-price {
+    order: 2;
+}
+
+.product-page-price .mpwr-original-price {
+    font-size: .52em;
+}
+
+.wishlist-details .wishlist-price .mpwr-sale-price,
+.cart-price .mpwr-sale-price,
+.product-modal-price .mpwr-sale-price {
+    color: #E5A484;
+}
+
+.wishlist-details .wishlist-price .mpwr-original-price,
+.cart-price .mpwr-original-price,
+.product-modal-price .mpwr-original-price {
+    color: #999;
+}
+
+/* Keep drawer prices on one line: original first, discounted price on the right. */
+.wishlist-price .mpwr-price-pair.is-drawer-price,
+.cart-price .mpwr-price-pair.is-drawer-price {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.wishlist-price .is-drawer-price .mpwr-original-price,
+.cart-price .is-drawer-price .mpwr-original-price {
+    order: 1;
+}
+
+.wishlist-price .is-drawer-price .mpwr-sale-price,
+.cart-price .is-drawer-price .mpwr-sale-price {
+    order: 2;
+    font-size: .78em;
+}

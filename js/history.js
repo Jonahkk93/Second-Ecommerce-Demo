@@ -2,6 +2,8 @@ import { mountMPWRDrawers } from "./drawer-component.js?v=20260816-6";
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from "./firestore-api.js";
 import { onAuthStateChanged } from "./auth-api.js";
 
+await (window.MPWRCatalogueReady || Promise.resolve(window.products));
+
 mountMPWRDrawers(document.body);
 
 const historyGrid = document.querySelector(".history-products");
@@ -45,6 +47,7 @@ let pendingMoveToWishlist = null;
 let selectedModalProduct = null;
 let selectedModalOptions = {};
 let selectedModalPrice = 0;
+let selectedModalRegularPrice = 0;
 
 function showToast(message,type = "success") {
     const toast = document.querySelector(".toast");
@@ -95,8 +98,7 @@ function cartImage(item) {
 }
 
 function cartPrice(item) {
-    const value = item.price ?? cartProduct(item)?.price ?? 0;
-    return Number(String(value).replace(/[^0-9.]/g,"")) || 0;
+    return window.MPWRPricing.details(item).current;
 }
 
 function cartProductLink(item) {
@@ -190,7 +192,7 @@ function renderCart() {
         const selections = Object.values(cartSelections(item)).filter(Boolean).join(" • ");
         const row = document.createElement("article");
         row.className = "cart-box";
-        row.innerHTML = `<div class="cart-swipe-actions" aria-hidden="true"><button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist"><img src="images/Icon Folder/Move To Favorites Outline Icon_White.PNG" alt=""><span>Wishlist</span></button><button class="cart-swipe-action cart-share" type="button" aria-label="Share item"><img src="images/Icon Folder/Share Icon V2_White.PNG" alt=""><span>Share</span></button><button class="cart-swipe-action cart-delete" type="button" aria-label="Delete item"><img src="images/Icon Folder/Delete Icon_White.PNG" alt=""><span>Delete</span></button></div><div class="cart-box-main"><a href="${cartProductLink(item)}" class="cart-product-link" aria-label="View ${cartTitle(item)}"><img class="cart-img" src="${cartImage(item)}" alt="${cartTitle(item)}" loading="lazy" decoding="async"></a><div class="cart-detail"><h2 class="cart-product-title"><a href="${cartProductLink(item)}" class="cart-title-link">${cartTitle(item)}</a></h2><div class="cart-variants">${selections}</div><span class="cart-price">UGX ${cartPrice(item).toLocaleString()}</span><div class="cart-quantity"><button class="decrement" type="button" aria-label="Decrease quantity"><img src="images/Icon Folder/Minus Icon_333.PNG" alt=""></button><span class="number">${quantity}</span><button class="increment" type="button" aria-label="Increase quantity"><img src="images/Icon Folder/Plus Icon_333.PNG" alt=""></button></div></div><div class="cart-item-actions"><img src="images/Icon Folder/Delete Icon_333.PNG" class="cart-remove" alt="Remove item" role="button" tabindex="0"></div></div>`;
+        row.innerHTML = `<div class="cart-swipe-actions" aria-hidden="true"><button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist"><img src="images/Icon Folder/Move To Favorites Outline Icon_White.PNG" alt=""><span>Wishlist</span></button><button class="cart-swipe-action cart-share" type="button" aria-label="Share item"><img src="images/Icon Folder/Share Icon V2_White.PNG" alt=""><span>Share</span></button><button class="cart-swipe-action cart-delete" type="button" aria-label="Delete item"><img src="images/Icon Folder/Delete Icon_White.PNG" alt=""><span>Delete</span></button></div><div class="cart-box-main"><a href="${cartProductLink(item)}" class="cart-product-link" aria-label="View ${cartTitle(item)}"><img class="cart-img" src="${cartImage(item)}" alt="${cartTitle(item)}" loading="lazy" decoding="async"></a><div class="cart-detail"><h2 class="cart-product-title"><a href="${cartProductLink(item)}" class="cart-title-link">${cartTitle(item)}</a></h2><div class="cart-variants">${selections}</div><span class="cart-price">${window.MPWRPricing.markup(item, undefined, "is-drawer-price")}</span><div class="cart-quantity"><button class="decrement" type="button" aria-label="Decrease quantity"><img src="images/Icon Folder/Minus Icon_333.PNG" alt=""></button><span class="number">${quantity}</span><button class="increment" type="button" aria-label="Increase quantity"><img src="images/Icon Folder/Plus Icon_333.PNG" alt=""></button></div></div><div class="cart-item-actions"><img src="images/Icon Folder/Delete Icon_333.PNG" class="cart-remove" alt="Remove item" role="button" tabindex="0"></div></div>`;
 
         const number = row.querySelector(".number");
         const updateQuantity = nextQuantity => {
@@ -443,11 +445,12 @@ function openProductModal(item) {
         const images = variant?.images || variant?.gallery || product.variantGalleries?.[key] ||
             product.variantGalleries?.[color]?.[size] || product.sizeGalleries?.[size] ||
             product.galleries?.[color] || product.gallery || [product.image];
-        selectedModalPrice = variant?.price || product.variantPrices?.[key] ||
+        selectedModalRegularPrice = variant?.price || product.variantPrices?.[key] ||
             product.variantPrices?.[color]?.[size] || product.sizePrices?.[size] ||
             product.colorPrices?.[color] || product.price;
+        selectedModalPrice = window.MPWRPricing.details(product, selectedModalRegularPrice).current;
         productModalImage.src = window.normalizeMPWRImagePath?.(images[0] || product.image,product.id) || images[0] || product.image;
-        productModalPrice.textContent = `UGX ${Number(String(selectedModalPrice).replace(/[^0-9.]/g,"")).toLocaleString()}`;
+        productModalPrice.innerHTML = window.MPWRPricing.markup(product, selectedModalRegularPrice, "is-modal-price");
         const parameters = new URLSearchParams({id:String(product.id)});
         Object.entries(selectedModalOptions).forEach(([keyName,value]) => { if (value) parameters.set(keyName,value); });
         const href = `product.html?${parameters.toString()}`;
@@ -538,7 +541,7 @@ function renderWishlist() {
             </a>
             <div class="wishlist-details">
                 <h3><a href="${cartProductLink(item)}" class="wishlist-title-link">${cartTitle(item)}</a></h3>
-                <span>UGX ${cartPrice(item).toLocaleString()}</span>
+                <span class="wishlist-price">${window.MPWRPricing.markup(item, undefined, "is-drawer-price")}</span>
                 <button class="wishlist-add-cart" type="button">Add to Cart</button>
             </div>
             <button class="wishlist-remove" type="button" aria-label="Remove ${cartTitle(item)} from wishlist">
@@ -643,7 +646,7 @@ function createProductCard(product, favorites) {
         </div>
         <h2 class="product-title">${product.title}</h2>
         <div class="price-and-cart">
-            <span class="price">UGX ${Number(String(product.price).replace(/[^0-9.]/g, "")).toLocaleString()}</span>
+            <span class="price">${window.MPWRPricing.markup(product, undefined, "is-card-price")}</span>
             <div class="history-product-menu">
                 <button class="history-product-menu-trigger" type="button" aria-label="Product options" aria-expanded="false">
                     <img src="images/Icon Folder/3 Dots Icon_E5A484.PNG" alt="">
@@ -907,6 +910,8 @@ productModalCart.addEventListener("click",() => {
         id:String(selectedModalProduct.id),
         title:selectedModalProduct.title,
         price:Number(String(selectedModalPrice).replace(/[^0-9.]/g,"")),
+        originalPrice:Number(String(selectedModalRegularPrice).replace(/[^0-9.]/g,"")),
+        discountPercent:window.MPWRPricing.details(selectedModalProduct, selectedModalRegularPrice).percent,
         image:productModalImage.src,
         quantity:1,
         selectedOptions:{...selectedModalOptions}

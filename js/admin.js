@@ -20,25 +20,31 @@ import { adminAuth, adminDb } from "./admin-firebase.js";
 
 const auth = adminAuth;
 const db = adminDb;
+const ordersPortal = document.body.dataset.ordersPortal === "true";
 const ordersList = document.querySelector(".orders-list");
 const orderSearch = document.getElementById("order-search");
 const adminDashboard = document.getElementById("admin-dashboard");
-const adminAccountButton = document.getElementById("admin-account-button");
-const adminAccountMenu = document.getElementById("admin-account-menu");
-const adminAccountEmail = document.getElementById("admin-account-email");
-const adminAccountPhoto = document.getElementById("admin-account-photo");
-const adminAccountInitials = document.getElementById("admin-account-initials");
-const adminSignout = document.getElementById("admin-signout");
+const portalAccountButton = ordersPortal ? document.getElementById("admin-account-button") : null;
+const portalAccountMenu = ordersPortal ? document.getElementById("admin-account-menu") : null;
+const portalAccountEmail = ordersPortal ? document.getElementById("admin-account-email") : null;
+const portalAccountInitials = ordersPortal ? document.getElementById("admin-account-initials") : null;
+const portalSignout = ordersPortal ? document.getElementById("admin-signout") : null;
 const statusConfirm = document.getElementById("admin-status-confirm");
 const statusConfirmName = document.getElementById("admin-status-confirm-name");
 const statusConfirmCancel = statusConfirm.querySelector(".admin-status-cancel");
 const dashboardNavLink = document.querySelector('.admin-side-nav a[href="admin.html"]');
 const ordersNavLink = document.querySelector('.admin-side-nav a[href="#orders"]');
+const adminTopNav = document.querySelector(".admin-dashboard > .admin-nav");
 
 function syncAdminNavSelection() {
     const ordersSelected = window.location.hash === "#orders";
     dashboardNavLink?.classList.toggle("active", !ordersSelected);
     ordersNavLink?.classList.toggle("active", ordersSelected);
+    if (!ordersPortal) {
+        adminTopNav?.classList.toggle("orders-view-hidden", ordersSelected);
+        adminDashboard?.classList.toggle("orders-view", ordersSelected);
+        document.documentElement.classList.toggle("management-orders-view", ordersSelected);
+    }
 }
 
 syncAdminNavSelection();
@@ -66,7 +72,9 @@ async function publishBestsellers(orders) {
         .sort((a, b) => b.unitsSold - a.unitsSold || a.id.localeCompare(b.id))
         .slice(0, 10);
 
-    await setDoc(doc(db, "storefront", "popular"), {
+    // Sales rankings are analytics data. Keep them separate from the manually
+    // curated Popular selection managed on the Homepage screen.
+    await setDoc(doc(db, "storefront", "bestsellers"), {
         products,
         windowDays: BESTSELLER_WINDOW_DAYS,
         updatedAt: serverTimestamp()
@@ -102,36 +110,27 @@ statusConfirm.addEventListener("click", event => {
 
 function showDashboard(profile = {}) {
     adminDashboard.hidden = false;
-    adminAccountEmail.textContent = auth.currentUser?.email || "Admin account";
-
-    const initials = `${profile.firstName?.trim()?.[0] || ""}${profile.lastName?.trim()?.[0] || ""}` ||
-        auth.currentUser?.email?.[0] || "A";
-    adminAccountInitials.textContent = initials.toUpperCase();
-
-    if (profile.profileImage) {
-        adminAccountPhoto.src = profile.profileImage;
-        adminAccountButton.classList.add("has-photo");
-        adminAccountPhoto.onerror = () => {
-            adminAccountPhoto.onerror = null;
-            adminAccountButton.classList.remove("has-photo");
-        };
-    } else {
-        adminAccountButton.classList.remove("has-photo");
-    }
+    if (portalAccountEmail) portalAccountEmail.textContent = auth.currentUser?.email || "Orders account";
+    if (portalAccountInitials) portalAccountInitials.textContent = (auth.currentUser?.email?.trim()?.[0] || "A").toUpperCase();
 }
 
-adminAccountButton.addEventListener("click", event => {
+portalAccountButton?.addEventListener("click", event => {
     event.stopPropagation();
-    const willOpen = adminAccountMenu.hidden;
-    adminAccountMenu.hidden = !willOpen;
-    adminAccountButton.setAttribute("aria-expanded", String(willOpen));
+    const willOpen = portalAccountMenu.hidden;
+    portalAccountMenu.hidden = !willOpen;
+    portalAccountButton.setAttribute("aria-expanded", String(willOpen));
+});
+
+portalSignout?.addEventListener("click", async () => {
+    await signOut(auth);
+    window.location.replace("order-management-login.html");
 });
 
 document.addEventListener("click", event => {
-    if (event.target.closest(".admin-account")) return;
-    adminAccountMenu.hidden = true;
-    adminAccountButton.setAttribute("aria-expanded", "false");
-
+    if (portalAccountMenu && !event.target.closest(".admin-account")) {
+        portalAccountMenu.hidden = true;
+        portalAccountButton.setAttribute("aria-expanded", "false");
+    }
     document.querySelectorAll(".status-picker-menu:not([hidden])").forEach(menu => {
         menu.hidden = true;
         menu.closest(".status-picker")
@@ -140,26 +139,22 @@ document.addEventListener("click", event => {
     });
 });
 
-adminSignout.addEventListener("click", async () => {
-    await signOut(auth);
-    window.location.replace("admin-login.html");
-});
-
 onAuthStateChanged(auth, async (user) => {
 
     if (!user) {
-        window.location.replace("admin-login.html");
+        window.location.replace(ordersPortal ? "order-management-login.html" : "admin-login.html");
         return;
     }
 
     try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        const userData = userDoc.exists() ? userDoc.data() : {};
-        const isAdmin = userDoc.exists() && userData.role === "admin";
+        const userDoc = ordersPortal ? null : await getDoc(doc(db, "users", user.uid));
+        const userData = ordersPortal ? user : userDoc?.exists() ? userDoc.data() : {};
+        const isAdmin = userData.role === "admin";
+        const hasOrdersAccess = isAdmin || (ordersPortal && userData.role === "orders");
 
-        if (!isAdmin) {
+        if (!hasOrdersAccess) {
             await signOut(auth);
-            window.location.replace("admin-login.html?error=unauthorized");
+            window.location.replace(ordersPortal ? "order-management-login.html?error=unauthorized" : "admin-login.html?error=unauthorized");
             return;
         }
 
@@ -167,7 +162,7 @@ onAuthStateChanged(auth, async (user) => {
     } catch (error) {
         console.error("Unable to verify administrator access:", error);
         await signOut(auth);
-        window.location.replace("admin-login.html?error=verification");
+        window.location.replace(ordersPortal ? "order-management-login.html?error=verification" : "admin-login.html?error=verification");
         return;
     }
 
@@ -199,10 +194,12 @@ ordersList.innerHTML = `
         )
     );
 
-    try {
-        await publishBestsellers(snapshot.docs.map(orderDoc => orderDoc.data()));
-    } catch (error) {
-        console.error("Could not refresh the popular-products summary", error);
+    if (!ordersPortal) {
+        try {
+            await publishBestsellers(snapshot.docs.map(orderDoc => orderDoc.data()));
+        } catch (error) {
+            console.error("Could not refresh the popular-products summary", error);
+        }
     }
 
     ordersList.innerHTML = "";
@@ -241,10 +238,10 @@ for (const orderDoc of snapshot.docs) {
 
     </div>
 `).join("");
-        let customerName = "Unknown Customer";
-let customerEmail = "No email";
+        let customerName = `${order.customer?.firstName || ""} ${order.customer?.lastName || ""}`.trim() || order.customer?.name || "Unknown Customer";
+let customerEmail = order.customer?.email || "No email";
 
-try {
+if (!ordersPortal) try {
     const customerDoc = await getDoc(doc(db, "users", order.userId));
 
 if (customerDoc.exists()) {
@@ -391,14 +388,16 @@ option.addEventListener("click", async event => {
     try {
         await updateDoc(doc(db, "orders", orderDoc.id), { status: nextStatus });
         order.status = nextStatus;
-        try {
-            await publishBestsellers(snapshot.docs.map(item =>
-                item.id === orderDoc.id
-                    ? { ...item.data(), status: nextStatus }
-                    : item.data()
-            ));
-        } catch (error) {
-            console.error("Could not refresh the popular-products summary", error);
+        if (!ordersPortal) {
+            try {
+                await publishBestsellers(snapshot.docs.map(item =>
+                    item.id === orderDoc.id
+                        ? { ...item.data(), status: nextStatus }
+                        : item.data()
+                ));
+            } catch (error) {
+                console.error("Could not refresh the popular-products summary", error);
+            }
         }
     } finally {
         statusTrigger.disabled = false;

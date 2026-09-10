@@ -41,7 +41,10 @@ import {
     onAuthStateChanged
 } from "./auth-api.js";
 
-await (window.MPWRCatalogueReady || Promise.resolve(window.products));
+await Promise.all([
+    window.MPWRCatalogueReady || Promise.resolve(window.products),
+    window.MPWRDiscountsReady || Promise.resolve()
+]);
 
 const auth = window.auth;
 
@@ -220,6 +223,7 @@ let selectedProduct = null;
 let selectedModalProduct = null;
 let selectedModalOptions = {};
 let selectedModalPrice = "0";
+let selectedModalRegularPrice = "0";
 const productsById = Object.fromEntries(
     products.map(product => [product.id, product])
 );
@@ -436,9 +440,7 @@ async function saveOrderToFirestore() {
 
             total: cartItems.reduce((sum, item) => {
 
-                const price = Number(
-                    String(item.price).replace(/[^\d]/g, "")
-                );
+                const price = window.MPWRPricing.details(item).current;
 
                 return sum + (price * item.quantity);
 
@@ -635,7 +637,7 @@ function updateTotalPrice() {
 
         console.log("PRICE:", item.price);
 
-        const price = Number(String(item.price).replace(/[^\d]/g, ""));
+        const price = window.MPWRPricing.details(item).current;
 
         console.log("PARSED:", price);
 
@@ -788,13 +790,19 @@ function saveWishlist() {
 
 function createCartItem(productBox, selections = {}, overrides = {}) {
 
+    const product = productsById[Number(productBox.dataset.id)];
+    const regularPrice = overrides.originalPrice || product?.price || productBox.querySelector(".original-price")?.textContent || productBox.querySelector(".price")?.textContent;
+    const pricing = window.MPWRPricing.details(product || { id: productBox.dataset.id, price: regularPrice }, regularPrice);
+
     return {
 
         id: productBox.dataset.id,
 
         title: productBox.querySelector(".product-title").textContent,
 
-        price: overrides.price || productBox.querySelector(".price").textContent,
+        price: overrides.price || pricing.current,
+        originalPrice: pricing.regular,
+        discountPercent: pricing.percent,
 
         image: overrides.image || productBox.querySelector(".img-box > img").src,
 
@@ -867,7 +875,7 @@ function createCartBox(cartItem) {
 </div>
 
 <span class="cart-price">
-UGX ${Number(String(cartItem.price).replace(/[^\d]/g, "")).toLocaleString()}
+${window.MPWRPricing.markup(cartItem, undefined, "is-drawer-price")}
 
             </span>
 
@@ -1888,9 +1896,7 @@ function createWishlistItem(item) {
                 <a href="${productHref}" class="wishlist-title-link">${item.title}</a>
             </h3>
 
-           <span>
-    UGX ${Number(String(item.price).replace(/[^\d]/g, "")).toLocaleString()}
-</span>
+           <span class="wishlist-price">${window.MPWRPricing.markup(item, undefined, "is-drawer-price")}</span>
 
             <button class="wishlist-add-cart">
 
@@ -2305,16 +2311,24 @@ function openProductModal(productBox) {
             product.galleries?.[color] ||
             product.gallery || [product.image];
 
-        selectedModalPrice = variant?.price ||
+        const regularModalPrice = variant?.price ||
             product.variantPrices?.[key] ||
             product.variantPrices?.[color]?.[size] ||
             product.sizePrices?.[size] ||
             product.colorPrices?.[color] ||
             product.price;
+        selectedModalRegularPrice = regularModalPrice;
+        const pricing = window.MPWRPricing.details({
+            ...product,
+            discountPercent: productBox.dataset.discountPercent || product.discountPercent
+        }, regularModalPrice);
+        selectedModalPrice = pricing.current;
 
         productModalImage.src = images[0] || product.image;
-        productModalPrice.textContent =
-            `UGX ${Number(selectedModalPrice).toLocaleString()}`;
+        productModalPrice.innerHTML = window.MPWRPricing.markup({
+            ...product,
+            discountPercent: pricing.percent
+        }, regularModalPrice, "is-modal-price");
 
         const detailParams = new URLSearchParams({ id: String(product.id) });
         Object.entries(selectedModalOptions).forEach(([optionKey, value]) => {
@@ -2416,9 +2430,12 @@ productBoxes.forEach(product => {
         // Don't navigate if clicking Wishlist
         if (event.target.closest(".wishlist-btn")) return;
 
-        const productId = product.dataset.id;
+        const detailParams = new URLSearchParams({ id: product.dataset.id });
+        if (product.dataset.discountPercent) {
+            detailParams.set("discount", product.dataset.discountPercent);
+        }
 
-        window.location.href = `product.html?id=${productId}`;
+        window.location.href = `product.html?${detailParams.toString()}`;
 
     });
 
@@ -2468,6 +2485,7 @@ productModalCart.addEventListener("click", () => {
         selectedModalOptions,
         {
             price: selectedModalPrice,
+            originalPrice: selectedModalRegularPrice,
             image: productModalImage.src
         }
     );

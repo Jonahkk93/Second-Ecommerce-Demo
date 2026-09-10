@@ -35,6 +35,9 @@ if (loginErrorCode === "unauthorized") {
 
 function friendlyLoginError(error) {
     const code = String(error?.code || "");
+    if (code.includes("network-request-failed")) {
+        return "The MPWR sign-in service is not running. Start Docker Desktop, then try again.";
+    }
     if (code.includes("invalid-credential")) return "Incorrect email or password.";
     if (code.includes("too-many-requests")) return "Too many attempts. Please try again later.";
     return "Unable to sign in. Please try again.";

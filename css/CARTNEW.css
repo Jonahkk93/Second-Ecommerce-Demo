@@ -340,7 +340,7 @@ header{
 
 /*CATALOG*/
 .shop{
-    padding: 100px 9% 30px;
+    padding: 136px 9% 30px;
 }
 
 /*Catalogue Title*/
@@ -3548,6 +3548,7 @@ margin-top:50px;
 /* Keep the catalogue inside the phone viewport, including narrow devices. */
 .shop{
     width:100%;
+    padding-top:108px;
     padding-right:9%;
     padding-left:9%;
 }
@@ -5374,3 +5375,72 @@ header{
 
 
 
+/* Shared sale-price treatment used by cards, product modals, cart and wishlist. */
+.mpwr-price-pair {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    line-height: 1.15;
+}
+
+.product-modal-price .mpwr-price-pair.is-modal-price {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.product-modal-price .is-modal-price .mpwr-original-price {
+    order: 1;
+}
+
+.product-modal-price .is-modal-price .mpwr-sale-price {
+    order: 2;
+}
+
+.mpwr-sale-price {
+    color: #E5A484;
+    font-weight: 600;
+}
+
+.mpwr-original-price {
+    color: #999;
+    font-size: .78em;
+    font-weight: 400;
+    line-height: 1;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+.wishlist-details .wishlist-price .mpwr-sale-price,
+.cart-price .mpwr-sale-price,
+.product-modal-price .mpwr-sale-price {
+    color: #E5A484;
+}
+
+.wishlist-details .wishlist-price .mpwr-original-price,
+.cart-price .mpwr-original-price,
+.product-modal-price .mpwr-original-price {
+    color: #999;
+}
+
+/* Keep drawer prices on one line: original first, discounted price on the right. */
+.wishlist-price .mpwr-price-pair.is-drawer-price,
+.cart-price .mpwr-price-pair.is-drawer-price {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.wishlist-price .is-drawer-price .mpwr-original-price,
+.cart-price .is-drawer-price .mpwr-original-price {
+    order: 1;
+}
+
+.wishlist-price .is-drawer-price .mpwr-sale-price,
+.cart-price .is-drawer-price .mpwr-sale-price {
+    order: 2;
+    font-size: .78em;
+}

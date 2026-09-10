@@ -2,6 +2,8 @@ import { addDoc, collection, doc, getDoc, initializePayment, serverTimestamp, se
 import { onAuthStateChanged } from "./auth-api.js";
 import { deliveryQuoteFor, populateUgandaDistricts } from "./shipping-config.js?v=20260827-2";
 
+await (window.MPWRCatalogueReady || Promise.resolve(window.products));
+
 const auth = window.auth;
 const db = window.db;
 const form = document.getElementById("checkout-form");

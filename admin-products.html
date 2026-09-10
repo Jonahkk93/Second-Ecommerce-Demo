@@ -4,32 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPWR Management</title>
-    <link rel="stylesheet" href="css/admin-products.css?v=20260908-18">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260910-63">
     <link rel="stylesheet" href="css/Larke.css">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
+    <link rel="stylesheet" href="css/management-navigation.css?v=20260909-30">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
     <script src="js/touch-interactions.js" defer></script>
+    <script src="js/management-navigation.js?v=20260909-13" defer></script>
+    <script type="module" src="js/management-account.js?v=20260909-3"></script>
 </head>
 <body>
 <div class="management-shell">
-    <aside class="management-sidebar">
-        <a class="management-brand" href="admin.html" aria-label="MPWR admin dashboard"><span>MPWR</span><small>Management</small></a>
-        <nav class="management-nav" aria-label="Management sections">
-            <a class="management-nav-item" href="admin.html"><span><img src="images/Icon Folder/Dashboard Icon_Light Gray.PNG" alt=""></span> Dashboard</a>
-            <a class="management-nav-item" href="admin.html#orders"><span><img src="images/Icon Folder/Order status_Light Gray.PNG" alt=""></span> Orders</a>
-            <button class="management-nav-item active" data-panel="catalogue" type="button"><span>▦</span> Products</button>
-            <button class="management-nav-item" data-panel="homepage" type="button"><span><img src="images/Icon Folder/Home Icon_Light Gray.PNG" alt=""></span> Homepage</button>
-            <button class="management-nav-item" data-panel="deleted" type="button"><span><img src="images/Icon Folder/Delete Icon_Light Gray.PNG" alt=""></span> Deleted Products <em id="deleted-nav-count">0</em></button>
-            <button class="management-nav-item" data-coming-soon="Customers" type="button"><span><img src="images/Icon Folder/Customers Icon_Light Gray.PNG" alt=""></span> Customers</button>
-            <a class="management-nav-item" href="admin-reviews.html"><span><img src="images/Icon Folder/Reviews Icon_Light Gray.PNG" alt=""></span> Reviews</a>
-            <a class="management-nav-item" href="admin-analytics.html"><span><img src="images/Icon Folder/Analytics Icon_Light Gray.PNG" alt=""></span> Analytics</a>
-            <button class="management-nav-item" data-coming-soon="Marketing" type="button"><span><img src="images/Icon Folder/Marketing Icon_Light Gray.PNG" alt=""></span> Marketing</button>
-            <button class="management-nav-item" data-coming-soon="Coupons" type="button"><span>◇</span> Coupons</button>
-            <button class="management-nav-item" data-coming-soon="Settings" type="button"><span><img src="images/Icon Folder/Settings Icon_Light Gray.PNG" alt=""></span> Settings</button>
-            <a class="management-nav-item" href="index.html" target="_blank"><span>↗</span> View website</a>
-        </nav>
-    </aside>
+    <aside class="management-sidebar" data-management-sidebar></aside>
 
     <main class="management-main">
         <header class="management-topbar">
@@ -57,16 +44,19 @@
 
         <section class="management-panel" data-panel-content="homepage">
             <div class="section-heading homepage-heading">
-                <div><p class="eyebrow">Merchandising</p><h2>Homepage popular products</h2><p>Choose up to 10 published products and arrange the order shoppers should see.</p></div>
+                <div><p class="eyebrow">Merchandising</p><div class="homepage-heading-title"><h2>Popular Products</h2><label class="toggle-row popular-mode-toggle"><input type="checkbox" id="popular-mode-automatic" aria-label="Use automatic popular products"><span class="toggle-control"></span><span class="popular-mode-toggle-label">Manual</span></label></div><p id="popular-mode-description">Choose up to 10 published products and arrange the order shoppers should see.</p></div>
             </div>
             <div class="homepage-layout">
-                <div class="homepage-preview-card"><span class="preview-label">Live section preview</span><h3>Popular</h3><div id="popular-selection" class="popular-selection"></div><p id="popular-selection-help">Select products from the catalogue on the right.</p></div>
+                <div class="homepage-preview-card" id="popular-preview-card"><span class="preview-label" id="popular-preview-label">Manual section preview</span><h3>Popular</h3><div id="popular-selection" class="popular-selection"></div><p id="popular-selection-help">Select products from the catalogue on the right.</p></div>
                 <div class="homepage-picker-card"><label class="search-field"><span>⌕</span><input type="search" id="homepage-search" placeholder="Find a published product…"></label><div id="homepage-products" class="homepage-products"></div></div>
             </div>
-            <div class="homepage-save-footer">
-                <button class="history-clear clear-wishlist" id="save-homepage" type="button">
-                    <span>Save Changes</span>
-                </button>
+            <div class="section-heading homepage-heading discount-management-heading">
+                <div><p class="eyebrow">Offers</p><div class="homepage-heading-title"><h2>Discount Products</h2><div class="discount-heading-toggles"><label class="toggle-row discount-mode-toggle"><input type="checkbox" id="discount-mode-automatic" aria-label="Use automatic discount products"><span class="toggle-control"></span><span class="discount-mode-toggle-label">Manual</span></label><label class="toggle-row homepage-section-toggle"><input type="checkbox" id="offer-section-enabled" aria-label="Show Offers on the homepage" checked><span class="toggle-control"></span><span class="homepage-section-toggle-label">Shown</span></label></div></div><p id="discount-mode-description">Choose and order every discounted product. The first 10 appear on the homepage; View All opens the complete list.</p></div>
+                <label class="discount-campaign-field" for="discount-campaign-label"><span>Select the Campaign</span><select id="discount-campaign-label"><option value="Limited Offers">Limited Offers</option><option value="Valentines Offers">Valentines Offers</option><option value="Christmas Offers">Christmas Offers</option><option value="Black Friday">Black Friday</option></select></label>
+            </div>
+            <div class="homepage-layout discount-management-layout">
+                <div class="homepage-preview-card" id="offer-preview-card"><span class="preview-label" id="discount-campaign-preview">Limited Offers</span><h3>Offers</h3><div id="discount-selection" class="popular-selection discount-selection"></div><p id="discount-selection-help">Select discount products from the catalogue on the right.</p></div>
+                <div class="homepage-picker-card"><label class="search-field"><span>⌕</span><input type="search" id="discount-search" placeholder="Find a published product…"></label><div id="discount-products" class="homepage-products"></div></div>
             </div>
         </section>
 
@@ -115,7 +105,11 @@
                 <label class="media-dropzone" for="product-media"><strong>Choose images or videos</strong><span>JPEG, PNG, WebP, GIF up to 5 MB · MP4, MOV, WebM up to 50 MB</span><input type="file" id="product-media" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm" multiple></label>
                 <p id="selected-media-count" class="product-media-help">No new files selected.</p>
             </section>
-            <section class="form-section compact-section"><label class="toggle-row"><input type="checkbox" id="product-featured"><span class="toggle-control"></span><span><strong>Feature on homepage</strong><small>Add this product to Popular when space is available.</small></span></label></section>
+            <section class="form-section compact-section product-merchandising-options">
+                <label class="toggle-row"><input type="checkbox" id="product-featured"><span class="toggle-control"></span><span><strong>Feature on homepage</strong><small>Add this product to Popular when space is available.</small></span></label>
+                <label class="toggle-row"><input type="checkbox" id="product-discounted"><span class="toggle-control"></span><span><strong>Put on discount</strong><small>Add this product to the Offer catalogue.</small></span></label>
+                <label class="field product-discount-field hidden" id="product-discount-field"><span>Discount percentage</span><span class="discount-editor-input"><input type="number" id="product-discount-percent" min="1" max="95" step="1" value="15"><strong>% off</strong></span></label>
+            </section>
             <div class="form-actions"><button class="secondary-button close-modal-secondary" type="button">Cancel</button><button class="primary-button" id="save-product" type="submit">Save Product</button></div>
         </form>
     </div>
@@ -124,10 +118,12 @@
 <div class="confirm-modal hidden" role="dialog" aria-modal="true" aria-labelledby="archive-title"><div class="confirm-card"><h2 id="archive-title">Delete product?</h2><p>The product will leave the website and move to Deleted Products. You have 60 days to restore it.</p><div><button class="secondary-button" id="cancel-archive" type="button">Cancel</button><button class="danger-button" id="confirm-archive" type="button">Delete Product</button></div></div></div>
 <div class="confirm-modal hidden" id="restore-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="restore-confirm-title" aria-describedby="restore-confirm-message"><div class="confirm-card"><h2 id="restore-confirm-title">Restore product?</h2><p id="restore-confirm-message">This product will return to the catalogue.</p><div><button class="secondary-button" id="cancel-restore" type="button">Cancel</button><button class="primary-button" id="confirm-restore" type="button">Restore Product</button></div></div></div>
 <div class="confirm-modal hidden" id="permanent-delete-modal" role="dialog" aria-modal="true" aria-labelledby="permanent-delete-title" aria-describedby="permanent-delete-message"><div class="confirm-card"><h2 id="permanent-delete-title">Permanently delete product?</h2><p id="permanent-delete-message">This product will be permanently removed and cannot be restored.</p><div><button class="secondary-button" id="cancel-permanent-delete" type="button">Cancel</button><button class="danger-button" id="confirm-permanent-delete" type="button">Delete Permanently</button></div></div></div>
-<div class="confirm-modal hidden" id="homepage-selection-modal" role="dialog" aria-modal="true" aria-labelledby="homepage-selection-title" aria-describedby="homepage-selection-message"><div class="confirm-card"><h2 id="homepage-selection-title">Change homepage product?</h2><p id="homepage-selection-message">Confirm this change to the homepage Popular section.</p><div><button class="secondary-button" id="cancel-homepage-selection" type="button">Cancel</button><button class="primary-button" id="confirm-homepage-selection" type="button">Confirm</button></div></div></div>
+<div class="confirm-modal hidden" id="homepage-addition-modal" role="dialog" aria-modal="true" aria-labelledby="homepage-addition-title" aria-describedby="homepage-addition-message"><div class="confirm-card"><h2 id="homepage-addition-title">Add product?</h2><p id="homepage-addition-message">This product will be added to the selected homepage section.</p><div><button class="secondary-button" id="cancel-homepage-addition" type="button">Cancel</button><button class="primary-button" id="confirm-homepage-addition" type="button">Add Product</button></div></div></div>
+<div class="confirm-modal hidden" id="homepage-setting-modal" role="dialog" aria-modal="true" aria-labelledby="homepage-setting-title" aria-describedby="homepage-setting-message"><div class="confirm-card"><h2 id="homepage-setting-title">Confirm homepage change?</h2><p id="homepage-setting-message">This setting will be updated on the homepage.</p><div><button class="secondary-button" id="cancel-homepage-setting" type="button">Cancel</button><button class="primary-button" id="confirm-homepage-setting" type="button">Confirm Change</button></div></div></div>
+<div class="confirm-modal hidden" id="homepage-removal-modal" role="dialog" aria-modal="true" aria-labelledby="homepage-removal-title" aria-describedby="homepage-removal-message"><div class="confirm-card"><h2 id="homepage-removal-title">Remove product?</h2><p id="homepage-removal-message">This product will be removed from the homepage Popular section when you save your changes.</p><div><button class="secondary-button" id="cancel-homepage-removal" type="button">Cancel</button><button class="danger-button" id="confirm-homepage-removal" type="button">Remove Product</button></div></div></div>
+<div class="confirm-modal hidden" id="discount-removal-modal" role="dialog" aria-modal="true" aria-labelledby="discount-removal-title" aria-describedby="discount-removal-message"><div class="confirm-card"><h2 id="discount-removal-title">Remove discount product?</h2><p id="discount-removal-message">This product will be removed from the homepage discount section when you save your changes.</p><div><button class="secondary-button" id="cancel-discount-removal" type="button">Cancel</button><button class="danger-button" id="confirm-discount-removal" type="button">Remove Product</button></div></div></div>
 <div class="admin-products-toast" role="status" aria-live="polite"></div>
-<script src="js/products.js?v=20260907-4"></script>
 <script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/admin-products.js?v=20260908-12"></script>
+    <script type="module" src="js/admin-products.js?v=20260910-48"></script>
  </body>
 </html>

@@ -1,8 +1,8 @@
-import { CanActivate, createParamDecorator, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, createParamDecorator, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 
-export type AuthUser = { sub: string; email: string; role: "customer" | "admin" };
+export type AuthUser = { sub: string; email: string; role: "customer" | "orders" | "admin" };
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -25,6 +25,17 @@ export class AdminGuard implements CanActivate {
   async canActivate(context: ExecutionContext) {
     await this.auth.canActivate(context);
     if (context.switchToHttp().getRequest().user?.role !== "admin") throw new UnauthorizedException("Admin access required");
+    return true;
+  }
+}
+
+@Injectable()
+export class OrdersGuard implements CanActivate {
+  constructor(private readonly auth: AuthGuard) {}
+  async canActivate(context: ExecutionContext) {
+    await this.auth.canActivate(context);
+    const role = context.switchToHttp().getRequest().user?.role;
+    if (role !== "admin" && role !== "orders") throw new ForbiddenException("Orders access required");
     return true;
   }
 }

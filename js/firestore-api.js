@@ -30,6 +30,7 @@ async function request(path, options = {}) {
     const response = await fetch(`${API_ROOT}${path}`, {
         method: options.method || "GET",
         credentials: "include",
+        cache: options.cache,
         headers: options.body ? { "Content-Type": "application/json" } : undefined,
         body: options.body ? JSON.stringify(options.body) : undefined
     });
@@ -74,7 +75,7 @@ export async function getDoc(reference) {
     if (reference.name === "carts") data = await request("/cart", { db: reference.db });
     if (reference.name === "favorites") data = await request("/favorites", { db: reference.db });
     if (reference.name === "reviews") { const uid = (reference.db?.auth || window.auth)?.currentUser?.uid || ""; const productId = reference.id.startsWith(`${uid}_`) ? reference.id.slice(uid.length + 1) : reference.id; data = await request(`/reviews/mine/${encodeURIComponent(productId)}`, { db: reference.db }); }
-    if (reference.name === "storefront") data = await request(`/storefront/${encodeURIComponent(reference.id)}`, { auth: false });
+    if (reference.name === "storefront") data = await request(`/storefront/${encodeURIComponent(reference.id)}`, { auth: false, cache: "no-store" });
     if (reference.name === "products") data = await request(`/products/${encodeURIComponent(reference.id)}`, { auth: false });
     return snapshot(reference.id, data);
 }

@@ -6,10 +6,25 @@
 
     if (!isHomepage) {
         document.body.classList.add("category-page");
-        window.MPWRDiscovery?.rankElements(
-            document.querySelector("#products > .product-content"),
-            { context: `category-page-${page}` }
-        );
+        const categoryPages = {
+            "nails.html": { category: "press-ons", title: "Press-On Nails" },
+            "wigs.html": { category: "wigs", title: "Wigs" },
+            "lashes.html": { category: "lashes", title: "Lashes" },
+            "productspage.html": { category: "products", title: "Products" }
+        };
+        const pageCategory = categoryPages[page];
+        if (pageCategory) {
+            const section = document.querySelector("#products");
+            const grid = section?.querySelector(":scope > .product-content");
+            section?.setAttribute("aria-label", `${pageCategory.title} catalogue`);
+            const heading = section?.querySelector(":scope > .section-title");
+            if (heading) heading.textContent = pageCategory.title;
+            document.title = `${pageCategory.title} | MPWR`;
+            [...(grid?.querySelectorAll(":scope > .product-box") || [])].forEach(card => {
+                if (card.dataset.category !== pageCategory.category) card.remove();
+            });
+            window.MPWRDiscovery?.rankElements(grid, { context: `category-page-${pageCategory.category}` });
+        }
         return;
     }
 

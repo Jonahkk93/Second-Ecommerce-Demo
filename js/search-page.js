@@ -34,6 +34,7 @@ let selectedModalProduct = null;
 let selectedModalCard = null;
 let selectedModalOptions = {};
 let selectedModalPrice = 0;
+let selectedModalRegularPrice = 0;
 let suggestions = [];
 try {
     const configuredSuggestions = JSON.parse(document.querySelector("#search-suggestions-data")?.textContent || "[]");
@@ -271,15 +272,18 @@ function openProductModal(product,card) {
             product.galleries?.[color] ||
             product.gallery || [product.image];
 
-        selectedModalPrice = variant?.price ||
+        selectedModalRegularPrice = variant?.price ||
             product.variantPrices?.[variantKey] ||
             product.variantPrices?.[color]?.[size] ||
             product.sizePrices?.[size] ||
             product.colorPrices?.[color] ||
             product.price;
 
+        const pricing = window.MPWRPricing.details(product, selectedModalRegularPrice);
+        selectedModalPrice = pricing.current;
+
         productModalImage.src = images[0] || product.image;
-        productModalPrice.textContent = `UGX ${Number(selectedModalPrice).toLocaleString()}`;
+        productModalPrice.innerHTML = window.MPWRPricing.markup(product, selectedModalRegularPrice, "is-modal-price");
         const parameters = new URLSearchParams({id:String(product.id)});
         Object.entries(selectedModalOptions).forEach(([key,value]) => { if (value) parameters.set(key,value); });
         const href = `product.html?${parameters.toString()}`;
@@ -351,7 +355,7 @@ function productCard(product) {
         </div>
         <h2 class="product-title">${product.title}</h2>
         <div class="price-and-cart">
-            <span class="price">UGX ${Number(product.price).toLocaleString()}</span>
+            <span class="price">${window.MPWRPricing.markup(product, undefined, "is-card-price")}</span>
             <i><img src="images/Plus.PNG" class="addie" alt="View product"></i>
         </div>`;
     const openProduct = () => {
@@ -434,6 +438,8 @@ productModalCart.addEventListener("click",() => {
         id:String(selectedModalProduct.id),
         title:selectedModalProduct.title,
         price:Number(selectedModalPrice),
+        originalPrice:Number(selectedModalRegularPrice),
+        discountPercent:window.MPWRPricing.details(selectedModalProduct, selectedModalRegularPrice).percent,
         image:productModalImage.src,
         selectedOptions:{...selectedModalOptions},
         color:selectedModalOptions.color || "",

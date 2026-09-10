@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, index, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
-export const userRole = pgEnum("user_role", ["customer", "admin"]);
+export const userRole = pgEnum("user_role", ["customer", "orders", "admin"]);
 export const shippingClass = pgEnum("shipping_class", ["small", "medium", "large"]);
 export const orderStatus = pgEnum("order_status", ["pending", "processing", "shipped", "delivered", "cancelled"]);
 export const paymentStatus = pgEnum("payment_status", ["pending", "successful", "failed", "refunded"]);

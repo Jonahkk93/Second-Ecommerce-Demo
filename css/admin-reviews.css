@@ -130,7 +130,7 @@
     .admin-review-card{grid-template-columns:minmax(0,1fr) minmax(112px,36%);gap:8px}
     .review-panel,.ordered-item-panel{padding:12px;border-radius:14px}
     .review-panel-label{margin-bottom:12px;font-size:9px;letter-spacing:.08em}
-    .review-metrics{grid-template-columns:1fr}
+    .review-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
     .review-metrics article{min-height:88px}
     .review-results-heading{align-items:flex-start;flex-direction:column;gap:4px}
     .management-sidebar .management-nav{grid-template-columns:1fr}

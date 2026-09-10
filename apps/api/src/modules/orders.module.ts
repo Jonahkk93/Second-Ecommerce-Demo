@@ -1,9 +1,9 @@
-import { BadRequestException, Body, Controller, Get, Inject, Injectable, Module, NotFoundException, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Inject, Injectable, Logger, Module, NotFoundException, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { IsArray, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Min } from "class-validator";
 import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
-import { AdminGuard, AuthGuard, AuthUser, CurrentUser } from "../common/auth";
+import { AuthGuard, AuthUser, CurrentUser, OrdersGuard } from "../common/auth";
 import { DB, Database } from "../database/database.module";
-import { deliveryQuotes, orderItems, orders, products, users } from "../database/schema";
+import { deliveryQuotes, orderItems, orders, products, storefrontSettings, users } from "../database/schema";
 
 class CreateOrderDto { @IsUUID() quoteId!: string; @IsString() firstName!: string; @IsString() lastName!: string; @IsEmail() email!: string; @IsString() phone!: string; @IsOptional() @IsString() notes?: string; }
 class UpdateStatusDto { @IsIn(["pending", "processing", "shipped", "delivered", "cancelled"]) status!: "pending" | "processing" | "shipped" | "delivered" | "cancelled"; }
@@ -12,7 +12,39 @@ type QuotedOrderItem = { productId: string; variantId?: string; title: string; s
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
   constructor(@Inject(DB) private db: Database) {}
+
+  async refreshBestsellers() {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const rows = await this.db.select({ id: products.legacyId, quantity: orderItems.quantity })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .where(and(eq(orders.status, "delivered"), gt(orders.createdAt, cutoff), eq(products.active, true)));
+    const totals = new Map<string, number>();
+    rows.forEach(row => {
+      if (!row.id) return;
+      totals.set(row.id, (totals.get(row.id) || 0) + Math.max(1, Number(row.quantity) || 1));
+    });
+    const rankedProducts = [...totals.entries()]
+      .map(([id, unitsSold]) => ({ id, unitsSold }))
+      .sort((a, b) => b.unitsSold - a.unitsSold || a.id.localeCompare(b.id))
+      .slice(0, 10);
+    await this.db.insert(storefrontSettings).values({ key: "bestsellers", value: { products: rankedProducts, windowDays: 30 } })
+      .onConflictDoUpdate({ target: storefrontSettings.key, set: { value: { products: rankedProducts, windowDays: 30 }, updatedAt: new Date() } });
+  }
+
+  async updateStatus(id: string, status: UpdateStatusDto["status"]) {
+    const [order] = await this.db.update(orders).set({ status, updatedAt: new Date() }).where(eq(orders.id, id)).returning();
+    if (!order) throw new NotFoundException("Order not found");
+    try {
+      await this.refreshBestsellers();
+    } catch (error) {
+      this.logger.error("Could not refresh bestseller rankings", error instanceof Error ? error.stack : String(error));
+    }
+    return order;
+  }
   async create(userId: string, dto: CreateOrderDto) {
     return this.db.transaction(async tx => {
       const [quote] = await tx.select().from(deliveryQuotes).where(and(eq(deliveryQuotes.id, dto.quoteId), eq(deliveryQuotes.userId, userId), isNull(deliveryQuotes.consumedAt), gt(deliveryQuotes.expiresAt, new Date()))).limit(1);
@@ -31,9 +63,11 @@ export class OrdersService {
     const catalogue = await this.db.select().from(products).where(inArray(products.legacyId, legacyIds));
     if (catalogue.length !== legacyIds.length) throw new BadRequestException("One or more products are unavailable");
     const productMap = new Map(catalogue.map(product => [product.legacyId, product]));
+    const [discountSetting] = await this.db.select().from(storefrontSettings).where(eq(storefrontSettings.key, "discounts")).limit(1);
+    const discountMap = new Map(((discountSetting?.value as any)?.products || []).map((item: any) => [String(item.id), Math.min(95, Math.max(1, Math.round(Number(item.percent) || 15)))]));
     return this.db.transaction(async tx => {
       let subtotal = 0;
-      const snapshots = rawItems.map(item => { const product = productMap.get(String(item.id))!; const quantity = Math.max(1, Math.min(20, Number(item.quantity) || 1)); const metadata = product.metadata as Record<string, any>; const selectedSize = item.selectedOptions?.length || item.selectedOptions?.size || item.size; const optionPrice = selectedSize ? Number(metadata.sizePrices?.[selectedSize]) : NaN; const unitPrice = Number.isFinite(optionPrice) ? optionPrice : product.price; subtotal += unitPrice * quantity; const selectedOptions = item.selectedOptions || { ...(item.color ? { color: item.color } : {}), ...(item.size ? { size: item.size } : {}) }; return { productId: product.id, title: product.title, quantity, unitPrice, options: { ...selectedOptions, legacySnapshot: item } }; });
+      const snapshots = rawItems.map(item => { const product = productMap.get(String(item.id))!; const quantity = Math.max(1, Math.min(20, Number(item.quantity) || 1)); const metadata = product.metadata as Record<string, any>; const selectedSize = item.selectedOptions?.length || item.selectedOptions?.size || item.size; const optionPrice = selectedSize ? Number(metadata.sizePrices?.[selectedSize]) : NaN; const regularPrice = Number.isFinite(optionPrice) ? optionPrice : product.price; const discount = discountMap.get(String(product.legacyId)) as number | undefined; const unitPrice = discount ? Math.round(regularPrice * (1 - discount / 100)) : regularPrice; subtotal += unitPrice * quantity; const selectedOptions = item.selectedOptions || { ...(item.color ? { color: item.color } : {}), ...(item.size ? { size: item.size } : {}) }; return { productId: product.id, title: product.title, quantity, unitPrice, options: { ...selectedOptions, legacySnapshot: item } }; });
       const [order] = await tx.insert(orders).values({ userId, subtotal, deliveryFee: dto.deliveryFee, total: subtotal + dto.deliveryFee, customer: dto.customer, delivery: { ...dto.delivery, payment: dto.payment || {} } }).returning();
       await tx.insert(orderItems).values(snapshots.map(item => ({ orderId: order.id, ...item })));
       return { ...order, items: snapshots };
@@ -51,9 +85,9 @@ class OrdersController {
   @UseGuards(AuthGuard) @Post() create(@CurrentUser() user: AuthUser, @Body() dto: CreateOrderDto) { return this.service.create(user.sub, dto); }
   @UseGuards(AuthGuard) @Post("legacy") createLegacy(@CurrentUser() user: AuthUser, @Body() dto: LegacyOrderDto) { return this.service.createLegacy(user.sub, dto); }
   @UseGuards(AuthGuard) @Get() list(@CurrentUser() user: AuthUser) { return this.service.list(user.sub); }
-  @UseGuards(AdminGuard) @Get("admin/all") adminList() { return this.service.adminList(); }
+  @UseGuards(OrdersGuard) @Get("admin/all") adminList() { return this.service.adminList(); }
   @UseGuards(AuthGuard) @Get(":id") one(@CurrentUser() user: AuthUser, @Param("id") id: string) { return this.service.one(user.sub, id); }
-  @UseGuards(AdminGuard) @Patch(":id/status") async status(@Param("id") id: string, @Body() dto: UpdateStatusDto) { const [order] = await this.db.update(orders).set({ status: dto.status, updatedAt: new Date() }).where(eq(orders.id, id)).returning(); if (!order) throw new NotFoundException("Order not found"); return order; }
+  @UseGuards(OrdersGuard) @Patch(":id/status") status(@Param("id") id: string, @Body() dto: UpdateStatusDto) { return this.service.updateStatus(id, dto.status); }
 }
 @Module({ controllers: [OrdersController], providers: [OrdersService], exports: [OrdersService] })
 export class OrdersModule {}

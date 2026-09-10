@@ -23,8 +23,8 @@
 .products-toolbar .search-field>span{display:grid;width:18px;height:18px;flex:0 0 18px;place-items:center}
 .products-toolbar .search-field>span img{display:block;width:14px;height:14px;object-fit:contain}
 .deleted-product-actions{display:flex;align-items:center;gap:8px;justify-content:flex-end}.permanently-delete-product{display:grid;width:38px;height:38px;padding:0;border:1px solid #efd0d0;border-radius:10px;background:#fff;cursor:pointer;place-items:center}.permanently-delete-product img{display:block;width:17px!important;height:17px!important;border-radius:0!important;background:transparent!important;object-fit:contain}.permanently-delete-product:hover,.permanently-delete-product:focus-visible,.permanently-delete-product:active,.permanently-delete-product.is-confirming{border-color:#d9534f;background:#fff2f2;outline:none}.permanently-delete-product:is(:hover,:focus-visible,:active,.is-confirming) img{content:url("../images/Icon Folder/Delete Icon_d9534f.PNG")}.restore-product{min-height:38px}.confirm-card .danger-button{display:inline-flex;align-items:center;justify-content:center}
-.close-modal img{display:block;width:15px;height:15px;object-fit:contain}.remove-popular{display:grid;place-items:center}.remove-popular img{display:block;width:11px!important;height:11px!important;border-radius:0!important;object-fit:contain}
-#add-product-btn{display:inline-flex;align-items:center;gap:8px}#add-product-btn img{display:block;width:13px;height:13px;padding:2px;border-radius:50%;background:#fff;object-fit:contain}.homepage-product .toggle-popular{display:grid;place-items:center}.homepage-product .toggle-popular img{display:block;width:12px!important;height:12px!important;border-radius:0!important;object-fit:contain}
+.close-modal img{display:block;width:15px;height:15px;object-fit:contain}.remove-popular{display:grid;place-items:center;transition:transform .25s ease,opacity .25s ease,border-color .25s ease}.remove-popular img{display:block;width:11px!important;height:11px!important;border-radius:0!important;object-fit:contain}.remove-popular:hover{border-color:#d9534f;opacity:.9;transform:translateY(-2px) scale(1.08)}.remove-popular:focus-visible{border-color:#d9534f;outline:none;transform:translateY(-2px) scale(1.08)}.remove-popular:active{border-color:#d9534f;outline:none;transform:scale(.92)}.remove-popular:is(:hover,:focus-visible,:active) img{content:url("../images/Icon Folder/Close Icon_d9534f.PNG")}
+#add-product-btn{display:inline-flex;align-items:center;gap:8px}#add-product-btn img{display:block;width:13px;height:13px;padding:2px;border-radius:50%;background:#fff;object-fit:contain}.homepage-product .toggle-popular{display:grid;place-items:center;transition:transform .25s ease,opacity .25s ease}.homepage-product .toggle-popular img{display:block;width:12px!important;height:12px!important;border-radius:0!important;object-fit:contain}.homepage-product .toggle-popular:hover,.homepage-product .toggle-popular:focus-visible{opacity:.9;outline:none;transform:translateY(-2px) scale(1.08)}.homepage-product .toggle-popular:active{transform:scale(.92)}
 select.product-dropdown-native{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .product-dropdown{position:relative;min-width:0;width:100%}
 .product-dropdown-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:42px;padding:10px 12px;border:1px solid #ddd;border-radius:999px;background:#fff;color:var(--ink);font-size:14px;text-align:left;cursor:pointer}
@@ -49,8 +49,8 @@ select.product-dropdown-native{position:absolute;width:1px;height:1px;margin:-1p
 
 /* Popular products preview: keep the order marker outside the product card. */
 .popular-selection{gap:12px}
-.popular-item{display:grid;grid-template-columns:36px minmax(0,1fr);align-items:center;gap:10px;padding:0;border:0;border-radius:0;background:transparent}
-.popular-rank{display:grid;width:36px;height:36px;border:2px solid var(--peach);border-radius:50%;background:#fff;color:var(--peach-dark);font-size:13px;font-weight:800;line-height:1;place-items:center}
+.popular-item{display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;gap:10px;padding:0;border:0;border-radius:0;background:transparent}
+.popular-rank{display:grid;width:30px;height:30px;border:2px solid #f1eeee;border-radius:50%;background:#f1eeee;color:#9b9693;font-size:12px;font-weight:800;line-height:1;place-items:center}
 .popular-item-card{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:11px;min-width:0;padding:9px;border:1px solid var(--line);border-radius:12px;background:#fff}
 .popular-item .popular-item-image{width:48px;height:55px;border-radius:8px;object-fit:cover}
 .popular-item-details{min-width:0}
@@ -59,12 +59,94 @@ select.product-dropdown-native{position:absolute;width:1px;height:1px;margin:-1p
 .popular-item:hover .popular-item-card{border-color:#d8ccc5;box-shadow:0 7px 18px rgba(59,43,35,.06)}
 .popular-item.dragging{opacity:1}
 .popular-item.dragging .popular-rank,.popular-item.dragging .popular-item-card{opacity:.45}
-@media(max-width:520px){.popular-item{grid-template-columns:32px minmax(0,1fr);gap:8px}.popular-rank{width:32px;height:32px}.popular-item-card{grid-template-columns:43px minmax(0,1fr) auto;gap:9px}.popular-item .popular-item-image{width:43px;height:50px}}
+@media(max-width:520px){.popular-item{grid-template-columns:28px minmax(0,1fr);gap:8px}.popular-rank{width:28px;height:28px;font-size:11px}.popular-item-card{grid-template-columns:43px minmax(0,1fr) auto;gap:9px}.popular-item .popular-item-image{width:43px;height:50px}}
 
-/* Same footer button treatment as History's Clear History action. */
-.management-panel[data-panel-content="homepage"]{padding-bottom:88px}
-.homepage-save-footer{position:fixed;right:0;bottom:0;left:245px;z-index:50;padding:20px clamp(24px,4vw,64px);border-top:1px solid #f1f1f1;background:#fff}
-.clear-wishlist{display:flex;width:100%;align-items:center;justify-content:center;gap:10px;padding:14px;border:1px solid #ddd;border-radius:10px;background-color:rgba(243,243,243,.932);color:#666;font-size:15px;font-weight:600;cursor:pointer;transition:.25s ease}
-.clear-wishlist:hover,.clear-wishlist.is-confirming{border-color:#00bf63;color:#00bf63;box-shadow:0 0 0 2px rgba(0,191,99,.07),0 5px 12px rgba(0,191,99,.09)}
-@media(min-width:601px){.clear-wishlist.is-confirming{border-color:#00bf63;color:#00bf63}}
-@media(max-width:780px){.homepage-save-footer{right:0;left:0;padding:20px 16px}}
+/* Keep the published-product picker compact instead of using long full-width rows. */
+.homepage-layout{grid-template-columns:minmax(360px,1fr) minmax(300px,460px);align-items:start}
+.homepage-products{grid-template-columns:1fr}
+.homepage-picker-card{display:flex;min-height:0;overflow:hidden;flex-direction:column}.homepage-picker-card .homepage-products{min-height:0;max-height:none;flex:1;overflow-y:auto}
+.popular-selection{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:64px;align-items:stretch;column-gap:32px;row-gap:16px}
+.homepage-products .homepage-product{grid-template-columns:42px minmax(0,1fr) auto;gap:9px;padding:7px}
+.homepage-products .homepage-product>img{width:42px;height:48px}
+.popular-selection .popular-item{width:100%;height:64px;min-width:0}
+.popular-selection .popular-item-card{width:100%;height:64px;min-width:0;grid-template-columns:42px minmax(0,1fr) auto;gap:9px;padding:7px}
+.popular-selection .popular-item-image{width:42px;height:48px}
+@media(max-width:1050px){.homepage-layout{grid-template-columns:1fr}}
+@media(max-width:600px){.popular-selection{grid-template-columns:1fr}}
+
+.popular-flying-image{position:fixed;z-index:100001;border-radius:8px;object-fit:cover;pointer-events:none;box-shadow:0 12px 28px rgba(32,27,25,.2)}
+.popular-item.popular-arrival{animation:popular-arrival-pop .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes popular-arrival-pop{0%{transform:scale(.94)}55%{transform:scale(1.035)}100%{transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.popular-item.popular-arrival{animation:none}}
+
+/* Homepage discount picker uses the Popular controls with an editable offer. */
+.discount-management-heading{margin-top:64px}
+.discount-campaign-field{display:grid;min-width:190px;gap:7px}.discount-campaign-field>span{color:var(--muted);font-size:12px;font-weight:700}.discount-campaign-field .product-dropdown-trigger{padding-right:22px;padding-left:22px}
+.discount-management-layout{margin-bottom:18px}
+.discount-percent-control{display:flex;align-items:center;gap:5px;margin-top:5px;color:var(--muted);font-size:11px;font-weight:700}
+.discount-percent-input{width:52px;min-height:27px;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font:inherit;text-align:center}
+.discount-percent-input:focus{border-color:var(--peach);outline:0;box-shadow:0 0 0 3px rgba(229,164,132,.14)}
+.discount-homepage-product .toggle-discount{display:grid;place-items:center;transition:transform .25s ease,opacity .25s ease}
+.discount-homepage-product .toggle-discount img{display:block;width:12px!important;height:12px!important;border-radius:0!important;object-fit:contain}
+.discount-homepage-product .toggle-discount:hover,.discount-homepage-product .toggle-discount:focus-visible{opacity:.9;outline:none;transform:translateY(-2px) scale(1.08)}
+.discount-homepage-product .toggle-discount:active{transform:scale(.92)}
+.discount-homepage-product .toggle-discount:disabled{cursor:not-allowed;opacity:.35;transform:none}
+@media(max-width:600px){.discount-management-heading{margin-top:46px;align-items:stretch;flex-direction:column}.discount-campaign-field{width:100%;min-width:0}}
+
+.product-merchandising-options{display:grid;gap:16px}
+.product-discount-field{max-width:270px;margin-left:51px}
+.discount-editor-input{display:flex;align-items:center;gap:9px}
+.discount-editor-input input{min-width:0;flex:1}
+.discount-editor-input strong{flex:0 0 auto;color:var(--muted);font-size:12px;white-space:nowrap}
+@media(max-width:520px){.product-discount-field{max-width:none;margin-left:0}}
+
+/* Keep the management navigation flush with the viewport during scroll bounce. */
+html{background:#1e1a18;overscroll-behavior-y:none}
+body{overscroll-behavior-y:none}
+@media(max-width:780px){.management-sidebar{position:sticky;top:0;z-index:200}}
+.homepage-product .toggle-popular:disabled{cursor:not-allowed;opacity:.35;transform:none}
+.homepage-product .toggle-popular.is-blocked,.discount-homepage-product .toggle-discount.is-blocked{cursor:pointer;opacity:.35}
+.homepage-product .toggle-popular.is-blocked:hover,.homepage-product .toggle-popular.is-blocked:focus-visible,.discount-homepage-product .toggle-discount.is-blocked:hover,.discount-homepage-product .toggle-discount.is-blocked:focus-visible{opacity:.9;outline:none;transform:translateY(-2px) scale(1.08)}
+.homepage-product .toggle-popular.is-blocked:active,.discount-homepage-product .toggle-discount.is-blocked:active{outline:none;transform:scale(.92)}
+
+/* Homepage section visibility controls. */
+.homepage-heading-title{display:flex;width:auto;align-items:center;gap:8px;flex-wrap:wrap}
+.homepage-heading-title h2{min-width:0;margin:0}
+.homepage-section-toggle{flex:0 0 auto;gap:8px;white-space:nowrap}
+.toggle-row .toggle-control{width:50px;height:22px;margin:0 5px;border:1px solid #ded8d4;background:#efedec;box-shadow:inset 0 1px 3px rgba(51,51,51,.06);transition:background .25s ease,border-color .25s ease}
+.toggle-row .toggle-control:after{top:-5px;left:-5px;width:30px;height:30px;background:#aaa6a4;box-shadow:0 4px 10px rgba(45,39,36,.2);transition:transform .3s cubic-bezier(.2,.9,.25,1.2),background .25s ease,box-shadow .25s ease}
+.toggle-row input:checked+.toggle-control{border-color:#ecc4b0;background:#f7e5dc}
+.toggle-row input:checked+.toggle-control:after{background:#e5a484;box-shadow:0 4px 12px rgba(229,164,132,.32);transform:translateX(28px)}
+.toggle-row:hover .toggle-control:after{transform:scale(1.06)}
+.toggle-row:hover input:checked+.toggle-control:after{transform:translateX(28px) scale(1.06)}
+.toggle-row input:focus-visible+.toggle-control{outline:2px solid #e5a484;outline-offset:4px}
+.toggle-row:active .toggle-control:after{transform:scale(.94)}
+.toggle-row:active input:checked+.toggle-control:after{transform:translateX(28px) scale(.94)}
+.popular-item-placeholder{cursor:default}
+.popular-item-placeholder .popular-rank{border:2px solid #f1eeee;background:#f1eeee;color:#9b9693}
+.popular-item-placeholder .popular-item-card{border:1px solid #ebebeb;background:#fafafa;box-shadow:none}
+.popular-placeholder-image{width:42px;height:48px;border-radius:8px;background:#f0f0f0}
+.popular-placeholder-details{display:grid;gap:7px}
+.popular-placeholder-details i{display:block;width:min(110px,75%);height:8px;border-radius:999px;background:#eeeeee}
+.popular-placeholder-details i:last-child{width:min(70px,48%);height:6px}
+.popular-placeholder-action{width:31px;height:31px;border:1px solid #e8e8e8;border-radius:9px;background:#f7f7f7}
+.homepage-preview-card.section-disabled .popular-item-placeholder{opacity:.7}
+.homepage-section-toggle-label{min-width:43px;color:var(--muted);font-size:11px;font-weight:700}
+.popular-mode-toggle{flex:0 0 auto;gap:8px;white-space:nowrap}
+.popular-mode-toggle-label{min-width:58px;color:var(--muted);font-size:11px;font-weight:700}
+.discount-heading-toggles{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.discount-mode-toggle{flex:0 0 auto;gap:8px;white-space:nowrap}
+.discount-mode-toggle-label{min-width:58px;color:var(--muted);font-size:11px;font-weight:700}
+.homepage-layout.popular-automatic .homepage-picker-card{border-color:#dedbd9;background:#f3f1f0;pointer-events:none;user-select:none}
+.homepage-layout.popular-automatic .homepage-picker-card .search-field,.homepage-layout.popular-automatic .homepage-picker-card .homepage-products{opacity:.48;filter:grayscale(1)}
+.popular-item.is-automatic{cursor:default}
+.popular-item.is-automatic .popular-item-card{padding-right:14px}
+.popular-item.is-automatic .popular-item-details small{color:var(--peach-dark);font-weight:700}
+.homepage-preview-card.section-disabled .popular-selection,.homepage-preview-card.section-disabled>p{opacity:.45;filter:grayscale(1)}
+.homepage-preview-card.section-disabled .preview-label{color:var(--muted)}
+.homepage-layout.section-disabled .homepage-picker-card{border-color:#dedbd9;background:#f3f1f0}
+.homepage-layout.section-disabled .homepage-picker-card .search-field,.homepage-layout.section-disabled .homepage-picker-card .homepage-products{opacity:.48;filter:grayscale(1)}
+.homepage-layout.section-disabled .popular-selection,.homepage-layout.section-disabled .homepage-picker-card{pointer-events:none;user-select:none}
+.discount-campaign-field.section-disabled{opacity:.48;filter:grayscale(1);pointer-events:none;user-select:none}
+.product-dropdown.disabled .product-dropdown-trigger{cursor:not-allowed;box-shadow:none}
+@media(max-width:520px){.homepage-heading-title{align-items:center;gap:7px}.homepage-heading-title h2{font-size:clamp(19px,6vw,24px)}}

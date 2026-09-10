@@ -33,6 +33,10 @@ updateProductHeaderMode();
 
 const productId = params.get("id");
 const product = products.find(item => String(item.id) === String(productId));
+const discountPercent = Math.min(
+    95,
+    Math.max(0, Number(product?.discountPercent ?? params.get("discount")) || 0)
+);
 
 function recordProductVisit(item) {
     if (!item) return;
@@ -334,21 +338,34 @@ function variationGallery(selections = selectedOptions) {
     return [...new Set([...selectedGallery, ...baseGallery])];
 }
 
-function variationPrice(selections = selectedOptions) {
+function variationRegularPrice(selections = selectedOptions) {
     const color = selections.color || "";
     const size = selections.size || selections.length || "";
     const combinedKey = selectionKey(selections);
-    return product.variants?.[combinedKey]?.price ||
+    const regularPrice = product.variants?.[combinedKey]?.price ||
         product.variantPrices?.[combinedKey] ||
         product.variantPrices?.[color]?.[size] ||
         product.sizePrices?.[size] ||
         product.colorPrices?.[color] ||
         product.price;
+    return regularPrice;
+}
+
+function variationPrice(selections = selectedOptions) {
+    return window.MPWRPricing.details(
+        { ...product, discountPercent },
+        variationRegularPrice(selections)
+    ).current;
 }
 
 function updateVariationPrice() {
-    selectedPrice = variationPrice();
-    productPrice.textContent = `UGX ${Number(selectedPrice).toLocaleString()}`;
+    const regularPrice = variationRegularPrice();
+    selectedPrice = window.MPWRPricing.details({ ...product, discountPercent }, regularPrice).current;
+    productPrice.innerHTML = window.MPWRPricing.markup(
+        { ...product, discountPercent },
+        regularPrice,
+        "is-product-page-price"
+    );
 }
 
 let touchStartX = 0;
@@ -631,6 +648,7 @@ const REVIEW_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "im
 let selectedModalProduct = null;
 let selectedModalOptions = {};
 let selectedModalPrice = 0;
+let selectedModalRegularPrice = 0;
 
 function isFavoriteProduct(item) {
     return favorites.some(favorite => String(favorite.id) === String(item.id));
@@ -715,9 +733,10 @@ function openRelatedProductModal(item) {
         const size = selectedModalOptions.size || selectedModalOptions.length || "";
         const variant = item.variants?.[key];
         const images = variant?.images || variant?.gallery || item.variantGalleries?.[key] || item.variantGalleries?.[color]?.[size] || item.sizeGalleries?.[size] || item.galleries?.[color] || item.gallery || [item.image];
-        selectedModalPrice = variant?.price || item.variantPrices?.[key] || item.variantPrices?.[color]?.[size] || item.sizePrices?.[size] || item.colorPrices?.[color] || item.price;
+        selectedModalRegularPrice = variant?.price || item.variantPrices?.[key] || item.variantPrices?.[color]?.[size] || item.sizePrices?.[size] || item.colorPrices?.[color] || item.price;
+        selectedModalPrice = window.MPWRPricing.details(item, selectedModalRegularPrice).current;
         productModalImage.src = images[0] || item.image;
-        productModalPrice.textContent = `UGX ${Number(selectedModalPrice).toLocaleString()}`;
+        productModalPrice.innerHTML = window.MPWRPricing.markup(item, selectedModalRegularPrice, "is-modal-price");
     };
 
     productModalImage.alt = item.title;
@@ -799,7 +818,7 @@ function renderRelatedProducts() {
             </div>
             <h2 class="product-title">${item.title}</h2>
             <div class="price-and-cart">
-                <span class="price">UGX ${Number(item.price).toLocaleString()}</span>
+                <span class="price">${window.MPWRPricing.markup(item, undefined, "is-card-price")}</span>
                 <i class=""><img src="images/Plus.PNG" class="addie"></i>
             </div>
         </div>
@@ -854,6 +873,8 @@ productModalCart?.addEventListener("click", () => {
         id: selectedModalProduct.id,
         title: selectedModalProduct.title,
         price: selectedModalPrice,
+        originalPrice: selectedModalRegularPrice,
+        discountPercent:window.MPWRPricing.details(selectedModalProduct, selectedModalRegularPrice).percent,
         image: productModalImage.src || selectedModalProduct.image,
         selectedOptions: { ...selectedModalOptions },
         color: selectedModalOptions.color || "",
@@ -1628,9 +1649,7 @@ async function saveOrderToFirestore(cartItems) {
             userId: user.uid,
             items: cartItems,
             total: cartItems.reduce((sum, item) => {
-                const price = Number(
-                    String(item.price).replace(/[^\d]/g, "")
-                );
+                const price = window.MPWRPricing.details(item).current;
 
                 return sum + (price * item.quantity);
             }, 0),
@@ -1717,7 +1736,7 @@ function updateTotalPrice(cartItems) {
     let total = 0;
 
     cartItems.forEach(item => {
-        const price = Number(String(item.price).replace(/[^\d.]/g, ""));
+        const price = window.MPWRPricing.details(item).current;
         total += price * item.quantity;
     });
 
@@ -1774,9 +1793,7 @@ function createCartBox(cartItem) {
 </div>
 
 <span class="cart-price">
-
-    UGX ${Number(String(cartItem.price).replace(/[^\d]/g, "")).toLocaleString()}
-
+    ${window.MPWRPricing.markup(cartItem, undefined, "is-drawer-price")}
 </span>
 
             <div class="cart-quantity">
@@ -2091,8 +2108,11 @@ if (product) {
     optionsPanel.hidden = optionGroups.length === 0;
 
     productTitle.textContent = product.title;
-    productPrice.textContent =
-        `UGX ${Number(product.price).toLocaleString()}`;
+    productPrice.innerHTML = window.MPWRPricing.markup(
+        { ...product, discountPercent },
+        product.price,
+        "is-product-page-price"
+    );
     productDescription.textContent =
         product.description;
     productDescription.classList.add("is-collapsed");
@@ -2226,6 +2246,8 @@ addTocartIcon.addEventListener("click", () => {
         id: product.id,
         title: product.title,
         price: selectedPrice,
+        originalPrice: variationRegularPrice(),
+        discountPercent,
         image: galleryImages[0] || product.image,
         selectedOptions: { ...selectedOptions },
         color: selectedOptions.color || "",
@@ -2334,9 +2356,7 @@ function createWishlistItem(item) {
             <h3>
                 <a href="${productHref}" class="wishlist-title-link">${item.title}</a>
             </h3>
-<span>
-    UGX ${Number(String(item.price).replace(/[^\d]/g, "")).toLocaleString()}
-</span>
+<span class="wishlist-price">${window.MPWRPricing.markup(item, undefined, "is-drawer-price")}</span>
             <button class="wishlist-add-cart">
 
                 Add to Cart

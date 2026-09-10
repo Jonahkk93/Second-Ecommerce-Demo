@@ -26,7 +26,9 @@
                 "nails.html": "Nails.html",
                 "wigs.html": "Wigs.html",
                 "lashes.html": "Lashes.html",
-                "productspage.html": "ProductsPage.html"
+                "productspage.html": "ProductsPage.html",
+                "discounts.html": "Discounts.html",
+                "campaign.html": "Campaign.html"
             };
             const currentCategoryLink = categoryLinks[currentPage];
 

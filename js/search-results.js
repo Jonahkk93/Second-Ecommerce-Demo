@@ -63,6 +63,7 @@ let selectedModalProduct = null;
 let selectedModalCard = null;
 let selectedModalOptions = {};
 let selectedModalPrice = 0;
+let selectedModalRegularPrice = 0;
 
 function updateCartButton() {
     const count = getCart().reduce((total,item) => total + Number(item.quantity || 1),0);
@@ -309,8 +310,7 @@ function cartProductHref(item) {
 }
 
 function cartItemPrice(item) {
-    const rawPrice = item.price || products.find(product => String(product.id) === String(item.id))?.price || 0;
-    return Number(String(rawPrice).replace(/[^0-9.]/g,"")) || 0;
+    return window.MPWRPricing.details(item).current;
 }
 
 function getFavorites() {
@@ -340,7 +340,7 @@ function renderWishlistDrawer() {
     favorites.forEach((item,index) => {
         const row = document.createElement("article");
         row.className = "wishlist-item";
-        row.innerHTML = `<a href="product.html?id=${encodeURIComponent(item.id)}" class="wishlist-product-link" aria-label="View ${cartItemTitle(item)}"><img class="wishlist-img" src="${cartItemImage(item)}" alt="${cartItemTitle(item)}" loading="lazy" decoding="async"></a><div class="wishlist-details"><h3><a href="product.html?id=${encodeURIComponent(item.id)}" class="wishlist-title-link">${cartItemTitle(item)}</a></h3><span>UGX ${cartItemPrice(item).toLocaleString()}</span><button class="wishlist-add-cart" type="button">Add to Cart</button></div><button class="wishlist-remove" type="button"><img class="wishlist-remove-icon" src="images/Icon Folder/Delete Icon_333.PNG" alt=""></button>`;
+        row.innerHTML = `<a href="product.html?id=${encodeURIComponent(item.id)}" class="wishlist-product-link" aria-label="View ${cartItemTitle(item)}"><img class="wishlist-img" src="${cartItemImage(item)}" alt="${cartItemTitle(item)}" loading="lazy" decoding="async"></a><div class="wishlist-details"><h3><a href="product.html?id=${encodeURIComponent(item.id)}" class="wishlist-title-link">${cartItemTitle(item)}</a></h3><span class="wishlist-price">${window.MPWRPricing.markup(item, undefined, "is-drawer-price")}</span><button class="wishlist-add-cart" type="button">Add to Cart</button></div><button class="wishlist-remove" type="button"><img class="wishlist-remove-icon" src="images/Icon Folder/Delete Icon_333.PNG" alt=""></button>`;
         const removeIcon = row.querySelector(".wishlist-remove-icon");
         row.querySelector(".wishlist-remove").addEventListener("pointerenter",() => { removeIcon.src = "images/Icon Folder/Delete Icon_d9534f.PNG"; });
         row.querySelector(".wishlist-remove").addEventListener("pointerleave",() => { if (removeIcon !== confirmingDeleteIcon) removeIcon.src = "images/Icon Folder/Delete Icon_333.PNG"; });
@@ -374,7 +374,7 @@ function renderCartDrawer() {
         const row = document.createElement("article");
         row.className = "cart-box";
         const productHref = cartProductHref(item);
-        row.innerHTML = `<div class="cart-swipe-actions" aria-hidden="true"><button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist"><img src="images/Icon Folder/Move To Favorites Outline Icon_White.PNG" alt=""><span>Wishlist</span></button><button class="cart-swipe-action cart-share" type="button" aria-label="Share item"><img src="images/Icon Folder/Share Icon V2_White.PNG" alt=""><span>Share</span></button><button class="cart-swipe-action cart-delete" type="button" aria-label="Delete item"><img src="images/Icon Folder/Delete Icon_White.PNG" alt=""><span>Delete</span></button></div><div class="cart-box-main"><a href="${productHref}" class="cart-product-link" aria-label="View ${cartItemTitle(item)}"><img class="cart-img" src="${cartItemImage(item)}" alt="${cartItemTitle(item)}" loading="lazy" decoding="async"></a><div class="cart-detail"><h2 class="cart-product-title"><a href="${productHref}" class="cart-title-link">${cartItemTitle(item)}</a></h2><div class="cart-variants">${selections}</div><span class="cart-price">UGX ${cartItemPrice(item).toLocaleString()}</span><div class="cart-quantity"><button class="decrement" type="button" data-action="decrease" aria-label="Decrease quantity"><img src="images/Icon Folder/Minus Icon_333.PNG" alt=""></button><span class="number">${quantity}</span><button class="increment" type="button" data-action="increase" aria-label="Increase quantity"><img src="images/Icon Folder/Plus Icon_333.PNG" alt=""></button></div></div><div class="cart-item-actions"><img src="images/Icon Folder/Delete Icon_333.PNG" class="cart-remove" alt="Remove item" role="button" tabindex="0"></div></div>`;
+        row.innerHTML = `<div class="cart-swipe-actions" aria-hidden="true"><button class="cart-swipe-action cart-move-wishlist" type="button" aria-label="Move item to wishlist"><img src="images/Icon Folder/Move To Favorites Outline Icon_White.PNG" alt=""><span>Wishlist</span></button><button class="cart-swipe-action cart-share" type="button" aria-label="Share item"><img src="images/Icon Folder/Share Icon V2_White.PNG" alt=""><span>Share</span></button><button class="cart-swipe-action cart-delete" type="button" aria-label="Delete item"><img src="images/Icon Folder/Delete Icon_White.PNG" alt=""><span>Delete</span></button></div><div class="cart-box-main"><a href="${productHref}" class="cart-product-link" aria-label="View ${cartItemTitle(item)}"><img class="cart-img" src="${cartItemImage(item)}" alt="${cartItemTitle(item)}" loading="lazy" decoding="async"></a><div class="cart-detail"><h2 class="cart-product-title"><a href="${productHref}" class="cart-title-link">${cartItemTitle(item)}</a></h2><div class="cart-variants">${selections}</div><span class="cart-price">${window.MPWRPricing.markup(item, undefined, "is-drawer-price")}</span><div class="cart-quantity"><button class="decrement" type="button" data-action="decrease" aria-label="Decrease quantity"><img src="images/Icon Folder/Minus Icon_333.PNG" alt=""></button><span class="number">${quantity}</span><button class="increment" type="button" data-action="increase" aria-label="Increase quantity"><img src="images/Icon Folder/Plus Icon_333.PNG" alt=""></button></div></div><div class="cart-item-actions"><img src="images/Icon Folder/Delete Icon_333.PNG" class="cart-remove" alt="Remove item" role="button" tabindex="0"></div></div>`;
         row.querySelector('[data-action="decrease"]').addEventListener("click",event => { event.stopPropagation(); if (quantity > 1) cart[index].quantity = quantity - 1; else cart.splice(index,1); saveCart(cart); });
         row.querySelector('[data-action="increase"]').addEventListener("click",event => { event.stopPropagation(); cart[index].quantity = quantity + 1; saveCart(cart); });
         const cartRemoveIcon = row.querySelector(".cart-remove");
@@ -525,15 +525,18 @@ function openProductModal(product,card) {
             product.galleries?.[color] ||
             product.gallery || [product.image];
 
-        selectedModalPrice = variant?.price ||
+        selectedModalRegularPrice = variant?.price ||
             product.variantPrices?.[key] ||
             product.variantPrices?.[color]?.[size] ||
             product.sizePrices?.[size] ||
             product.colorPrices?.[color] ||
             product.price;
 
+        const pricing = window.MPWRPricing.details(product, selectedModalRegularPrice);
+        selectedModalPrice = pricing.current;
+
         productModalImage.src = images[0] || product.image;
-        productModalPrice.textContent = `UGX ${Number(selectedModalPrice).toLocaleString()}`;
+        productModalPrice.innerHTML = window.MPWRPricing.markup(product, selectedModalRegularPrice, "is-modal-price");
         const detailParams = new URLSearchParams({id:String(product.id)});
         Object.entries(selectedModalOptions).forEach(([optionKey,value]) => {
             if (value) detailParams.set(optionKey,value);
@@ -711,7 +714,7 @@ function resultCard(product) {
         </div>
         <h2 class="product-title">${product.title}</h2>
         <div class="price-and-cart">
-            <span class="price">UGX ${Number(product.price).toLocaleString()}</span>
+            <span class="price">${window.MPWRPricing.markup(product, undefined, "is-card-price")}</span>
             <i><img src="images/Plus.PNG" class="addie" alt="View product"></i>
         </div>`;
     const open = () => location.href = `product.html?id=${encodeURIComponent(product.id)}`;
@@ -857,6 +860,8 @@ productModalCart.addEventListener("click",() => {
         id:String(selectedModalProduct.id),
         title:selectedModalProduct.title,
         price:Number(selectedModalPrice),
+        originalPrice:Number(selectedModalRegularPrice),
+        discountPercent:window.MPWRPricing.details(selectedModalProduct, selectedModalRegularPrice).percent,
         image:productModalImage.src,
         selectedOptions:{...selectedModalOptions},
         color:selectedModalOptions.color || "",

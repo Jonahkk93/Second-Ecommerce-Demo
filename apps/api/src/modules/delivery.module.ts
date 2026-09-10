@@ -7,7 +7,7 @@ import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 import Redis from "ioredis";
 import { AdminGuard, AuthGuard, AuthUser, CurrentUser } from "../common/auth";
 import { DB, Database, REDIS } from "../database/database.module";
-import { deliveryQuotes, deliveryRateRules, fulfillmentCenters, products, productVariants } from "../database/schema";
+import { deliveryQuotes, deliveryRateRules, fulfillmentCenters, products, productVariants, storefrontSettings } from "../database/schema";
 
 class QuoteItemDto { @IsUUID() productId!: string; @IsOptional() @IsUUID() variantId?: string; @IsInt() @Min(1) @Max(20) quantity!: number; }
 class DestinationDto { @IsString() address!: string; @IsString() city!: string; @IsString() district!: string; @IsOptional() @IsString() placeId?: string; }
@@ -53,8 +53,10 @@ export class DeliveryService {
     const variantIds = dto.items.map(i => i.variantId).filter(Boolean) as string[];
     const variants = variantIds.length ? await this.db.select().from(productVariants).where(inArray(productVariants.id, variantIds)) : [];
     const productMap = new Map(catalogue.map(p => [p.id, p])); const variantMap = new Map(variants.map(v => [v.id, v]));
+    const [discountSetting] = await this.db.select().from(storefrontSettings).where(eq(storefrontSettings.key, "discounts")).limit(1);
+    const discountMap = new Map(((discountSetting?.value as any)?.products || []).map((item: any) => [String(item.id), Math.min(95, Math.max(1, Math.round(Number(item.percent) || 15)))]));
     let subtotal = 0; let orderClassRank = 0; const levels = ["small", "medium", "large"] as const;
-    const pricedItems = dto.items.map(item => { const product = productMap.get(item.productId)!; const variant = item.variantId ? variantMap.get(item.variantId) : undefined; if (item.variantId && (!variant || variant.productId !== product.id || !variant.active)) throw new BadRequestException("Invalid product variant"); if (variant && variant.stock < item.quantity) throw new BadRequestException(`${product.title} does not have enough stock`); const unitPrice = variant?.price ?? product.price; subtotal += unitPrice * item.quantity; orderClassRank = Math.max(orderClassRank, levels.indexOf(product.class)); return { ...item, title: product.title, unitPrice, sku: variant?.sku, options: variant?.options || {} }; });
+    const pricedItems = dto.items.map(item => { const product = productMap.get(item.productId)!; const variant = item.variantId ? variantMap.get(item.variantId) : undefined; if (item.variantId && (!variant || variant.productId !== product.id || !variant.active)) throw new BadRequestException("Invalid product variant"); if (variant && variant.stock < item.quantity) throw new BadRequestException(`${product.title} does not have enough stock`); const regularPrice = variant?.price ?? product.price; const discount = discountMap.get(String(product.legacyId)) as number | undefined; const unitPrice = discount ? Math.round(regularPrice * (1 - discount / 100)) : regularPrice; subtotal += unitPrice * item.quantity; orderClassRank = Math.max(orderClassRank, levels.indexOf(product.class)); return { ...item, title: product.title, unitPrice, sku: variant?.sku, options: variant?.options || {} }; });
     const orderClass = levels[orderClassRank] || "small";
     const [origin] = await this.db.select().from(fulfillmentCenters).where(eq(fulfillmentCenters.active, true)).limit(1); if (!origin) throw new BadRequestException("No fulfillment centre configured");
     const route = await this.route(origin, dto.destination);

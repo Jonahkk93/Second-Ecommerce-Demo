@@ -461,6 +461,71 @@ products.forEach(product => {
 
 window.products = products;
 
+const mpwrDiscountsById = new Map();
+
+function numericMPWRPrice(value) {
+    return Number(String(value ?? "").replace(/[^0-9.]/g, "")) || 0;
+}
+
+function setMPWRDiscounts(discounts) {
+    mpwrDiscountsById.clear();
+    (Array.isArray(discounts) ? discounts : []).forEach(item => {
+        const id = String(item?.id || "");
+        const percent = Math.min(95, Math.max(0, Math.round(Number(item?.percent) || 0)));
+        if (id && percent) mpwrDiscountsById.set(id, percent);
+    });
+    products.forEach(product => {
+        const percent = mpwrDiscountsById.get(String(product.id)) || 0;
+        if (percent) product.discountPercent = percent;
+        else delete product.discountPercent;
+    });
+}
+
+function mpwrPriceDetails(item, regularOverride) {
+    const catalogueProduct = products.find(product => String(product.id) === String(item?.id));
+    const explicitPercent = regularOverride !== undefined ? item?.discountPercent : undefined;
+    const campaignPercent = Math.min(95, Math.max(0, Number(
+        explicitPercent ?? (catalogueProduct
+            ? (catalogueProduct.discountPercent ?? mpwrDiscountsById.get(String(item?.id)) ?? 0)
+            : (item?.discountPercent ?? mpwrDiscountsById.get(String(item?.id)) ?? 0))
+    ) || 0));
+    const storedPrice = numericMPWRPrice(item?.price);
+    const cataloguePrice = numericMPWRPrice(catalogueProduct?.price);
+
+    if (campaignPercent) {
+        const regular = numericMPWRPrice(
+            regularOverride ?? item?.originalPrice ?? (catalogueProduct ? cataloguePrice : storedPrice)
+        );
+        const current = Math.round(regular * (1 - campaignPercent / 100));
+        return { current, regular, percent: campaignPercent, discounted: regular > current, source: "campaign" };
+    }
+
+    const current = numericMPWRPrice(
+        regularOverride ?? (catalogueProduct ? cataloguePrice : storedPrice)
+    );
+    const compareAtPrice = numericMPWRPrice(
+        item?.compareAtPrice ?? catalogueProduct?.compareAtPrice ?? item?.originalPrice
+    );
+    if (compareAtPrice > current) {
+        const percent = Math.min(95, Math.max(1, Math.round((1 - current / compareAtPrice) * 100)));
+        return { current, regular: compareAtPrice, percent, discounted: true, source: "product" };
+    }
+
+    return { current, regular: current, percent: 0, discounted: false, source: "regular" };
+}
+
+function mpwrPriceMarkup(item, regularOverride, groupClass = "") {
+    const pricing = mpwrPriceDetails(item, regularOverride);
+    if (!pricing.discounted) return `UGX ${pricing.current.toLocaleString()}`;
+    return `<span class="mpwr-price-pair ${groupClass}"><span class="mpwr-sale-price">UGX ${pricing.current.toLocaleString()}</span><span class="mpwr-original-price">UGX ${pricing.regular.toLocaleString()}</span></span>`;
+}
+
+window.MPWRPricing = {
+    details: mpwrPriceDetails,
+    markup: mpwrPriceMarkup,
+    setDiscounts: setMPWRDiscounts
+};
+
 /* Keep catalogue image paths portable between localhost and the deployed site. */
 function normalizeMPWRImagePath(source, productId) {
     const fallback = products.find(product => String(product.id) === String(productId))?.image || "";
@@ -483,8 +548,12 @@ function normalizeMPWRImagePath(source, productId) {
 function normalizeMPWRItems(items = []) {
     return items.map(item => {
         const catalogueProduct = products.find(product => String(product.id) === String(item.id));
+        const pricing = mpwrPriceDetails(item);
         return {
             ...item,
+            price: pricing.current,
+            originalPrice: pricing.discounted ? pricing.regular : undefined,
+            discountPercent: pricing.discounted ? pricing.percent : undefined,
             image: normalizeMPWRImagePath(item.image, item.id),
             shippingClass: item.shippingClass || catalogueProduct?.shippingClass || "small"
         };
@@ -550,7 +619,7 @@ function createCatalogueCard(product) {
     priceAndCart.className = "price-and-cart";
     const price = document.createElement("span");
     price.className = "price";
-    price.textContent = `UGX ${Number(product.price).toLocaleString()}`;
+    price.innerHTML = mpwrPriceMarkup(product, undefined, "is-card-price");
     const addWrapper = document.createElement("i");
     const addIcon = document.createElement("img");
     addIcon.src = "images/Plus.PNG";
@@ -592,7 +661,7 @@ function syncCatalogueCards() {
             const title = card.querySelector(".product-title");
             if (title) title.textContent = product.title;
             const price = card.querySelector(".price");
-            if (price) price.textContent = `UGX ${Number(product.price).toLocaleString()}`;
+            if (price) price.innerHTML = mpwrPriceMarkup(product, undefined, "is-card-price");
         }
 
         card.dataset.category = product.category;
@@ -630,6 +699,35 @@ window.MPWRCatalogueReady = fetch(`${catalogueHost}/products`, { credentials: "i
         console.warn("Using the built-in catalogue because the live catalogue is unavailable.", error);
         syncCatalogueCards();
         return products;
+    })
+    .then(async catalogue => {
+        let discounts = null;
+        try {
+            discounts = JSON.parse(localStorage.getItem("mpwrDiscountProducts") || "null");
+        } catch (_) {
+            discounts = null;
+        }
+        setMPWRDiscounts(discounts);
+
+        try {
+            const [, { doc, getDoc }] = await Promise.all([
+                import("./firebase.js"),
+                import("./firestore-api.js")
+            ]);
+            if (window.db) {
+                const snapshot = await getDoc(doc(window.db, "storefront", "discounts"));
+                const remoteDiscounts = snapshot.data()?.products;
+                if (Array.isArray(remoteDiscounts)) {
+                    setMPWRDiscounts(remoteDiscounts);
+                    localStorage.setItem("mpwrDiscountProducts", JSON.stringify(remoteDiscounts));
+                }
+            }
+        } catch (error) {
+            console.warn("Using cached discount prices.", error);
+        }
+
+        syncCatalogueCards();
+        return catalogue;
     });
 
 // Keep an already-open storefront tab synchronized with catalogue changes made

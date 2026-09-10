@@ -9,12 +9,33 @@
 /* Shared MPWR Management sidebar */
 .admin-side-nav{position:fixed;inset:0 auto 0 0;z-index:220;width:245px;padding:30px 22px;background:#1e1a18;color:#fff}.admin-side-brand{display:flex;flex-direction:column;width:max-content;margin:0 12px 38px;color:#fff;text-decoration:none}.admin-side-brand span{font-size:27px;font-weight:700;letter-spacing:.13em}.admin-side-brand small{margin-top:4px;color:#c5bdb8;font-size:10px;letter-spacing:.18em;text-transform:uppercase}.admin-side-nav nav{display:grid;gap:5px}.admin-side-nav nav a,.admin-side-nav nav button{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border:0;border-radius:11px;background:transparent;color:#cfc7c2;cursor:pointer;font:inherit;font-size:13px;text-align:left;text-decoration:none;transition:.2s}.admin-side-nav nav a>span,.admin-side-nav nav button>span{display:grid;width:20px;place-items:center;font-size:16px}.admin-side-nav nav a>span img,.admin-side-nav nav button>span img{display:block;width:18px;height:18px;object-fit:contain}.admin-side-nav nav a:hover,.admin-side-nav nav button:hover,.admin-side-nav nav a.active{background:rgba(229,164,132,.16);color:#fff;transform:translateX(2px)}.admin-side-nav nav a.active{box-shadow:inset 3px 0 #e5a484}.admin-dashboard{padding-top:72px;padding-left:245px}.admin-dashboard>.admin-nav{left:245px}.admin-dashboard>.admin-header{padding-right:5%;padding-left:5%}
 .admin-side-nav a:is(.active,:hover,:focus-visible,:active)[href="#orders"] img{content:url("../images/Icon Folder/Order status_White.PNG")}.admin-side-nav button:is(.active,:hover,:focus-visible,:active)[data-coming-soon="Customers"] img{content:url("../images/Icon Folder/Customers Icon_White.PNG")}.admin-side-nav a:is(.active,:hover,:focus-visible,:active)[href="admin-reviews.html"] img{content:url("../images/Icon Folder/Reviews Icon_White.PNG")}.admin-side-nav a:is(.active,:hover,:focus-visible,:active)[href="admin-analytics.html"] img{content:url("../images/Icon Folder/Analytics Icon_White.PNG")}.admin-side-nav button:is(.active,:hover,:focus-visible,:active)[data-coming-soon="Marketing"] img{content:url("../images/Icon Folder/Marketing Icon_White.PNG")}.admin-side-nav button:is(.active,:hover,:focus-visible,:active)[data-coming-soon="Settings"] img{content:url("../images/Icon Folder/Settings Icon_White.PNG")}
+.admin-dashboard.orders-view{padding-top:0}.admin-dashboard>.admin-nav.orders-view-hidden{display:none}
 
 @media(max-width:900px){.admin-side-nav{position:fixed;inset:62px 0 auto;width:auto;height:54px;padding:6px 14px;overflow-x:auto;background:#1e1a18}.admin-side-brand{display:none}.admin-side-nav nav{display:flex;width:max-content;gap:4px}.admin-side-nav nav a,.admin-side-nav nav button{width:auto;min-width:max-content;padding:9px 12px}.admin-dashboard{padding-top:116px;padding-left:0}.admin-dashboard>.admin-nav{left:0}}
 
 body{
     background:#f8f8f8;
     color:#333;
+}
+
+/* Use the normal page canvas on full-width layouts. */
+html{
+    background:#f8f8f8;
+}
+
+/* Keep the compact Management navigation flush during scroll bounce. */
+@media(max-width:1024px){
+    html{
+        background:#1e1a18;
+    }
+}
+
+/* Match Reviews on full laptop widths without restricting compact scrolling. */
+@media(min-width:1025px){
+    html.management-orders-view,
+    html.management-orders-view body{
+        overscroll-behavior-y:none;
+    }
 }
 
 a[x-apple-data-detectors]{
