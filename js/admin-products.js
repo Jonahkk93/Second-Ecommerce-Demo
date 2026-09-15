@@ -12,6 +12,12 @@ const HOMEPAGE_DISCOUNT_PRODUCT_LIMIT = 10;
 const DEFAULT_DISCOUNTS = ["12", "15", "1", "4", "11"].map(id => ({ id, percent: 15 }));
 const DISCOUNT_CAMPAIGN_LABELS = ["Limited Offers", "Valentines Offers", "Christmas Offers", "Black Friday"];
 const LEGACY_DISCOUNT_CAMPAIGN_LABELS = { Valentines: "Valentines Offers", Christmas: "Christmas Offers" };
+const DISCOUNT_CAMPAIGN_ICONS = {
+    "Limited Offers": "images/Icon Folder/Discount Icon_E5A484.PNG",
+    "Valentines Offers": "images/Icon Folder/Valentines Icon_Red.PNG",
+    "Christmas Offers": "images/Icon Folder/Christmas Icon_Red.PNG",
+    "Black Friday": "images/Icon Folder/Black Friday.png"
+};
 
 function normalizeDiscountCampaignLabel(label) {
     const normalizedLabel = LEGACY_DISCOUNT_CAMPAIGN_LABELS[label] || label;
@@ -290,6 +296,7 @@ function formatMoney(value) {
 }
 
 function enhanceProductDropdown(select) {
+    const isCampaignDropdown = select.id === "discount-campaign-label";
     select.classList.add("product-dropdown-native");
     const picker = document.createElement("div");
     picker.className = "product-dropdown";
@@ -309,7 +316,15 @@ function enhanceProductDropdown(select) {
         const option = document.createElement("button");
         option.type = "button";
         option.dataset.value = item.value;
-        option.textContent = item.textContent;
+        if (isCampaignDropdown) {
+            option.classList.add("campaign-dropdown-option");
+            const icon = document.createElement("img");
+            icon.src = DISCOUNT_CAMPAIGN_ICONS[item.value] || DISCOUNT_CAMPAIGN_ICONS["Limited Offers"];
+            icon.alt = "";
+            option.append(icon, document.createTextNode(item.textContent));
+        } else {
+            option.textContent = item.textContent;
+        }
         option.disabled = item.disabled;
         option.setAttribute("role", "option");
         menu.appendChild(option);
@@ -317,7 +332,16 @@ function enhanceProductDropdown(select) {
 
     const sync = () => {
         const selected = select.options[select.selectedIndex];
-        trigger.querySelector(".product-dropdown-label").textContent = selected?.textContent || "Select";
+        const triggerLabel = trigger.querySelector(".product-dropdown-label");
+        if (isCampaignDropdown && selected) {
+            const icon = document.createElement("img");
+            icon.src = DISCOUNT_CAMPAIGN_ICONS[selected.value] || DISCOUNT_CAMPAIGN_ICONS["Limited Offers"];
+            icon.alt = "";
+            triggerLabel.classList.add("campaign-dropdown-label");
+            triggerLabel.replaceChildren(icon, document.createTextNode(selected.textContent));
+        } else {
+            triggerLabel.textContent = selected?.textContent || "Select";
+        }
         trigger.disabled = select.disabled;
         picker.classList.toggle("disabled", select.disabled);
         if (select.disabled) close();
@@ -708,6 +732,7 @@ function renderAll() {
 
 function closeEditor() {
     $(".product-modal").classList.add("hidden");
+    document.body.classList.remove("product-editor-open");
     editingProduct = null;
 }
 
@@ -741,6 +766,7 @@ function openEditor(product = null) {
     const existingMedia = $("#existing-media");
     existingMedia.innerHTML = `${gallery.map(url => `<img src="${escapeHtml(url)}" alt="Existing product image">`).join("")}${videos.map(video => `<video src="${escapeHtml(video.url || video)}" muted aria-label="Existing product video"></video>`).join("")}`;
     existingMedia.classList.toggle("hidden", gallery.length + videos.length === 0);
+    document.body.classList.add("product-editor-open");
     $(".product-modal").classList.remove("hidden");
     setTimeout(() => $("#product-title").focus(), 30);
 }

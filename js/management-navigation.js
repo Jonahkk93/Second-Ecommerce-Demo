@@ -38,9 +38,9 @@
             ${link("orders", ordersHref, "Orders", icon("Order status_Light Gray.PNG"))}
             ${link("products", "admin-products.html#products", "Products", icon("Products 2 Icon_Light Gray.PNG"), productExtra)}
             ${link("homepage", "admin-products.html#homepage", "Homepage", icon("Home Icon_Light Gray.PNG"), homepageExtra)}
-            ${link("deleted", "admin-products.html#deleted-products", `Deleted Products${onProducts ? ' <em id="deleted-nav-count">0</em>' : ""}`, icon("Delete Icon_Light Gray.PNG"), deletedExtra)}
+            ${link("deleted", "admin-products.html#deleted-products", '<span class="management-nav-label">Deleted Products <em id="deleted-nav-count">0</em></span>', icon("Delete Icon_Light Gray.PNG"), deletedExtra)}
             ${comingSoon("Customers", icon("Customers Icon_Light Gray.PNG"))}
-            ${link("reviews", "admin-reviews.html", "Reviews", icon("Reviews Icon_Light Gray.PNG"))}
+            ${link("reviews", "admin-reviews.html", '<span class="management-nav-label">Reviews <em id="reviews-nav-count">0</em></span>', icon("Reviews Icon_Light Gray.PNG"))}
             ${link("analytics", "admin-analytics.html", "Analytics", icon("Analytics Icon_Light Gray.PNG"))}
             ${comingSoon("Marketing", icon("Marketing Icon_Light Gray.PNG"))}
             ${comingSoon("Coupons", "<span>◇</span>")}
@@ -60,6 +60,49 @@
                 <button type="button" id="admin-signout">Sign Out</button>
             </div>
         </div>`;
+
+    const setReviewsCount = count => {
+        const badge = sidebar.querySelector("#reviews-nav-count");
+        if (badge) badge.textContent = String(Math.max(0, Number(count) || 0));
+    };
+
+    const setDeletedProductsCount = count => {
+        const badge = sidebar.querySelector("#deleted-nav-count");
+        if (badge) badge.textContent = String(Math.max(0, Number(count) || 0));
+    };
+
+    const loadReviewsCount = async () => {
+        const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+        const apiRoot = window.MPWR_API_URL || (localHost ? "http://127.0.0.1:3000/v1" : "/api/v1");
+        try {
+            const response = await fetch(`${apiRoot}/admin/reviews`, { credentials: "include" });
+            if (!response.ok) return;
+            const reviews = await response.json();
+            const awaiting = Array.isArray(reviews)
+                ? reviews.filter(review => !String(review.adminReply || "").trim() && !review.adminSeenAt).length
+                : 0;
+            setReviewsCount(awaiting);
+        } catch (_error) {
+            // Keep the badge at zero while the management API is unavailable.
+        }
+    };
+
+    const loadDeletedProductsCount = async () => {
+        const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+        const apiRoot = window.MPWR_API_URL || (localHost ? "http://127.0.0.1:3000/v1" : "/api/v1");
+        try {
+            const response = await fetch(`${apiRoot}/admin/products/deleted`, { credentials: "include" });
+            if (!response.ok) return;
+            const products = await response.json();
+            setDeletedProductsCount(Array.isArray(products) ? products.length : 0);
+        } catch (_error) {
+            // Keep the badge at zero while the management API is unavailable.
+        }
+    };
+
+    window.addEventListener("management-reviews-count", event => setReviewsCount(event.detail?.count));
+    loadReviewsCount();
+    loadDeletedProductsCount();
 
     const syncActiveItem = () => {
         if (!onDashboard) return;

@@ -250,7 +250,7 @@ button{
 .payment-empty{
     margin-top:35px;
     padding:60px 24px;
-    border:1px dashed #d8d8d8;
+    border:0;
     border-radius:18px;
     background:#fff;
     text-align:center

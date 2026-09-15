@@ -249,7 +249,8 @@
             if (icon) {
                 const campaignIcons = {
                     "Valentines Offers": "images/Icon Folder/Valentines Icon_Red.PNG",
-                    "Christmas Offers": "images/Icon Folder/Christmas Icon_Red.PNG"
+                    "Christmas Offers": "images/Icon Folder/Christmas Icon_Red.PNG",
+                    "Black Friday": "images/Icon Folder/Black Friday.png"
                 };
                 icon.src = campaignIcons[campaignLabel] || "images/Icon Folder/Discount Icon_E5A484.PNG";
             }

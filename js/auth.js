@@ -24,6 +24,83 @@ const homeAccountEmail = document.getElementById("home-account-email");
 const homeSignout = document.getElementById("home-signout");
 const defaultAccountImage = "images/Account Logo 3.PNG";
 
+function initializeAccountControls() {
+    if (!accountIcon) return;
+
+    const accountOverlay = document.querySelector(".account-overlay");
+    const accountClose = document.querySelector(".account-close");
+    const signinView = document.querySelector(".signin-view");
+    const registerView = document.querySelector(".register-view");
+    const createAccountButton = document.querySelector(".create-account-btn");
+    const backToSigninButton = document.querySelector(".back-to-signin-btn");
+    const homeViewProfile = document.getElementById("home-view-profile");
+
+    const showSignin = () => {
+        registerView?.classList.remove("active");
+        signinView?.classList.remove("hide");
+        accountOverlay?.classList.add("active");
+        document.body.style.overflow = "hidden";
+        accountOverlay?.querySelector(".account-modal")?.scrollTo(0, 0);
+        requestAnimationFrame(() => {
+            document.getElementById("signin-email")?.focus({ preventScroll: true });
+        });
+    };
+
+    const closeAccount = () => {
+        accountOverlay?.classList.remove("active");
+        document.body.style.overflow = "";
+        registerView?.classList.remove("active");
+        signinView?.classList.remove("hide");
+    };
+
+    accountIcon.addEventListener("click", event => {
+        if (event.target.closest(".home-account-menu")) return;
+
+        if (auth.currentUser) {
+            if (homeAccountMenu) homeAccountMenu.hidden = !homeAccountMenu.hidden;
+        } else {
+            showSignin();
+        }
+    });
+
+    createAccountButton?.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        signinView?.classList.add("hide");
+        registerView?.classList.add("active");
+    });
+
+    backToSigninButton?.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        showSignin();
+    });
+
+    accountClose?.addEventListener("click", closeAccount);
+    accountOverlay?.addEventListener("click", event => {
+        if (event.target === accountOverlay) closeAccount();
+    });
+
+    homeViewProfile?.addEventListener("click", () => {
+        sessionStorage.setItem("accountReturnUrl", window.location.href);
+    });
+
+    document.addEventListener("click", event => {
+        if (event.target.closest("#account-icon")) return;
+        if (homeAccountMenu) homeAccountMenu.hidden = true;
+    });
+
+    if (sessionStorage.getItem("openAccountSignIn") === "true") {
+        sessionStorage.removeItem("openAccountSignIn");
+        showSignin();
+    } else if (new URLSearchParams(window.location.search).get("account") === "login") {
+        showSignin();
+        history.replaceState({}, "", window.location.pathname);
+    }
+}
+
+initializeAccountControls();
+
 function showAccountInitials(firstName = "", lastName = "", email = "") {
     const initials = `${firstName.trim()[0] || ""}${lastName.trim()[0] || ""}` ||
         email.trim()[0] || "A";

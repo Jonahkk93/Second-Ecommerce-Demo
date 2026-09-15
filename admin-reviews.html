@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reviews · MPWR Management</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/admin-products.css?v=20260908-11">
-    <link rel="stylesheet" href="css/admin-reviews.css?v=20260909-22">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260915-11">
+    <link rel="stylesheet" href="css/admin-reviews.css?v=20260915-23">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
-    <link rel="stylesheet" href="css/management-navigation.css?v=20260909-30">
+    <link rel="stylesheet" href="css/management-navigation.css?v=20260915-8">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
-    <script src="js/management-navigation.js?v=20260909-13" defer></script>
+    <script src="js/auto-grow-textareas.js?v=20260915-2" defer></script>
+    <script src="js/management-navigation.js?v=20260915-4" defer></script>
     <script type="module" src="js/management-account.js?v=20260909-3"></script>
 </head>
 <body>
@@ -19,19 +20,17 @@
     <main class="management-main reviews-main">
         <header class="management-topbar reviews-topbar"><div><p class="eyebrow">Customer feedback</p><h1>Reviews</h1><p>Read feedback and respond publicly as MPWR.</p></div></header>
         <section class="review-metrics">
-            <article><span>Total reviews</span><strong id="reviews-total">0</strong></article>
-            <article><span>Average rating</span><strong id="reviews-average">0.0</strong></article>
             <article><span>Awaiting reply / To be Seen</span><strong id="reviews-unanswered">0</strong></article>
-            <article><span>Five-star reviews</span><strong id="reviews-five-star">0</strong></article>
+            <article><span>Total Reviews</span><strong id="reviews-total">0</strong></article>
         </section>
         <div class="reviews-toolbar">
             <label class="search-field"><span><img src="images/Icon Folder/Search Icon_Gray.PNG" alt=""></span><input type="search" id="review-search" placeholder="Search customer, product or review…"></label>
             <select id="rating-filter" aria-label="Filter by rating"><option value="all">All ratings</option><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select>
-            <select id="reply-filter" aria-label="Filter by reply status"><option value="all">All reviews</option><option value="unanswered">Awaiting reply / To be Seen</option><option value="answered">Replied</option></select>
+            <select id="reply-filter" aria-label="Filter by reply status"><option value="unanswered" selected>Awaiting reply / To be Seen</option><option value="answered">Replied / Seen</option><option value="all">All reviews</option></select>
         </div>
         <div class="review-results-heading"><strong id="review-result-count">0 reviews</strong><span>Newest first</span></div>
         <section id="admin-review-list" class="admin-review-list"></section>
-        <div class="empty-state hidden" id="reviews-empty"><strong>No reviews found</strong><span>New customer reviews will appear here automatically.</span></div>
+        <div class="empty-state hidden" id="reviews-empty"><img class="reviews-empty-icon" src="images/Icon Folder/Reviews Icon_Gray.PNG" alt=""><strong>No reviews yet</strong><span>New customer reviews will appear here</span></div>
     </main>
 </div>
 <div class="confirm-modal hidden" id="seen-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="seen-confirm-title" aria-describedby="seen-confirm-message">
@@ -43,6 +42,6 @@
 </div>
 <div class="analytics-loading" id="reviews-loading"><div class="loading-spinner"></div><p>Loading customer reviews…</p></div>
 <div class="admin-products-toast" role="status" aria-live="polite"></div>
-<script type="module" src="js/admin-reviews.js?v=20260908-12"></script>
+<script type="module" src="js/admin-reviews.js?v=20260915-8"></script>
 </body>
 </html>

@@ -59,7 +59,7 @@ function initials(name) {
 }
 
 function optionSummary(review) {
-    return Object.entries(review.purchasedOptions || {}).filter(([, value]) => value).map(([key, value]) => `${key}: ${value}`).join(" · ");
+    return Object.entries(review.purchasedOptions || {}).filter(([, value]) => value).map(([key, value]) => `${key}: ${value}`).join("\n");
 }
 
 function isAwaitingReply(review) {
@@ -67,11 +67,10 @@ function isAwaitingReply(review) {
 }
 
 function renderStats() {
-    const average = reviews.length ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length : 0;
+    const awaitingCount = reviews.filter(isAwaitingReply).length;
+    $("#reviews-unanswered").textContent = awaitingCount;
     $("#reviews-total").textContent = reviews.length;
-    $("#reviews-average").textContent = average.toFixed(1);
-    $("#reviews-unanswered").textContent = reviews.filter(isAwaitingReply).length;
-    $("#reviews-five-star").textContent = reviews.filter(review => Number(review.rating) === 5).length;
+    window.dispatchEvent(new CustomEvent("management-reviews-count", { detail: { count: awaitingCount } }));
 }
 
 function filteredReviews() {
@@ -80,8 +79,8 @@ function filteredReviews() {
     const reply = $("#reply-filter").value;
     return reviews.filter(review => {
         const searchText = `${review.customerName || ""} ${review.customerEmail || ""} ${review.productTitle || ""} ${review.text || ""}`.toLowerCase();
-        const answered = Boolean(String(review.adminReply || "").trim());
-        return (!query || searchText.includes(query)) && (rating === "all" || Number(review.rating) === Number(rating)) && (reply === "all" || (reply === "answered" ? answered : isAwaitingReply(review)));
+        const repliedOrSeen = Boolean(String(review.adminReply || "").trim()) || Boolean(review.adminSeenAt);
+        return (!query || searchText.includes(query)) && (rating === "all" || Number(review.rating) === Number(rating)) && (reply === "all" || (reply === "answered" ? repliedOrSeen : isAwaitingReply(review)));
     });
 }
 
@@ -159,16 +158,18 @@ function renderReviews() {
         const images = attachments(review).filter(item => String(item.type || "").startsWith("image/"));
         return `<article class="admin-review-card" data-id="${escapeHtml(review.id)}">
             <section class="review-panel">
-                <span class="review-panel-label">Review</span>
+                <div class="review-panel-heading"><span class="review-panel-label">Review</span><time class="review-panel-date">${escapeHtml(dateLabel(review.createdAt))}</time></div>
                 <header class="admin-review-header">
-                    <div class="review-customer"><span class="review-avatar">${escapeHtml(initials(review.customerName))}</span><div><strong>${escapeHtml(review.customerName || "MPWR customer")}${review.verifiedPurchase ? '<img class="verified-purchase" src="images/Icon Folder/Verified Icon_E5A484.PNG" alt="Verified purchase">' : ""}<span class="review-rating" aria-label="${Number(review.rating)} out of 5 stars">${"★".repeat(Number(review.rating))}${"☆".repeat(5 - Number(review.rating))}</span></strong><small>${escapeHtml(review.customerEmail || "Customer account")} · ${escapeHtml(dateLabel(review.createdAt))}</small></div></div>
+                    <div class="review-customer"><span class="review-avatar">${escapeHtml(initials(review.customerName))}</span><div><strong>${escapeHtml(review.customerName || "MPWR customer")}${review.verifiedPurchase ? '<img class="verified-purchase" src="images/Icon Folder/Verified Icon_E5A484.PNG" alt="Verified purchase">' : ""}<span class="review-rating" aria-label="${Number(review.rating)} out of 5 stars">${"★".repeat(Number(review.rating))}${"☆".repeat(5 - Number(review.rating))}</span></strong><small>${escapeHtml(review.customerEmail || "Customer account")}<span class="review-customer-date"> · ${escapeHtml(dateLabel(review.createdAt))}</span></small></div></div>
                 </header>
-                <div class="review-content"><p class="review-copy">${escapeHtml(review.text || "")}</p>${images.length ? `<div class="review-attachments-admin">${images.map(item => `<a href="${escapeHtml(item.url)}" target="_blank"><img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.name || "Review image")}"></a>`).join("")}</div>` : ""}${reply ? `<div class="admin-reply"><div class="admin-reply-heading"><strong><span>MPWR reply</span><img src="images/Icon Folder/Verified Purchase Icon_333.PNG" alt="Verified MPWR"></strong><time>${escapeHtml(dateLabel(review.adminRepliedAt))}</time></div><p>${escapeHtml(reply)}</p></div>` : ""}${isOpen ? `<form class="reply-editor"><textarea maxlength="1200" aria-label="Reply to ${escapeHtml(review.customerName || "customer")}" placeholder="Write a helpful public response…">${escapeHtml(reply)}</textarea><div class="reply-editor-footer"><small><span class="reply-character-count">${reply.length}</span>/1200 · This reply will be visible to shoppers.</small><div class="reply-actions"><button class="cancel-reply" type="button">Cancel</button>${reply ? '<button class="remove-reply" type="button">Remove reply</button>' : ""}<button class="save-reply" type="submit">${reply ? "Update reply" : "Publish reply"}</button></div></div></form>` : ""}</div>
+                <div class="review-content"><p class="review-copy">${escapeHtml(review.text || "")}</p>${images.length ? `<div class="review-attachments-admin">${images.map(item => `<a href="${escapeHtml(item.url)}" target="_blank"><img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.name || "Review image")}"></a>`).join("")}</div>` : ""}${reply ? `<div class="admin-reply"><div class="admin-reply-heading"><strong><span>MPWR reply</span><img src="images/Icon Folder/Verified Purchase Icon_333.PNG" alt="Verified MPWR"></strong><time>${escapeHtml(dateLabel(review.adminRepliedAt))}</time></div><p>${escapeHtml(reply)}</p></div>` : ""}${isOpen ? `<form class="reply-editor"><textarea maxlength="1200" aria-label="Reply to ${escapeHtml(review.customerName || "customer")}" placeholder="Reply to this review...">${escapeHtml(reply)}</textarea><div class="reply-editor-footer"><small><span class="reply-character-count">${reply.length}</span>/1200 · This reply will be visible to shoppers.</small><div class="reply-actions"><button class="cancel-reply" type="button">Cancel</button>${reply ? '<button class="remove-reply" type="button">Remove reply</button>' : ""}<button class="save-reply" type="submit">${reply ? "Update reply" : "Publish reply"}</button></div></div></form>` : ""}</div>
                 ${isOpen ? "" : `<div class="review-response-actions"><button class="reply-toggle" type="button">${reply ? "Edit reply" : "Reply"}</button><button class="seen-toggle${review.adminSeenAt ? " is-seen" : ""}" type="button">${review.adminSeenAt ? "Mark as unseen" : "Seen"}</button></div>`}
             </section>
             <aside class="ordered-item-panel">
-                <span class="review-panel-label">Item ordered</span>
-                <div class="review-product"><img src="${escapeHtml(review.productImage || "images/MPWR Logo.PNG")}" alt=""><div><strong>${escapeHtml(review.productTitle || "Product")}</strong><small>Purchased product</small>${optionSummary(review) ? `<div class="review-options">${escapeHtml(optionSummary(review))}</div>` : ""}</div></div>
+                <div class="ordered-item-content">
+                    <span class="review-panel-label">Item ordered</span>
+                    <div class="review-product"><img src="${escapeHtml(review.productImage || "images/MPWR Logo.PNG")}" alt=""><div><strong>${escapeHtml(review.productTitle || "Product")}</strong><small>Product Details</small>${optionSummary(review) ? `<div class="review-options">${escapeHtml(optionSummary(review))}</div>` : ""}</div></div>
+                </div>
             </aside>
         </article>`;
     }).join("");
