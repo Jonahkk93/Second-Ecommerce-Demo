@@ -11,6 +11,18 @@ summary{
     -webkit-tap-highlight-color:transparent;
 }
 
+/*
+ * iOS Safari enlarges the whole page when a focused form control renders
+ * below 16px. Keep touch form fields at the non-zooming size site-wide.
+ */
+@media (max-width:600px), (pointer:coarse){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea{
+        font-size:16px !important;
+    }
+}
+
 @media (hover:none), (pointer:coarse){
     button:hover,
     a:hover,

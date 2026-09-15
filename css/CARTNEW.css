@@ -2521,15 +2521,18 @@ e
 
 @media screen and (max-width:600px){
     .account-overlay{
-        padding:16px;
+        padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+        align-items:center;
     }
 
     .account-modal{
         width:100%;
         max-width:360px;
-        max-height:calc(100dvh - 32px);
+        max-height:calc(100dvh - max(32px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
         padding:24px;
         border-radius:18px;
+        overscroll-behavior:contain;
+        -webkit-overflow-scrolling:touch;
     }
 
     .account-modal-icon{
@@ -2558,6 +2561,7 @@ e
 
     .input-group input{
         padding:12px 14px;
+        font-size:16px;
     }
 
     .signin-btn,

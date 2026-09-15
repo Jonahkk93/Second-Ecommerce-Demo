@@ -4,7 +4,20 @@
         "a",
         "[role='button']",
         "input",
+        "textarea",
         "select",
+        "summary",
+        ".cart-remove",
+        ".wishlist-remove"
+    ].join(",");
+
+    const transientControlSelector = [
+        "button",
+        "a",
+        "[role='button']",
+        "input[type='button']",
+        "input[type='submit']",
+        "input[type='reset']",
         "summary",
         ".cart-remove",
         ".wishlist-remove"
@@ -14,7 +27,11 @@
         if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
 
         const control = event.target.closest?.(interactiveSelector);
-        control?.blur?.();
+
+        // Text fields, selects and checkboxes need to retain focus after a tap.
+        // Blurring them on pointerup made the keyboard/focus flicker and could
+        // make a field appear to ignore the first tap.
+        if (control?.matches?.(transientControlSelector)) control.blur?.();
 
         if (control && typeof PointerEvent === "function") {
             control.dispatchEvent(new PointerEvent("pointerleave", {
