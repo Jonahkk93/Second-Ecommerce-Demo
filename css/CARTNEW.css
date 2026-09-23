@@ -169,7 +169,7 @@ header{
     width:42px;
     height:42px;
     flex:0 0 42px;
-    background-image:url("../images/Icon Folder/Back Icon_Black.PNG");
+    background-image:url("../images/Icon Folder/Back Icon_Gray.PNG");
     background-position:center;
     background-repeat:no-repeat;
     background-size:24px 24px;
@@ -242,11 +242,27 @@ header{
 @media screen and (max-width:600px){
     .category-page header{
         height:70px;
-        padding:0 14px;
+        padding:0 9%;
     }
 
     .category-page .nav-icons{
-        gap:10px;
+        gap:12px;
+    }
+
+    .category-page .header-brand-controls{
+        gap:4px;
+    }
+
+    .category-page .category-back-button{
+        width:24px;
+        height:24px;
+        flex-basis:24px;
+        background-size:20px 20px;
+    }
+
+    .category-page .logo{
+        font-size:20px;
+        letter-spacing:1px;
     }
 
     .category-page .category-nav-home{
@@ -2715,6 +2731,7 @@ e
 
     .register-form .input-group input{
         padding:10px 12px;
+        font-size:16px;
     }
 
     .register-form .terms-check{
@@ -4464,6 +4481,11 @@ body.search-open .section-title{
         gap: 18px;
     }
 
+    .product-box .product-title{
+        font-size:14px;
+        line-height:1.3;
+    }
+
     .price-and-cart .price{
         font-size: 14px;
         white-space: nowrap;
@@ -5396,15 +5418,17 @@ header{
 }
 
 .product-modal-price .is-modal-price .mpwr-original-price {
-    order: 1;
+    order: 2;
+    font-size: 1em;
 }
 
 .product-modal-price .is-modal-price .mpwr-sale-price {
-    order: 2;
+    order: 1;
+    font-size: 1em;
 }
 
 .mpwr-sale-price {
-    color: #E5A484;
+    color: #9c674d;
     font-weight: 600;
 }
 
@@ -5420,7 +5444,7 @@ header{
 .wishlist-details .wishlist-price .mpwr-sale-price,
 .cart-price .mpwr-sale-price,
 .product-modal-price .mpwr-sale-price {
-    color: #E5A484;
+    color: #9c674d;
 }
 
 .wishlist-details .wishlist-price .mpwr-original-price,
@@ -5429,22 +5453,105 @@ header{
     color: #999;
 }
 
-/* Keep drawer prices on one line: original first, discounted price on the right. */
+/* Keep the current sale price prominent and the old price secondary in drawers. */
 .wishlist-price .mpwr-price-pair.is-drawer-price,
 .cart-price .mpwr-price-pair.is-drawer-price {
     flex-direction: row;
     align-items: baseline;
-    gap: 8px;
-    white-space: nowrap;
+    flex-wrap: wrap;
+    gap: 4px 8px;
 }
 
 .wishlist-price .is-drawer-price .mpwr-original-price,
 .cart-price .is-drawer-price .mpwr-original-price {
-    order: 1;
+    order: 2;
+    white-space: nowrap;
 }
 
 .wishlist-price .is-drawer-price .mpwr-sale-price,
 .cart-price .is-drawer-price .mpwr-sale-price {
-    order: 2;
+    order: 1;
     font-size: .78em;
+    white-space: nowrap;
+}
+
+.wishlist-details .wishlist-price .is-drawer-price .mpwr-sale-price,
+.wishlist-details .wishlist-price .is-drawer-price .mpwr-original-price {
+    font-size: 1em;
+}
+
+body:has(#discounts) .product-modal-price {
+    font-size: 16px;
+    line-height: 1.25;
+}
+
+body:has(#discounts) .product-modal-price .is-modal-price .mpwr-sale-price {
+    order: 1;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+body:has(#discounts) .product-modal-price .is-modal-price .mpwr-original-price {
+    order: 2;
+    font-size: .72em;
+}
+
+body:has(#discounts) .product-modal .product-modal-description-row {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: nowrap;
+    width: 100%;
+    gap: 4px;
+}
+
+body:has(#discounts) .product-modal .product-modal-description {
+    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
+    width: max-content;
+    max-width: calc(100% - 68px);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: #666;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+body:has(#discounts) .product-modal .product-modal-read-more {
+    display: inline-block;
+    flex: 0 0 auto;
+    margin: 0;
+    white-space: nowrap;
+    color: #9c674d;
+    font-size: 12px;
+}
+
+body:has(#discounts) .product-modal .product-modal-read-more::before {
+    content: none;
+}
+
+@media screen and (min-width: 1201px) and (max-width: 1799px) {
+    body:has(#discounts) .product-modal {
+        width: min(86vw, 560px);
+        padding: 20px;
+    }
+
+    body:has(#discounts) .product-modal-left {
+        flex: 0 0 120px;
+    }
+
+    body:has(#discounts) .product-modal-image {
+        width: 120px;
+        height: 120px;
+    }
+
+    body:has(#discounts) .product-modal-title {
+        font-size: 22px;
+    }
+
+    body:has(#discounts) .product-modal-price .is-modal-price .mpwr-sale-price {
+        font-size: 17px;
+    }
 }

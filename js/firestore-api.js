@@ -69,6 +69,15 @@ function normalizeRow(collectionName, row) {
     return row;
 }
 
+export async function getManagementBootstrap(db) {
+    const payload = await request("/admin/products/management-bootstrap", { db });
+    return {
+        products: (payload?.products || []).map(row => normalizeRow("products", row)),
+        deletedProducts: (payload?.deletedProducts || []).map(row => normalizeRow("deletedProducts", row)),
+        settings: payload?.settings || {}
+    };
+}
+
 export async function getDoc(reference) {
     let data = null;
     if (reference.name === "users") data = reference.db?.kind === "admin" ? await request(`/admin/users/${encodeURIComponent(reference.id)}`, { db: reference.db }) : await request("/profile", { db: reference.db });

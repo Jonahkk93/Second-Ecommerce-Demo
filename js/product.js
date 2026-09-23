@@ -685,8 +685,8 @@ function updateRelatedModalFavorite() {
     if (!selectedModalProduct || !productModalFavoriteIcon) return;
     const active = isFavoriteProduct(selectedModalProduct);
     productModalFavoriteIcon.src = active ? "images/Heart7.PNG" : "images/optimized/heart-outline.png";
-    productModalFavorite?.setAttribute("aria-label", active ? "Remove from Favorites" : "Add to Favorites");
-    if (productModalFavoriteLabel) productModalFavoriteLabel.textContent = active ? "Remove from Favorites" : "Add to Favorites";
+    productModalFavorite?.setAttribute("aria-label", active ? "Remove from Wishlist" : "Add to Wishlist");
+    if (productModalFavoriteLabel) productModalFavoriteLabel.textContent = active ? "Remove from Wishlist" : "Add to Wishlist";
 }
 
 async function updateRelatedModalReviews(item) {
@@ -805,7 +805,9 @@ function renderRelatedProducts() {
         })
         : candidates.slice(0, recommendationLimit);
 
-    relatedProductsGrid.innerHTML = recommendations.map(item => `
+    relatedProductsGrid.innerHTML = recommendations.map(item => {
+        const pricing = window.MPWRPricing.details(item);
+        return `
         <div class="product-box" data-category="${item.category || ""}" data-id="${item.id}">
             <div class="img-box">
                 <button class="wishlist-btn">
@@ -814,6 +816,7 @@ function renderRelatedProducts() {
                         class="wishlist-icon"
                     >
                 </button>
+                ${pricing.discounted ? `<span class="discount-badge">${pricing.percent}% OFF</span>` : ""}
                 <img src="${item.image}" loading="lazy" decoding="async">
             </div>
             <h2 class="product-title">${item.title}</h2>
@@ -822,7 +825,8 @@ function renderRelatedProducts() {
                 <i class=""><img src="images/Plus.PNG" class="addie"></i>
             </div>
         </div>
-    `).join("");
+    `;
+    }).join("");
 
     relatedProductsGrid.querySelectorAll(".product-box").forEach(card => {
         const item = products.find(productItem => Number(productItem.id) === Number(card.dataset.id));

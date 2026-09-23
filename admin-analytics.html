@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics · MPWR Management</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/admin-products.css?v=20260915-11">
-    <link rel="stylesheet" href="css/admin-analytics.css?v=20260907-1">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260920-13">
+    <link rel="stylesheet" href="css/admin-analytics.css?v=20260923-8">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
-    <link rel="stylesheet" href="css/management-navigation.css?v=20260915-8">
+    <link rel="stylesheet" href="css/management-navigation.css?v=20260920-9">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
     <script src="js/management-navigation.js?v=20260915-4" defer></script>
     <script type="module" src="js/management-account.js?v=20260909-3"></script>
@@ -19,7 +19,7 @@
 
     <main class="management-main analytics-main">
         <header class="management-topbar analytics-topbar">
-            <div><p class="eyebrow">Store performance</p><h1>Analytics</h1><p id="report-period">Loading report…</p></div>
+            <div><p class="eyebrow">Performance centre</p><h1>Analytics</h1><p id="report-period">Loading report…</p></div>
             <div class="analytics-actions">
                 <label><span>Reporting period</span><select id="analytics-range"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option></select></label>
                 <button class="secondary-button" id="export-report" type="button">Export CSV</button>
@@ -27,25 +27,42 @@
         </header>
 
         <section class="analytics-metrics" aria-label="Analytics summary">
-            <article><span>Total revenue</span><strong id="metric-revenue">UGX 0</strong><small id="change-revenue"></small></article>
-            <article><span>Orders</span><strong id="metric-orders">0</strong><small id="change-orders"></small></article>
-            <article><span>Average order value</span><strong id="metric-aov">UGX 0</strong><small id="change-aov"></small></article>
-            <article><span>Fulfilment rate</span><strong id="metric-fulfilment">0%</strong><small id="change-fulfilment"></small></article>
-            <article><span>New customers</span><strong id="metric-customers">0</strong><small id="change-customers"></small></article>
+            <article class="metric-revenue"><div><span>Total revenue</span><i aria-hidden="true">↗</i></div><strong id="metric-revenue">UGX 0</strong><small id="change-revenue"></small></article>
+            <article><div><span>Orders</span><i aria-hidden="true">▤</i></div><strong id="metric-orders">0</strong><small id="change-orders"></small></article>
+            <article><div><span>Average order</span><i aria-hidden="true">◎</i></div><strong id="metric-aov">UGX 0</strong><small id="change-aov"></small></article>
+            <article><div><span>Fulfilment rate</span><i aria-hidden="true">✓</i></div><strong id="metric-fulfilment">0%</strong><small id="change-fulfilment"></small></article>
+            <article><div><span>New customers</span><i aria-hidden="true">＋</i></div><strong id="metric-customers">0</strong><small id="change-customers"></small></article>
         </section>
 
-        <section class="analytics-grid">
-            <article class="analytics-card chart-card wide-card"><div class="card-heading"><div><span>Revenue over time</span><small>Non-cancelled order value</small></div><strong id="revenue-total-label"></strong></div><div id="revenue-chart" class="line-chart"></div></article>
-            <article class="analytics-card chart-card"><div class="card-heading"><div><span>Orders over time</span><small>Orders placed by day</small></div></div><div id="orders-chart" class="line-chart"></div></article>
-            <article class="analytics-card status-card"><div class="card-heading"><div><span>Orders by status</span><small>Current reporting period</small></div></div><div class="donut-layout"><div id="status-donut" class="status-donut"><strong id="status-total">0</strong><small>Total</small></div><div id="status-legend" class="status-legend"></div></div></article>
-            <article class="analytics-card category-card"><div class="card-heading"><div><span>Sales by category</span><small>Revenue contribution</small></div></div><div id="category-bars" class="category-bars"></div></article>
-            <article class="analytics-card table-card wide-card"><div class="card-heading"><div><span>Top-selling products</span><small>Ranked by revenue</small></div></div><div class="analytics-table-wrap"><table><thead><tr><th>Product</th><th>Units sold</th><th>Revenue</th><th>% of total</th></tr></thead><tbody id="top-products"></tbody></table></div></article>
-            <article class="analytics-card table-card"><div class="card-heading"><div><span>Recent orders</span><small>Latest activity in this period</small></div><a href="admin.html#orders">View orders</a></div><div class="analytics-table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead><tbody id="recent-orders"></tbody></table></div></article>
+        <section class="analytics-primary-grid">
+            <article class="analytics-card performance-card">
+                <div class="card-heading performance-heading"><div><span>Performance trend</span><small>Track revenue and demand across the selected period</small></div><div class="chart-switcher" role="tablist" aria-label="Performance metric"><button class="active" type="button" data-chart-metric="revenue" role="tab" aria-selected="true">Revenue</button><button type="button" data-chart-metric="orders" role="tab" aria-selected="false">Orders</button></div></div>
+                <div class="performance-total"><span id="performance-label">Revenue</span><strong id="performance-total">UGX 0</strong></div>
+                <div id="performance-chart" class="line-chart"></div>
+            </article>
+
+            <article class="analytics-card order-health-card">
+                <div class="card-heading"><div><span>Order health</span><small>Fulfilment pipeline for this period</small></div><a href="admin.html#orders">Manage</a></div>
+                <div class="order-health-summary"><div id="status-donut" class="status-donut"><strong id="status-total">0</strong><small>Orders</small></div><div><span>Delivered</span><strong id="delivered-share">0%</strong><small>of active orders</small></div><div><span>Cancelled</span><strong id="cancelled-share">0%</strong><small>of all orders</small></div></div>
+                <div id="status-legend" class="status-legend"></div>
+            </article>
+        </section>
+
+        <section class="analytics-insights" aria-label="Performance insights">
+            <article><span class="insight-icon">★</span><div><small>Best sales day</small><strong id="insight-best-day">No sales yet</strong><p id="insight-best-day-note">Waiting for order activity</p></div></article>
+            <article><span class="insight-icon">◇</span><div><small>Leading category</small><strong id="insight-category">No category yet</strong><p id="insight-category-note">Waiting for product sales</p></div></article>
+            <article><span class="insight-icon">↑</span><div><small>Top product</small><strong id="insight-product">No product yet</strong><p id="insight-product-note">Waiting for product sales</p></div></article>
+        </section>
+
+        <section class="analytics-secondary-grid">
+            <article class="analytics-card category-card"><div class="card-heading"><div><span>Category contribution</span><small>Share of revenue by product category</small></div><strong id="category-total"></strong></div><div id="category-bars" class="category-bars"></div></article>
+            <article class="analytics-card table-card products-ranking"><div class="card-heading"><div><span>Product ranking</span><small>Best sellers ranked by revenue</small></div><a href="admin-products.html">View catalogue</a></div><div class="analytics-table-wrap"><table><thead><tr><th>Rank</th><th>Product</th><th>Category</th><th>Units</th><th>Revenue</th><th>Share</th></tr></thead><tbody id="top-products"></tbody></table></div></article>
+            <article class="analytics-card table-card recent-orders-card"><div class="card-heading"><div><span>Recent orders</span><small>Latest customer activity in this period</small></div><a href="admin.html#orders">View all orders</a></div><div class="analytics-table-wrap"><table class="recent-orders-table"><colgroup><col class="order-column"><col class="customer-column"><col class="date-column"><col class="total-column"><col class="status-column"></colgroup><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th></tr></thead><tbody id="recent-orders"></tbody></table></div></article>
         </section>
     </main>
 </div>
 <div class="analytics-loading" id="analytics-loading"><div class="loading-spinner"></div><p>Preparing your report…</p></div>
 <div class="admin-products-toast" role="status" aria-live="polite"></div>
-<script type="module" src="js/admin-analytics.js?v=20260908-2"></script>
+<script type="module" src="js/admin-analytics.js?v=20260923-2"></script>
 </body>
 </html>

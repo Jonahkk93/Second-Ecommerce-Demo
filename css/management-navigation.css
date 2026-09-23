@@ -12,6 +12,18 @@
 @media(max-width:1024px){:is(.admin-side-nav,.management-sidebar),.management-sidebar:not(.admin-side-nav){overflow:visible}}
 .management-sidebar .admin-account-name{display:none}
 @media(min-width:1025px){.management-sidebar>.admin-account{display:flex;align-items:center;gap:9px}.management-sidebar>.admin-account .admin-account-button{border:0}.management-sidebar .admin-account-name{display:block;max-width:145px;overflow:hidden;color:#fff;font-size:12px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}}
+
+/* Center management dialogs within the white workspace, excluding the desktop sidebar. */
+@media(min-width:1025px){
+    :is(.product-modal,.confirm-modal,.admin-status-confirm,.signout-confirm-overlay){
+        padding-right:20px;
+        padding-left:265px;
+    }
+    .admin-products-toast{
+        left:calc(50% + 122.5px);
+        max-width:calc(100vw - 277px);
+    }
+}
 @media(max-width:1024px){.management-sidebar>.admin-account .admin-account-button,.management-sidebar>.admin-account .admin-account-button:is(:hover,:focus-visible,[aria-expanded="true"]){border:0!important}}
 
 /* Preserve a mathematically square, fully clipped profile image at every size. */

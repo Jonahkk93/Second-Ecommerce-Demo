@@ -68,6 +68,7 @@ function initializeAccountControls() {
         event.stopPropagation();
         signinView?.classList.add("hide");
         registerView?.classList.add("active");
+        accountOverlay?.querySelector(".account-modal")?.scrollTo(0, 0);
     });
 
     backToSigninButton?.addEventListener("click", event => {

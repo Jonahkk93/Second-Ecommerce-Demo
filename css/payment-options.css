@@ -468,6 +468,11 @@ button{
     background:#fff;
     color:var(--ink);
     outline:0}
+
+.payment-editor select{
+    padding-right:44px;
+    padding-left:22px
+}
     
 .payment-editor input:focus,.payment-editor select:focus{
     border-color:var(--accent);
@@ -546,7 +551,7 @@ button{
     width:100%;
     align-items:center;
     justify-content:space-between;
-    padding:13px 14px;
+    padding:13px 22px;
     border:1px solid #d9ceca;
     border-radius:9px;
     background:#fff;
@@ -805,6 +810,16 @@ body.payment-modal-open{
 
     .payment-editor input,.payment-editor select{
         font-size:16px
+    }
+
+    .payment-editor select{
+        padding-right:44px;
+        padding-left:22px
+    }
+
+    .payment-picker-trigger{
+        padding-right:22px;
+        padding-left:22px
     }
     
     .payment-delete-overlay{

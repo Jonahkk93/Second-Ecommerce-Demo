@@ -1815,12 +1815,14 @@ function updateProductModalFavorite() {
     const isFavorite = favorites.some(item =>
         String(item.id) === String(selectedProduct.dataset.id)
     );
-    const label = isFavorite ? "Remove from Favorites" : "Add to Favorites";
+    const label = isFavorite ? "Remove from Wishlist" : "Add to Wishlist";
     const icon = productModalFavorite.querySelector("img");
+    const text = productModalFavorite.querySelector("span");
 
     productModalFavorite.setAttribute("aria-label", label);
     productModalFavorite.setAttribute("title", label);
     productModalFavorite.classList.toggle("is-favorite", isFavorite);
+    if (text) text.textContent = label;
     icon?.setAttribute(
         "src",
         isFavorite ? "images/Heart7.PNG" : "images/optimized/heart-outline.png"

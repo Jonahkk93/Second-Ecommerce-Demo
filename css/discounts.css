@@ -106,6 +106,26 @@
     text-align: center;
 }
 
+@media screen and (min-width: 601px) and (max-width: 1023px) {
+    .discount-product-box .price-and-cart .price {
+        font-size: 12px;
+    }
+
+    .discount-product-box .original-price {
+        font-size: 10px;
+    }
+}
+
+@media screen and (min-width: 1024px) and (max-width: 1200px) {
+    .discount-product-box .price-and-cart .price {
+        font-size: 13px;
+    }
+
+    .discount-product-box .original-price {
+        font-size: 11px;
+    }
+}
+
 @media screen and (max-width: 600px) {
     .discount-shop {
         padding-top: 48px;

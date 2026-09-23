@@ -7,11 +7,11 @@
     <title>Admin Dashboard</title>
 
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/admin.css?v=20260909-9">
+    <link rel="stylesheet" href="css/admin.css?v=20260923-3">
     <link rel="stylesheet" href="css/signout-confirm.css">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
-    <link rel="stylesheet" href="css/management-navigation.css?v=20260915-8">
+    <link rel="stylesheet" href="css/management-navigation.css?v=20260920-9">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
     <script src="js/touch-interactions.js" defer></script>
     <script src="js/management-navigation.js?v=20260915-4" defer></script>
@@ -24,36 +24,50 @@
 
     <aside class="admin-side-nav management-sidebar" data-management-sidebar></aside>
 
-    <header class="admin-header">
-        <h1>Dashboard</h1>
-        <div class="dashboard-stats">
+    <main class="admin-workspace">
+        <section class="dashboard-overview is-loading" id="dashboard-overview" aria-busy="true">
+            <header class="dashboard-hero">
+                <div><p class="dashboard-eyebrow">Store overview</p><h1 id="dashboard-greeting">Good day</h1><p id="dashboard-date"></p></div>
+                <div class="dashboard-quick-actions"><a href="admin-products.html">Manage products</a><a class="primary" href="admin-products.html#homepage">Edit homepage</a></div>
+            </header>
 
-    <div class="stat-card">
-        <h3>Total Orders</h3>
-        <p id="total-orders">...</p>
-    </div>
+            <div class="dashboard-kpis" aria-label="Store performance summary">
+                <article><div class="dashboard-kpi-heading"><span>Revenue</span><i class="dashboard-icon revenue" aria-hidden="true">↗</i></div><strong id="total-revenue">UGX 0</strong><small id="revenue-note">Across all non-cancelled orders</small></article>
+                <article><div class="dashboard-kpi-heading"><span>Orders</span><i class="dashboard-icon orders" aria-hidden="true">▤</i></div><strong id="total-orders">0</strong><small id="orders-note">0 placed in the last 7 days</small></article>
+                <article><div class="dashboard-kpi-heading"><span>Average order</span><i class="dashboard-icon average" aria-hidden="true">◎</i></div><strong id="average-order-value">UGX 0</strong><small>Average non-cancelled basket</small></article>
+                <article><div class="dashboard-kpi-heading"><span>Customers</span><i class="dashboard-icon customers" aria-hidden="true">♙</i></div><strong id="total-customers">0</strong><small id="customer-note">Unique shoppers</small></article>
+            </div>
 
-    <div class="stat-card">
-        <h3>Pending Orders</h3>
-        <p id="pending-orders">...</p>
-    </div>
+            <div class="dashboard-grid">
+                <article class="dashboard-card sales-card">
+                    <div class="dashboard-card-heading"><div><span>Sales pulse</span><small>Revenue from the last 7 days</small></div><strong id="week-revenue">UGX 0</strong></div>
+                    <div class="sales-chart" id="sales-chart" aria-label="Seven-day revenue chart"></div>
+                </article>
 
-    <div class="stat-card">
-        <h3>Total Revenue</h3>
-        <p id="total-revenue">Loading...</p>
-    </div>
+                <article class="dashboard-card pipeline-card">
+                    <div class="dashboard-card-heading"><div><span>Order pipeline</span><small>What needs attention now</small></div><a href="admin.html#orders">View all</a></div>
+                    <div class="order-pipeline" id="order-pipeline"></div>
+                </article>
 
-    <div class="stat-card">
-        <h3>Total Customers</h3>
-        <p id="total-customers">...</p>
-    </div>
+                <article class="dashboard-card recent-card">
+                    <div class="dashboard-card-heading"><div><span>Recent orders</span><small>Latest customer activity</small></div><a href="admin.html#orders">Manage orders</a></div>
+                    <div class="dashboard-order-list" id="dashboard-recent-orders"></div>
+                </article>
 
-</div>
-    </header>
+                <article class="dashboard-card products-card">
+                    <div class="dashboard-card-heading"><div><span>Top products</span><small>Best performers by units ordered</small></div><a href="admin-products.html">Catalogue</a></div>
+                    <div class="dashboard-top-products" id="dashboard-top-products"></div>
+                </article>
 
-    <main class="admin-container" id="orders-content">
+                <article class="dashboard-card inventory-card">
+                    <div class="dashboard-card-heading"><div><span>Inventory watch</span><small>Products running low</small></div><a href="admin-products.html">Review stock</a></div>
+                    <div class="dashboard-inventory" id="dashboard-inventory"></div>
+                </article>
+            </div>
+        </section>
 
-        <h2>Orders</h2>
+        <section class="orders-workspace" id="orders-content" hidden>
+            <header class="orders-page-heading"><div><p class="dashboard-eyebrow">Fulfilment</p><h1>Orders</h1><p>Search orders, review purchases, and update fulfilment status.</p></div><div class="orders-page-summary"><span><strong id="pending-orders">0</strong> pending</span></div></header>
 
 <div class="admin-toolbar">
 
@@ -85,6 +99,8 @@
             <!-- Orders will appear here -->
         </div>
 
+        </section>
+
         <div class="admin-status-confirm" id="admin-status-confirm" hidden>
             <div class="admin-status-confirm-box" role="dialog" aria-modal="true" aria-labelledby="admin-status-confirm-title">
                 <h2 id="admin-status-confirm-title">Update Order Status?</h2>
@@ -103,7 +119,7 @@
     </div>
 
     <script type="module" src="js/products.js"></script>
-    <script type="module" src="js/admin.js?v=20260909-5"></script>
+    <script type="module" src="js/admin.js?v=20260923-2"></script>
     <script src="js/signout-confirm.js"></script>
 
 </body>

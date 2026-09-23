@@ -10,6 +10,7 @@ const statusColours = { pending: "#f2ad4b", processing: "#578ee9", shipped: "#8c
 const categoryLabels = { "press-ons": "Press-On Nails", wigs: "Wigs", lashes: "Lashes", products: "Products", polish: "Nail Polish" };
 let report = null;
 let toastTimer;
+let activeChartMetric = "revenue";
 
 function escapeHtml(value = "") {
     return String(value).replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
@@ -28,6 +29,68 @@ function showToast(message, type = "success") {
     void toast.offsetWidth;
     toast.classList.add("show");
     toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
+}
+
+function enhanceManagementDropdown(select) {
+    select.classList.add("product-dropdown-native");
+    const picker = document.createElement("div");
+    picker.className = "product-dropdown";
+    const trigger = document.createElement("button");
+    trigger.className = "product-dropdown-trigger";
+    trigger.type = "button";
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-label", select.closest("label")?.querySelector(":scope > span")?.textContent || "Choose reporting period");
+    trigger.innerHTML = '<span class="product-dropdown-label"></span><img class="product-dropdown-arrow" src="images/Icon Folder/Back Icon Down_Gray.PNG" alt="">';
+    const menu = document.createElement("div");
+    menu.className = "product-dropdown-menu";
+    menu.setAttribute("role", "listbox");
+    menu.hidden = true;
+
+    [...select.options].forEach(item => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.dataset.value = item.value;
+        option.textContent = item.textContent;
+        option.setAttribute("role", "option");
+        menu.appendChild(option);
+    });
+
+    const close = () => {
+        menu.hidden = true;
+        trigger.setAttribute("aria-expanded", "false");
+    };
+    const sync = () => {
+        trigger.querySelector(".product-dropdown-label").textContent = select.options[select.selectedIndex]?.textContent || "Select";
+        trigger.disabled = select.disabled;
+        picker.classList.toggle("disabled", select.disabled);
+        menu.querySelectorAll("button").forEach(option => {
+            const selected = option.dataset.value === select.value;
+            option.classList.toggle("selected", selected);
+            option.setAttribute("aria-selected", String(selected));
+        });
+        if (select.disabled) close();
+    };
+    trigger.addEventListener("click", event => {
+        if (select.disabled) return;
+        event.stopPropagation();
+        menu.hidden = !menu.hidden;
+        trigger.setAttribute("aria-expanded", String(!menu.hidden));
+    });
+    menu.addEventListener("click", event => {
+        const option = event.target.closest("button[data-value]");
+        if (!option) return;
+        select.value = option.dataset.value;
+        sync();
+        close();
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
+    picker.append(trigger, menu);
+    select.insertAdjacentElement("afterend", picker);
+    sync();
+    return sync;
 }
 
 function renderChange(element, change) {
@@ -65,19 +128,60 @@ function renderStatuses(statuses) {
     });
     $("#status-donut").style.background = total ? `conic-gradient(${segments.join(",")})` : "#eee";
     $("#status-total").textContent = total;
-    $("#status-legend").innerHTML = statuses.map(item => `<div><i style="background:${statusColours[item.status]}"></i><span>${escapeHtml(item.status)}</span><b>${item.count}</b></div>`).join("");
+    $("#status-legend").innerHTML = statuses.map(item => {
+        const share = total ? (item.count / total) * 100 : 0;
+        return `<div class="status-row"><i style="background:${statusColours[item.status]}"></i><span>${escapeHtml(item.status)}</span><div><b style="width:${share}%"></b></div><strong>${item.count}</strong></div>`;
+    }).join("");
+    const count = status => statuses.find(item => item.status === status)?.count || 0;
+    const active = Math.max(0, total - count("cancelled"));
+    $("#delivered-share").textContent = `${active ? Math.round((count("delivered") / active) * 100) : 0}%`;
+    $("#cancelled-share").textContent = `${total ? Math.round((count("cancelled") / total) * 100) : 0}%`;
 }
 
 function renderCategories(categories) {
+    const total = categories.reduce((sum, item) => sum + Number(item.value || 0), 0);
+    $("#category-total").textContent = compactMoney(total);
     if (!categories.length) return void ($("#category-bars").innerHTML = '<div class="analytics-empty">No category sales yet.</div>');
     const max = Math.max(...categories.map(item => item.value), 1);
-    $("#category-bars").innerHTML = categories.slice(0, 7).map(item => `<div class="category-row"><span>${escapeHtml(categoryLabels[item.category] || item.category)}</span><div class="bar-track"><i style="width:${(item.value / max) * 100}%"></i></div><strong>${compactMoney(item.value)}</strong></div>`).join("");
+    $("#category-bars").innerHTML = categories.slice(0, 7).map(item => `<div class="category-row"><div><span>${escapeHtml(categoryLabels[item.category] || item.category)}</span><small>${total ? ((item.value / total) * 100).toFixed(1) : 0}% of revenue</small></div><div class="bar-track"><i style="width:${(item.value / max) * 100}%"></i></div><strong>${compactMoney(item.value)}</strong></div>`).join("");
 }
 
 function renderTables(data) {
     const totalRevenue = Math.max(Number(data.metrics.revenue.value) || 0, 1);
-    $("#top-products").innerHTML = data.topProducts.length ? data.topProducts.map(product => `<tr><td><div class="product-cell"><img src="${escapeHtml(product.image || "images/MPWR Logo.PNG")}" alt=""><span>${escapeHtml(product.title)}</span></div></td><td>${product.units}</td><td>${money(product.revenue)}</td><td>${((product.revenue / totalRevenue) * 100).toFixed(1)}%</td></tr>`).join("") : '<tr><td colspan="4">No product sales in this period.</td></tr>';
-    $("#recent-orders").innerHTML = data.recentOrders.length ? data.recentOrders.map(order => `<tr><td>#${escapeHtml(order.id)}</td><td>${escapeHtml(order.customer)}</td><td>${money(order.total)}</td><td><span class="analytics-status ${escapeHtml(order.status)}">${escapeHtml(order.status)}</span></td></tr>`).join("") : '<tr><td colspan="4">No recent orders.</td></tr>';
+    $("#top-products").innerHTML = data.topProducts.length ? data.topProducts.map((product, index) => `<tr><td><span class="ranking-number">${index + 1}</span></td><td><div class="product-cell"><img src="${escapeHtml(product.image || "images/MPWR Logo.PNG")}" alt=""><span>${escapeHtml(product.title)}</span></div></td><td><span class="category-chip">${escapeHtml(categoryLabels[product.category] || product.category)}</span></td><td>${Number(product.units).toLocaleString()}</td><td><strong>${money(product.revenue)}</strong></td><td><div class="share-cell"><span>${((product.revenue / totalRevenue) * 100).toFixed(1)}%</span><i><b style="width:${Math.min(100, (product.revenue / totalRevenue) * 100)}%"></b></i></div></td></tr>`).join("") : '<tr><td colspan="6">No product sales in this period.</td></tr>';
+    $("#recent-orders").innerHTML = data.recentOrders.length ? data.recentOrders.map(order => {
+        const date = order.createdAt ? new Date(order.createdAt) : null;
+        return `<tr><td><strong>#${escapeHtml(String(order.id).slice(0, 8).toUpperCase())}</strong></td><td>${escapeHtml(order.customer)}</td><td>${date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "—"}</td><td><strong>${money(order.total)}</strong></td><td><span class="analytics-status ${escapeHtml(order.status)}">${escapeHtml(order.status)}</span></td></tr>`;
+    }).join("") : '<tr><td colspan="5">No recent orders.</td></tr>';
+}
+
+function renderPerformanceChart() {
+    if (!report) return;
+    const metric = activeChartMetric;
+    $("#performance-label").textContent = metric === "revenue" ? "Revenue" : "Orders";
+    $("#performance-total").textContent = metric === "revenue"
+        ? money(report.metrics.revenue.value)
+        : Number(report.metrics.orders.value).toLocaleString();
+    lineChart($("#performance-chart"), report.revenueSeries, metric, `performance-${metric}-gradient`);
+}
+
+function renderInsights(data) {
+    const bestDay = [...data.revenueSeries].sort((a, b) => Number(b.revenue) - Number(a.revenue))[0];
+    if (bestDay && Number(bestDay.revenue) > 0) {
+        $("#insight-best-day").textContent = new Date(`${bestDay.date}T00:00:00`).toLocaleDateString("en-UG", { weekday: "long", day: "numeric", month: "short" });
+        $("#insight-best-day-note").textContent = `${money(bestDay.revenue)} from ${bestDay.orders} order${bestDay.orders === 1 ? "" : "s"}`;
+    }
+    const category = data.categorySales[0];
+    if (category) {
+        const total = data.categorySales.reduce((sum, item) => sum + Number(item.value || 0), 0);
+        $("#insight-category").textContent = categoryLabels[category.category] || category.category;
+        $("#insight-category-note").textContent = `${total ? ((category.value / total) * 100).toFixed(1) : 0}% of product revenue`;
+    }
+    const product = data.topProducts[0];
+    if (product) {
+        $("#insight-product").textContent = product.title;
+        $("#insight-product-note").textContent = `${product.units} unit${product.units === 1 ? "" : "s"} · ${money(product.revenue)}`;
+    }
 }
 
 function renderReport(data) {
@@ -96,17 +200,17 @@ function renderReport(data) {
     const first = data.revenueSeries[0]?.date;
     const last = data.revenueSeries.at(-1)?.date;
     $("#report-period").textContent = first && last ? `${new Date(`${first}T00:00:00`).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })} – ${new Date(`${last}T00:00:00`).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}` : `Last ${data.rangeDays} days`;
-    $("#revenue-total-label").textContent = money(metrics.revenue.value);
-    lineChart($("#revenue-chart"), data.revenueSeries, "revenue", "revenue-gradient");
-    lineChart($("#orders-chart"), data.revenueSeries, "orders", "orders-gradient");
+    renderPerformanceChart();
     renderStatuses(data.orderStatuses);
     renderCategories(data.categorySales);
     renderTables(data);
+    renderInsights(data);
 }
 
 async function loadReport() {
     const range = $("#analytics-range").value;
     $("#analytics-range").disabled = true;
+    rangeDropdownSync();
     try {
         const response = await fetch(`${API_ROOT}/admin/analytics?range=${encodeURIComponent(range)}`, { credentials: "include" });
         const payload = await response.json().catch(() => null);
@@ -116,6 +220,7 @@ async function loadReport() {
         showToast(error?.message || "Unable to load analytics.", "error");
     } finally {
         $("#analytics-range").disabled = false;
+        rangeDropdownSync();
     }
 }
 
@@ -143,21 +248,33 @@ function exportCsv() {
     URL.revokeObjectURL(url);
 }
 
+const rangeDropdownSync = enhanceManagementDropdown($("#analytics-range"));
 $("#analytics-range").addEventListener("change", loadReport);
 $("#export-report").addEventListener("click", exportCsv);
+$$('[data-chart-metric]').forEach(button => button.addEventListener("click", () => {
+    activeChartMetric = button.dataset.chartMetric;
+    $$('[data-chart-metric]').forEach(option => {
+        const selected = option === button;
+        option.classList.toggle("active", selected);
+        option.setAttribute("aria-selected", String(selected));
+    });
+    renderPerformanceChart();
+}));
 $$('[data-coming-soon]').forEach(button => button.addEventListener("click", () => showToast(`${button.dataset.comingSoon} management is the next workspace to connect.`)));
 
 onAuthStateChanged(adminAuth, async user => {
     if (!user) return void window.location.replace("admin-login.html");
     try {
-        const profile = await getDoc(doc(adminDb, "users", user.uid));
-        if (!profile.exists() || profile.data().role !== "admin") {
-            await signOut(adminAuth);
-            return void window.location.replace("admin-login.html?error=unauthorized");
+        if (user.role !== "admin") {
+            const profile = await getDoc(doc(adminDb, "users", user.uid));
+            if (!profile.exists() || profile.data().role !== "admin") {
+                await signOut(adminAuth);
+                return void window.location.replace("admin-login.html?error=unauthorized");
+            }
         }
+        await loadReport();
         $("#analytics-app").hidden = false;
         $("#analytics-loading").remove();
-        await loadReport();
         document.documentElement.dataset.siteContentReady = "true";
         window.MPWRLoading?.ready();
     } catch (error) {

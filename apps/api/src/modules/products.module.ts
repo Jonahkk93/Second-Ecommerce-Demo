@@ -3,7 +3,7 @@ import { IsBoolean, IsIn, IsInt, IsObject, IsOptional, IsString, Min } from "cla
 import { and, eq, ilike, or } from "drizzle-orm";
 import { AdminGuard } from "../common/auth";
 import { DB, Database } from "../database/database.module";
-import { orderItems, products, productVariants } from "../database/schema";
+import { orderItems, products, productVariants, storefrontSettings } from "../database/schema";
 
 const PRODUCT_TRASH_DAYS = 60;
 
@@ -104,6 +104,20 @@ class AdminProductsController {
       const metadata = (product.metadata || {}) as ProductMetadata;
       return !metadata._trash && !metadata._purged;
     });
+  }
+  @Get("management-bootstrap") async managementBootstrap() {
+    await this.trash.purgeExpired();
+    const [productRows, settingRows] = await Promise.all([
+      this.db.select().from(products).limit(500),
+      this.db.select().from(storefrontSettings)
+    ]);
+    const activeProducts = productRows.filter(product => {
+      const metadata = (product.metadata || {}) as ProductMetadata;
+      return !metadata._trash && !metadata._purged;
+    });
+    const deletedProducts = productRows.filter(product => Boolean(((product.metadata || {}) as ProductMetadata)._trash));
+    const settings = Object.fromEntries(settingRows.map(setting => [setting.key, setting.value]));
+    return { products: activeProducts, deletedProducts, settings };
   }
   @Get("deleted") async deleted() {
     await this.trash.purgeExpired();

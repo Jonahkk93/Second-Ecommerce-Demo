@@ -422,10 +422,12 @@ async function updateProductModalReviews(product) {
 
 function updateModalFavorite() {
     const isFavorite = getFavorites().some(item => String(item.id) === String(selectedModalProduct?.id));
-    const label = isFavorite ? "Remove from Favorites" : "Add to Favorites";
+    const label = isFavorite ? "Remove from Wishlist" : "Add to Wishlist";
     productModalFavorite.classList.toggle("is-favorite",isFavorite);
     productModalFavorite.setAttribute("aria-label",label);
     productModalFavorite.setAttribute("title",label);
+    const text = productModalFavorite.querySelector("span");
+    if (text) text.textContent = label;
     productModalFavorite.querySelector("img").src = isFavorite
         ? "images/Heart7.PNG"
         : "images/optimized/heart-outline.png";

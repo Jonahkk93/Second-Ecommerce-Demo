@@ -11,6 +11,7 @@ import {
     getDocs,
     query,
     orderBy,
+    getManagementBootstrap,
     updateDoc,
     setDoc,
     serverTimestamp
@@ -24,6 +25,8 @@ const ordersPortal = document.body.dataset.ordersPortal === "true";
 const ordersList = document.querySelector(".orders-list");
 const orderSearch = document.getElementById("order-search");
 const adminDashboard = document.getElementById("admin-dashboard");
+const dashboardOverview = document.getElementById("dashboard-overview");
+const ordersContent = document.getElementById("orders-content");
 const portalAccountButton = ordersPortal ? document.getElementById("admin-account-button") : null;
 const portalAccountMenu = ordersPortal ? document.getElementById("admin-account-menu") : null;
 const portalAccountEmail = ordersPortal ? document.getElementById("admin-account-email") : null;
@@ -44,6 +47,8 @@ function syncAdminNavSelection() {
         adminTopNav?.classList.toggle("orders-view-hidden", ordersSelected);
         adminDashboard?.classList.toggle("orders-view", ordersSelected);
         document.documentElement.classList.toggle("management-orders-view", ordersSelected);
+        dashboardOverview.hidden = ordersSelected;
+        ordersContent.hidden = !ordersSelected;
     }
 }
 
@@ -110,8 +115,90 @@ statusConfirm.addEventListener("click", event => {
 
 function showDashboard(profile = {}) {
     adminDashboard.hidden = false;
+    const firstName = String(profile.firstName || profile.displayName || auth.currentUser?.displayName || "").trim().split(/\s+/)[0];
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    const greetingElement = document.getElementById("dashboard-greeting");
+    if (greetingElement) greetingElement.textContent = `${greeting}${firstName ? `, ${firstName}` : ""}`;
+    const dateElement = document.getElementById("dashboard-date");
+    if (dateElement) dateElement.textContent = new Intl.DateTimeFormat("en-UG", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
     if (portalAccountEmail) portalAccountEmail.textContent = auth.currentUser?.email || "Orders account";
     if (portalAccountInitials) portalAccountInitials.textContent = (auth.currentUser?.email?.trim()?.[0] || "A").toUpperCase();
+}
+
+function dashboardEscape(value = "") {
+    return String(value).replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
+}
+
+function dashboardMoney(value) {
+    return `UGX ${Math.round(Number(value) || 0).toLocaleString()}`;
+}
+
+function orderCreatedAt(order) {
+    const value = order.createdAt?.toDate?.() || (order.createdAt ? new Date(order.createdAt) : null);
+    return value && !Number.isNaN(value.getTime()) ? value : null;
+}
+
+function renderDashboard(orders, products) {
+    const activeOrders = orders.filter(order => String(order.status).toLowerCase() !== "cancelled");
+    const totalRevenue = activeOrders.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
+    const customers = new Set(orders.map(order => order.userId || order.customer?.email).filter(Boolean));
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    const recentOrders = orders.filter(order => (orderCreatedAt(order)?.getTime() || 0) >= sevenDaysAgo.getTime());
+
+    document.getElementById("total-orders").textContent = orders.length.toLocaleString();
+    document.getElementById("total-revenue").textContent = dashboardMoney(totalRevenue);
+    document.getElementById("average-order-value").textContent = dashboardMoney(activeOrders.length ? totalRevenue / activeOrders.length : 0);
+    document.getElementById("total-customers").textContent = customers.size.toLocaleString();
+    document.getElementById("orders-note").textContent = `${recentOrders.length} placed in the last 7 days`;
+
+    const daily = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(sevenDaysAgo);
+        date.setDate(date.getDate() + index);
+        const key = date.toISOString().slice(0, 10);
+        const revenue = activeOrders.reduce((sum, order) => {
+            const createdAt = orderCreatedAt(order);
+            return createdAt?.toISOString().slice(0, 10) === key ? sum + (Number(order.total) || 0) : sum;
+        }, 0);
+        return { date, revenue };
+    });
+    const weekRevenue = daily.reduce((sum, day) => sum + day.revenue, 0);
+    const maxRevenue = Math.max(...daily.map(day => day.revenue), 1);
+    document.getElementById("week-revenue").textContent = dashboardMoney(weekRevenue);
+    document.getElementById("sales-chart").innerHTML = daily.map(day => `<div class="sales-day"><div class="sales-bar-track"><i style="height:${Math.max(day.revenue ? 10 : 3, (day.revenue / maxRevenue) * 100)}%" title="${dashboardMoney(day.revenue)}"></i></div><span>${day.date.toLocaleDateString("en-UG", { weekday: "short" })}</span></div>`).join("");
+
+    const statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    document.getElementById("order-pipeline").innerHTML = statuses.map(status => {
+        const count = orders.filter(order => String(order.status).toLowerCase() === status.toLowerCase()).length;
+        const share = orders.length ? Math.round((count / orders.length) * 100) : 0;
+        return `<a href="admin.html#orders" class="pipeline-row"><i class="pipeline-dot ${status.toLowerCase()}"></i><span>${status}</span><div><b style="width:${share}%"></b></div><strong>${count}</strong></a>`;
+    }).join("");
+
+    const latest = [...orders].sort((a, b) => (orderCreatedAt(b)?.getTime() || 0) - (orderCreatedAt(a)?.getTime() || 0)).slice(0, 5);
+    document.getElementById("dashboard-recent-orders").innerHTML = latest.length ? latest.map(order => {
+        const customer = `${order.customer?.firstName || ""} ${order.customer?.lastName || ""}`.trim() || order.customer?.name || "Customer";
+        const createdAt = orderCreatedAt(order);
+        return `<a href="admin.html#orders" class="dashboard-order-row"><div class="dashboard-order-avatar">${dashboardEscape(customer.charAt(0).toUpperCase() || "C")}</div><div><strong>${dashboardEscape(customer)}</strong><small>#${dashboardEscape(String(order.id).slice(0, 8).toUpperCase())} · ${createdAt ? createdAt.toLocaleDateString("en-UG", { day: "numeric", month: "short" }) : "No date"}</small></div><span class="dashboard-status ${dashboardEscape(String(order.status).toLowerCase())}">${dashboardEscape(order.status || "Pending")}</span><b>${dashboardMoney(order.total)}</b></a>`;
+    }).join("") : '<div class="dashboard-empty">No orders yet.</div>';
+
+    const productTotals = new Map();
+    activeOrders.forEach(order => (Array.isArray(order.items) ? order.items : []).forEach(item => {
+        const key = String(item.id || item.title || "product");
+        const current = productTotals.get(key) || { title: item.title || "Product", image: item.image || "", units: 0, revenue: 0 };
+        const quantity = Math.max(1, Number(item.quantity) || 1);
+        current.units += quantity;
+        current.revenue += (Number(item.price) || 0) * quantity;
+        productTotals.set(key, current);
+    }));
+    const topProducts = [...productTotals.values()].sort((a, b) => b.units - a.units || b.revenue - a.revenue).slice(0, 5);
+    document.getElementById("dashboard-top-products").innerHTML = topProducts.length ? topProducts.map((product, index) => `<div class="dashboard-product-row"><span class="product-rank">${index + 1}</span><img src="${dashboardEscape(window.normalizeMPWRImagePath?.(product.image) || product.image || "images/MPWR Logo.PNG")}" alt=""><div><strong>${dashboardEscape(product.title)}</strong><small>${product.units} unit${product.units === 1 ? "" : "s"} ordered</small></div><b>${dashboardMoney(product.revenue)}</b></div>`).join("") : '<div class="dashboard-empty">Sales will appear here after the first order.</div>';
+
+    const lowStock = products.filter(product => product.active !== false && product.stock !== undefined && Number(product.stock) <= 5).sort((a, b) => Number(a.stock) - Number(b.stock)).slice(0, 5);
+    document.getElementById("dashboard-inventory").innerHTML = lowStock.length ? lowStock.map(product => `<a href="admin-products.html" class="inventory-row"><img src="${dashboardEscape(product.image || product.imageUrl || "images/MPWR Logo.PNG")}" alt=""><div><strong>${dashboardEscape(product.title || "Product")}</strong><small>${Number(product.stock) === 0 ? "Out of stock" : `${Number(product.stock)} remaining`}</small></div><span class="${Number(product.stock) === 0 ? "out" : "low"}">${Number(product.stock) === 0 ? "Restock" : "Low"}</span></a>`).join("") : '<div class="dashboard-empty success">Inventory levels look healthy.</div>';
+    dashboardOverview.classList.remove("is-loading");
+    dashboardOverview.removeAttribute("aria-busy");
 }
 
 portalAccountButton?.addEventListener("click", event => {
@@ -187,12 +274,10 @@ ordersList.innerHTML = `
     </div>
 `;
 
-    const snapshot = await getDocs(
-        query(
-            collection(db, "orders"),
-            orderBy("createdAt", "desc")
-        )
-    );
+    const [snapshot, management] = await Promise.all([
+        getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"))),
+        ordersPortal ? Promise.resolve({ products: [] }) : getManagementBootstrap(db).catch(() => ({ products: [] }))
+    ]);
 
     if (!ordersPortal) {
         try {
@@ -203,6 +288,7 @@ ordersList.innerHTML = `
     }
 
     ordersList.innerHTML = "";
+    const dashboardOrders = snapshot.docs.map(orderDoc => ({ id: orderDoc.id, ...orderDoc.data() }));
     let totalOrders = 0;
     let pendingOrders = 0;
     let totalRevenue = 0;
@@ -241,20 +327,6 @@ for (const orderDoc of snapshot.docs) {
         let customerName = `${order.customer?.firstName || ""} ${order.customer?.lastName || ""}`.trim() || order.customer?.name || "Unknown Customer";
 let customerEmail = order.customer?.email || "No email";
 
-if (!ordersPortal) try {
-    const customerDoc = await getDoc(doc(db, "users", order.userId));
-
-if (customerDoc.exists()) {
-    const customer = customerDoc.data();
-
-    customerName = `${customer.firstName} ${customer.lastName}`;
-
-    customerEmail = customer.email || "No email";
-}
-
-} catch (error) {
-    console.error(error);
-}
         totalOrders++;
 
 if (order.status === "Pending") {
@@ -389,6 +461,9 @@ option.addEventListener("click", async event => {
         await updateDoc(doc(db, "orders", orderDoc.id), { status: nextStatus });
         order.status = nextStatus;
         if (!ordersPortal) {
+            const dashboardOrder = dashboardOrders.find(item => item.id === orderDoc.id);
+            if (dashboardOrder) dashboardOrder.status = nextStatus;
+            renderDashboard(dashboardOrders, management.products || []);
             try {
                 await publishBestsellers(snapshot.docs.map(item =>
                     item.id === orderDoc.id
@@ -453,6 +528,8 @@ document.getElementById("total-revenue").textContent =
 
 document.getElementById("total-customers").textContent =
     customers.size;
+
+    if (!ordersPortal) renderDashboard(dashboardOrders, management.products || []);
 
 }
 

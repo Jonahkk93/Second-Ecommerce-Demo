@@ -1,12 +1,20 @@
 import { onAuthStateChanged } from "./auth-api.js";
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from "./firestore-api.js";
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getManagementBootstrap, setDoc, updateDoc } from "./firestore-api.js";
 import { deleteImage, uploadImage } from "./media-api.js";
 
 const auth = window.auth;
 const db = window.db;
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
-const categoryLabels = { "press-ons": "Press-On Nails", wigs: "Wigs", lashes: "Lashes", products: "Products" };
+const DEFAULT_CATEGORIES = [
+    { slug: "press-ons", label: "Press-On Nails" },
+    { slug: "wigs", label: "Wigs" },
+    { slug: "lashes", label: "Lashes" },
+    { slug: "products", label: "Products" }
+];
+const UNCATEGORIZED_CATEGORY = "uncategorized";
+const categoryLabels = Object.fromEntries(DEFAULT_CATEGORIES.map(category => [category.slug, category.label]));
+categoryLabels[UNCATEGORIZED_CATEGORY] = "No Category";
 const POPULAR_PRODUCT_LIMIT = 10;
 const HOMEPAGE_DISCOUNT_PRODUCT_LIMIT = 10;
 const DEFAULT_DISCOUNTS = ["12", "15", "1", "4", "11"].map(id => ({ id, percent: 15 }));
@@ -32,6 +40,7 @@ const productDropdownSync = new WeakMap();
 let toastTimer;
 let products = [];
 let deletedProducts = [];
+let categories = DEFAULT_CATEGORIES.map(category => ({ ...category }));
 let popularIds = [];
 let automaticPopularIds = [];
 let automaticPopularSales = new Map();
@@ -53,6 +62,10 @@ let homepagePanelResizeObserver = null;
 let homepageAutosaveTimer = null;
 let homepageAutosaveQueue = Promise.resolve();
 let homepageAutosaveMessage = "";
+let categorySlugEdited = false;
+let categoryProductIds = new Set();
+let categoryReassignmentIds = new Set();
+let categoryReassignmentTarget = null;
 const catalogueChannel = "BroadcastChannel" in window ? new BroadcastChannel("mpwr-catalogue") : null;
 const panelHashes = { catalogue: "products", homepage: "homepage", deleted: "deleted-products" };
 const hashPanels = Object.fromEntries(Object.entries(panelHashes).map(([panel, hash]) => [hash, panel]));
@@ -166,7 +179,7 @@ function closeHomepageSettingConfirmation() {
     $("#homepage-setting-modal").classList.add("hidden");
 }
 
-function updateHomepageSelection(product, action, sourceCard = null, shouldAutosave = true) {
+function updateHomepageSelection(product, action, sourceCard = null) {
     if (popularMode !== "manual") {
         showToast("Switch Popular Products to Manual before editing the selection", "error");
         return false;
@@ -175,6 +188,10 @@ function updateHomepageSelection(product, action, sourceCard = null, shouldAutos
         showToast("Remove this product from Discounts before adding it to Popular", "error");
         return false;
     }
+    if (popularMode === "manual") {
+        popularIds = popularIds.filter(id => products.some(item => String(item.id) === id && item.active !== false)
+            && (!discountSectionEnabled || !isHomepageDiscount(id)));
+    }
     if (action === "add" && !popularIds.includes(String(product.id)) && popularIds.length >= POPULAR_PRODUCT_LIMIT) {
         showToast(`Only ${POPULAR_PRODUCT_LIMIT} popular products can be added`, "error");
         return false;
@@ -182,18 +199,10 @@ function updateHomepageSelection(product, action, sourceCard = null, shouldAutos
     const id = String(product.id);
     if (action === "add") {
         if (!popularIds.includes(id)) popularIds.push(id);
-    } else {
-        homepageRemovalTarget = product;
-        $("#homepage-removal-title").textContent = `Remove ${product.title}?`;
-        $("#homepage-removal-message").textContent = "This product will be removed from the homepage Popular section when you save your changes.";
-        $("#homepage-removal-modal").classList.remove("hidden");
-        $("#confirm-homepage-removal").focus();
-        return false;
-    }
+    } else popularIds = popularIds.filter(value => value !== id);
     renderPopularSelection();
-    updateHomepageProductCard(id, true);
-    animateProductToPopular(sourceCard, id);
-    if (shouldAutosave) autosaveHomepageSettings(`${product.title} added to Popular.`);
+    updateHomepageProductCard(id, action === "add");
+    if (action === "add") animateProductToPopular(sourceCard, id);
     return true;
 }
 
@@ -224,7 +233,7 @@ function isHomepageDiscount(id) {
     return homepageDiscountSelections().some(item => item.id === String(id));
 }
 
-function updateDiscountSelection(product, action, sourceCard = null, shouldAutosave = true) {
+function updateDiscountSelection(product, action, sourceCard = null) {
     if (discountMode !== "manual") {
         showToast("Switch Discount Products to Manual before editing the selection", "error");
         return false;
@@ -238,23 +247,16 @@ function updateDiscountSelection(product, action, sourceCard = null, shouldAutos
         showToast(`Only ${HOMEPAGE_DISCOUNT_PRODUCT_LIMIT} discount products can appear on the homepage`, "error");
         return false;
     }
-    if (action === "remove") {
-        discountRemovalTarget = product;
-        $("#discount-removal-title").textContent = `Remove ${product.title}?`;
-        $("#discount-removal-modal").classList.remove("hidden");
-        $("#confirm-discount-removal").focus();
-        return false;
-    }
-    if (!discountSelection(id)) discountSelections.push({ id, percent: 15 });
-    if (popularMode === "manual" && popularIds.includes(id)) {
+    if (action === "remove") discountSelections = discountSelections.filter(item => item.id !== id);
+    else if (!discountSelection(id)) discountSelections.push({ id, percent: 15 });
+    if (action === "add" && popularMode === "manual" && popularIds.includes(id)) {
         popularIds = popularIds.filter(value => value !== id);
         renderPopularSelection();
     }
-    updateHomepageProductCard(id, false);
+    updateHomepageProductCard(id, action === "add");
     renderDiscountSelection();
     syncDiscountPickerAvailability();
-    animateProductToDiscount(sourceCard, id);
-    if (shouldAutosave) autosaveHomepageSettings(`${product.title} added to Offers.`);
+    if (action === "add") animateProductToDiscount(sourceCard, id);
     return true;
 }
 
@@ -281,6 +283,100 @@ function list(value) {
 
 function productImage(product) {
     return product.image || product.gallery?.[0] || "images/MPWR Logo.PNG";
+}
+
+function categorySlug(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60);
+}
+
+function normalizeCategories(items) {
+    const normalized = DEFAULT_CATEGORIES.map(category => ({ ...category }));
+    const known = new Set(normalized.map(category => category.slug));
+    (Array.isArray(items) ? items : []).forEach(item => {
+        const slug = categorySlug(item?.slug || item?.label);
+        const label = String(item?.label || "").trim().slice(0, 60);
+        if (!slug || !label || known.has(slug)) return;
+        known.add(slug);
+        normalized.push({
+            slug,
+            label,
+            productIds: Array.isArray(item?.productIds) ? item.productIds.map(String).filter(Boolean) : []
+        });
+    });
+    return normalized;
+}
+
+function syncCategoryControls(preferredProductCategory = "") {
+    Object.keys(categoryLabels).forEach(key => delete categoryLabels[key]);
+    categories.forEach(category => { categoryLabels[category.slug] = category.label; });
+    categoryLabels[UNCATEGORIZED_CATEGORY] = "No Category";
+
+    const filter = $("#category-filter");
+    const productSelect = $("#product-category");
+    const filterValue = filter.value || "all";
+    const productValue = preferredProductCategory || productSelect.value || "products";
+
+    filter.replaceChildren(
+        new Option("All categories", "all"),
+        new Option("No Category", UNCATEGORIZED_CATEGORY),
+        ...categories.map(category => new Option(category.label, category.slug))
+    );
+    productSelect.replaceChildren(
+        new Option("No Category", UNCATEGORIZED_CATEGORY),
+        ...categories.map(category => new Option(category.label, category.slug))
+    );
+    filter.value = filterValue === UNCATEGORIZED_CATEGORY || categories.some(category => category.slug === filterValue) ? filterValue : "all";
+    productSelect.value = productValue === UNCATEGORIZED_CATEGORY || categories.some(category => category.slug === productValue) ? productValue : "products";
+    productDropdownSync.get(filter)?.refresh?.();
+    productDropdownSync.get(productSelect)?.refresh?.();
+}
+
+function syncCategoryProductSelection() {
+    const count = categoryProductIds.size;
+    $("#category-product-selection-count").textContent = `${count} product${count === 1 ? "" : "s"} selected`;
+    $("#save-category").disabled = count === 0;
+}
+
+function renderCategoryProductPicker() {
+    const query = $("#category-product-search").value.trim().toLowerCase();
+    const matches = products
+        .filter(product => !query || `${product.title || ""} ${product.sku || ""}`.toLowerCase().includes(query))
+        .sort((first, second) => {
+            const firstAssigned = productCategory(first) !== UNCATEGORIZED_CATEGORY;
+            const secondAssigned = productCategory(second) !== UNCATEGORIZED_CATEGORY;
+            return Number(firstAssigned) - Number(secondAssigned);
+        });
+    $("#category-product-picker").innerHTML = matches.map(product => {
+        const id = String(product.id);
+        const selected = categoryProductIds.has(id);
+        const currentCategorySlug = productCategory(product);
+        const hasCategory = currentCategorySlug !== UNCATEGORIZED_CATEGORY;
+        const reassignmentApproved = categoryReassignmentIds.has(id);
+        const category = hasCategory ? (categoryLabels[currentCategorySlug] || currentCategorySlug) : "No Category";
+        return `<article class="category-product-choice ${hasCategory ? "has-category" : ""} ${selected ? "selected" : ""}" data-id="${escapeHtml(id)}">
+            <img src="${escapeHtml(productImage(product))}" alt="">
+            <span class="category-product-choice-copy"><strong>${escapeHtml(product.title || "Untitled product")}</strong><small>${escapeHtml(category)} · ${escapeHtml(product.sku || "No SKU")}</small></span>
+            ${hasCategory ? `<button class="category-product-menu-toggle" type="button" aria-label="More options for ${escapeHtml(product.title || "product")}" aria-expanded="false">⋯</button><div class="category-product-menu" hidden><button class="change-product-category" type="button">Change category</button></div>` : `<span aria-hidden="true"></span>`}
+            <button class="category-product-select" type="button" aria-label="${selected ? "Remove" : "Select"} ${escapeHtml(product.title || "product")}" aria-pressed="${selected}" ${hasCategory && !reassignmentApproved ? "disabled" : ""}><span class="category-product-check" aria-hidden="true"><img src="images/Icon Folder/Tick Icon_White.PNG" alt=""></span></button>
+        </article>`;
+    }).join("");
+    $("#category-products-empty").classList.toggle("hidden", matches.length > 0);
+    syncCategoryProductSelection();
+}
+
+function resetCategoryEditor() {
+    $("#category-form").reset();
+    $("#category-slug").setCustomValidity("");
+    categorySlugEdited = false;
+    categoryProductIds = new Set();
+    categoryReassignmentIds = new Set();
+    categoryReassignmentTarget = null;
+    renderCategoryProductPicker();
 }
 
 function productMediaCount(product) {
@@ -312,23 +408,27 @@ function enhanceProductDropdown(select) {
     menu.setAttribute("role", "listbox");
     menu.hidden = true;
 
-    [...select.options].forEach(item => {
-        const option = document.createElement("button");
-        option.type = "button";
-        option.dataset.value = item.value;
-        if (isCampaignDropdown) {
-            option.classList.add("campaign-dropdown-option");
-            const icon = document.createElement("img");
-            icon.src = DISCOUNT_CAMPAIGN_ICONS[item.value] || DISCOUNT_CAMPAIGN_ICONS["Limited Offers"];
-            icon.alt = "";
-            option.append(icon, document.createTextNode(item.textContent));
-        } else {
-            option.textContent = item.textContent;
-        }
-        option.disabled = item.disabled;
-        option.setAttribute("role", "option");
-        menu.appendChild(option);
-    });
+    const populateOptions = () => {
+        menu.replaceChildren();
+        [...select.options].forEach(item => {
+            const option = document.createElement("button");
+            option.type = "button";
+            option.dataset.value = item.value;
+            if (isCampaignDropdown) {
+                option.classList.add("campaign-dropdown-option");
+                const icon = document.createElement("img");
+                icon.src = DISCOUNT_CAMPAIGN_ICONS[item.value] || DISCOUNT_CAMPAIGN_ICONS["Limited Offers"];
+                icon.alt = "";
+                option.append(icon, document.createTextNode(item.textContent));
+            } else {
+                option.textContent = item.textContent;
+            }
+            option.disabled = item.disabled;
+            option.setAttribute("role", "option");
+            menu.appendChild(option);
+        });
+    };
+    populateOptions();
 
     const sync = () => {
         const selected = select.options[select.selectedIndex];
@@ -378,36 +478,39 @@ function enhanceProductDropdown(select) {
     select.addEventListener("change", sync);
     picker.append(trigger, menu);
     select.insertAdjacentElement("afterend", picker);
+    sync.refresh = () => {
+        populateOptions();
+        sync();
+    };
     productDropdownSync.set(select, sync);
     sync();
 }
 
 async function loadData() {
-    const [snapshot, deletedSnapshot, popularSetting, bestsellerSetting, discountSetting] = await Promise.all([
-        getDocs(collection(db, "products")),
-        getDocs(collection(db, "deletedProducts")),
-        getDoc(doc(db, "storefront", "popular")),
-        getDoc(doc(db, "storefront", "bestsellers")),
-        getDoc(doc(db, "storefront", "discounts"))
-    ]);
-    products = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    deletedProducts = deletedSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    popularIds = popularSetting.exists() && Array.isArray(popularSetting.data().products)
-        ? popularSetting.data().products.map(item => String(item.id))
+    const bootstrap = await getManagementBootstrap(db);
+    const popularSetting = bootstrap.settings.popular || {};
+    const bestsellerSetting = bootstrap.settings.bestsellers || {};
+    const discountSetting = bootstrap.settings.discounts || {};
+    products = bootstrap.products;
+    deletedProducts = bootstrap.deletedProducts;
+    categories = normalizeCategories(bootstrap.settings.categories?.items);
+    syncCategoryControls();
+    popularIds = Array.isArray(popularSetting.products)
+        ? popularSetting.products.map(item => String(item.id))
         : [];
-    popularMode = popularSetting.data()?.mode === "automatic" ? "automatic" : "manual";
-    const bestsellerProducts = Array.isArray(bestsellerSetting.data()?.products) ? bestsellerSetting.data().products : [];
+    popularMode = popularSetting.mode === "automatic" ? "automatic" : "manual";
+    const bestsellerProducts = Array.isArray(bestsellerSetting.products) ? bestsellerSetting.products : [];
     automaticPopularIds = bestsellerProducts.map(item => String(item.id)).filter(Boolean);
     automaticPopularSales = new Map(bestsellerProducts.map(item => [String(item.id), Math.max(0, Number(item.unitsSold) || 0)]));
-    discountSelections = Array.isArray(discountSetting.data()?.products)
-        ? discountSetting.data().products.map(item => ({
+    discountSelections = Array.isArray(discountSetting.products)
+        ? discountSetting.products.map(item => ({
             id: String(item.id),
             percent: Math.min(95, Math.max(1, Math.round(Number(item.percent) || 15)))
         }))
         : DEFAULT_DISCOUNTS.map(item => ({ ...item }));
-    discountCampaignLabel = normalizeDiscountCampaignLabel(discountSetting.data()?.label);
-    discountMode = discountSetting.data()?.mode === "automatic" ? "automatic" : "manual";
-    discountSectionEnabled = discountSetting.data()?.enabled !== false;
+    discountCampaignLabel = normalizeDiscountCampaignLabel(discountSetting.label);
+    discountMode = discountSetting.mode === "automatic" ? "automatic" : "manual";
+    discountSectionEnabled = discountSetting.enabled !== false;
     $("#popular-mode-automatic").checked = popularMode === "automatic";
     $("#discount-mode-automatic").checked = discountMode === "automatic";
     $("#offer-section-enabled").checked = discountSectionEnabled;
@@ -704,7 +807,7 @@ function removeDiscountSelectionCard(id) {
 function renderHomepage() {
     discountSelections = discountSelections.filter(item => products.some(product => String(product.id) === item.id && product.active !== false));
     const discountedIds = new Set(homepageDiscountSelections().map(item => item.id));
-    popularIds = popularIds.filter(id => (popularMode === "automatic" || discountMode === "automatic" || !discountSectionEnabled || !discountedIds.has(id)) && products.some(product => String(product.id) === id && product.active !== false)).slice(0, POPULAR_PRODUCT_LIMIT);
+    popularIds = popularIds.filter(id => (popularMode === "automatic" || !discountSectionEnabled || !discountedIds.has(id)) && products.some(product => String(product.id) === id && product.active !== false)).slice(0, POPULAR_PRODUCT_LIMIT);
     renderPopularSelection();
     renderHomepageProducts();
     renderDiscountSelection();
@@ -730,17 +833,39 @@ function renderAll() {
     renderDeletedProducts();
 }
 
+function setEditorPanel(panel, focusField = true) {
+    const content = $(".product-modal-content");
+    const nextPanel = panel === "category" && !editingProduct ? "category" : "product";
+    content.dataset.editorPanel = nextPanel;
+    $$(".add-editor-tab").forEach(tab => {
+        const active = tab.dataset.editorPanel === nextPanel;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+    });
+    $(".modal-header .eyebrow").textContent = nextPanel === "category" ? "Catalogue category" : "Catalogue item";
+    $("#product-modal-title").textContent = editingProduct
+        ? "Edit Product"
+        : nextPanel === "category" ? "Add Category" : "Add Product";
+    if (nextPanel === "category") renderCategoryProductPicker();
+    if (focusField) {
+        setTimeout(() => $(nextPanel === "category" ? "#category-name" : "#product-title")?.focus(), 330);
+    }
+}
+
 function closeEditor() {
     $(".product-modal").classList.add("hidden");
     document.body.classList.remove("product-editor-open");
+    $(".product-modal-content").classList.remove("is-editing");
     editingProduct = null;
+    setEditorPanel("product", false);
 }
 
 function openEditor(product = null) {
     editingProduct = product;
+    $(".product-modal-content").classList.toggle("is-editing", Boolean(product));
+    resetCategoryEditor();
     $("#product-form").reset();
     $("#product-id").value = product?.apiId || product?.id || "";
-    $("#product-modal-title").textContent = product ? "Edit Product" : "Add Product";
     $("#product-title").value = product?.title || "";
     $("#product-category").value = product ? productCategory(product) : "products";
     $("#product-status").value = product?.active === false ? "draft" : "active";
@@ -764,11 +889,11 @@ function openEditor(product = null) {
     const gallery = product?.gallery?.length ? product.gallery : (product?.image ? [product.image] : []);
     const videos = product?.videos || [];
     const existingMedia = $("#existing-media");
-    existingMedia.innerHTML = `${gallery.map(url => `<img src="${escapeHtml(url)}" alt="Existing product image">`).join("")}${videos.map(video => `<video src="${escapeHtml(video.url || video)}" muted aria-label="Existing product video"></video>`).join("")}`;
-    existingMedia.classList.toggle("hidden", gallery.length + videos.length === 0);
+    existingMedia.innerHTML = `${gallery.map(url => `<img src="${escapeHtml(url)}" alt="Existing product image">`).join("")}${videos.map(video => `<video src="${escapeHtml(video.url || video)}" muted aria-label="Existing product video"></video>`).join("")}<button class="existing-media-add" type="button" aria-label="Add another image or video"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></button>`;
+    existingMedia.classList.remove("hidden");
     document.body.classList.add("product-editor-open");
     $(".product-modal").classList.remove("hidden");
-    setTimeout(() => $("#product-title").focus(), 30);
+    setEditorPanel("product");
 }
 
 async function uploadMedia(files, saveButton) {
@@ -898,6 +1023,58 @@ function autosaveHomepageSettings(successMessage = "") {
     }, 300);
 }
 
+async function handleCategorySubmit(event) {
+    event.preventDefault();
+    const label = $("#category-name").value.trim().replace(/\s+/g, " ").slice(0, 60);
+    const slug = categorySlug($("#category-slug").value || label);
+    if (!label || !slug) return showToast("Enter a category name and valid handle.", "error");
+    if (categoryProductIds.size === 0) return showToast("Select at least one product before saving the category.", "error");
+    if (categories.some(category => category.slug === slug || category.label.toLowerCase() === label.toLowerCase())) {
+        return showToast("That category already exists.", "error");
+    }
+
+    const button = $("#save-category");
+    const selectedProducts = products.filter(product => categoryProductIds.has(String(product.id)));
+    if (!selectedProducts.length) return showToast("Select at least one available product.", "error");
+    const unconfirmedProduct = selectedProducts.find(product => {
+        const id = String(product.id);
+        return productCategory(product) !== UNCATEGORIZED_CATEGORY && !categoryReassignmentIds.has(id);
+    });
+    if (unconfirmedProduct) return showToast(`Confirm the category change for ${unconfirmedProduct.title}.`, "error");
+    const previousCategories = categories.map(category => ({ ...category }));
+    const previousMetadata = new Map(selectedProducts.map(product => [String(product.id), { ...(product.metadata || {}) }]));
+    button.disabled = true;
+    button.textContent = "Saving category…";
+    try {
+        categories = [...categories, { slug, label, productIds: selectedProducts.map(product => String(product.id)) }];
+        await setDoc(doc(db, "storefront", "categories"), { items: categories });
+        await Promise.all(selectedProducts.map(product => updateDoc(
+            doc(db, "products", product.apiId || product.id),
+            { metadata: { ...(product.metadata || {}), category: slug } }
+        )));
+        await loadData();
+        syncCategoryControls(slug);
+        resetCategoryEditor();
+        setEditorPanel("product");
+        notifyStorefrontChange();
+        showToast(`${label} added with ${selectedProducts.length} product${selectedProducts.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+        categories = previousCategories;
+        await Promise.allSettled([
+            setDoc(doc(db, "storefront", "categories"), { items: previousCategories }),
+            ...selectedProducts.map(product => updateDoc(
+                doc(db, "products", product.apiId || product.id),
+                { metadata: previousMetadata.get(String(product.id)) || {} }
+            ))
+        ]);
+        await loadData().catch(() => syncCategoryControls());
+        showToast(error?.message || "Unable to save the category.", "error");
+    } finally {
+        button.disabled = categoryProductIds.size === 0;
+        button.textContent = "Save Category";
+    }
+}
+
 async function handleProductSubmit(event) {
     event.preventDefault();
     const wasEditing = Boolean(editingProduct);
@@ -970,43 +1147,158 @@ async function handleProductSubmit(event) {
 function bindEvents() {
     $$('[data-coming-soon]').forEach(button => button.addEventListener("click", () => showToast(`${button.dataset.comingSoon} management is the next workspace to connect.`)));
     $("#add-product-btn").addEventListener("click", () => openEditor());
+    $$(".add-editor-tab").forEach(tab => tab.addEventListener("click", () => setEditorPanel(tab.dataset.editorPanel)));
+    $(".show-product-panel").addEventListener("click", () => setEditorPanel("product"));
     $$(".close-modal, .close-modal-secondary").forEach(button => button.addEventListener("click", closeEditor));
     $(".product-modal").addEventListener("click", event => { if (event.target === event.currentTarget) closeEditor(); });
     $("#product-form").addEventListener("submit", handleProductSubmit);
+    $("#category-form").addEventListener("submit", handleCategorySubmit);
+    $("#category-name").addEventListener("input", event => {
+        if (!categorySlugEdited) $("#category-slug").value = categorySlug(event.target.value);
+    });
+    $("#category-slug").addEventListener("input", event => {
+        categorySlugEdited = Boolean(event.target.value);
+        const normalized = categorySlug(event.target.value);
+        event.target.setCustomValidity(event.target.value && normalized !== event.target.value ? "Use lowercase letters, numbers, and hyphens only." : "");
+    });
+    $("#category-product-search").addEventListener("input", renderCategoryProductPicker);
+    $("#category-product-picker").addEventListener("click", event => {
+        const choice = event.target.closest(".category-product-choice");
+        if (!choice) return;
+        const id = String(choice.dataset.id || "");
+        const menuToggle = event.target.closest(".category-product-menu-toggle");
+        if (menuToggle) {
+            event.stopPropagation();
+            const menu = choice.querySelector(".category-product-menu");
+            const opening = menu.hidden;
+            $$(".category-product-menu:not([hidden])").forEach(openMenu => {
+                openMenu.hidden = true;
+                openMenu.previousElementSibling?.setAttribute("aria-expanded", "false");
+            });
+            menu.hidden = !opening;
+            menuToggle.setAttribute("aria-expanded", String(opening));
+            return;
+        }
+        if (event.target.closest(".change-product-category")) {
+            const product = products.find(item => String(item.id) === id);
+            if (!product) return;
+            categoryReassignmentTarget = product;
+            const currentCategory = categoryLabels[product.category || legacyCategories[id]] || "its current category";
+            const nextCategory = $("#category-name").value.trim() || "this new category";
+            $("#change-category-title").textContent = `Change ${product.title || "product"}'s category?`;
+            $("#change-category-message").textContent = `Are you sure you want to move this item from ${currentCategory} to ${nextCategory}?`;
+            $("#change-category-modal").classList.remove("hidden");
+            $("#confirm-change-category").focus();
+            return;
+        }
+        const selectButton = event.target.closest(".category-product-select");
+        if (!selectButton && choice.classList.contains("has-category")) return;
+        if (selectButton?.disabled) return;
+        if (categoryProductIds.has(id)) categoryProductIds.delete(id);
+        else categoryProductIds.add(id);
+        renderCategoryProductPicker();
+    });
+    $("#cancel-change-category").addEventListener("click", () => {
+        categoryReassignmentTarget = null;
+        $("#change-category-modal").classList.add("hidden");
+    });
+    $("#confirm-change-category").addEventListener("click", () => {
+        if (!categoryReassignmentTarget) return;
+        const id = String(categoryReassignmentTarget.id);
+        categoryReassignmentIds.add(id);
+        categoryProductIds.add(id);
+        categoryReassignmentTarget = null;
+        $("#change-category-modal").classList.add("hidden");
+        renderCategoryProductPicker();
+    });
+    $("#change-category-modal").addEventListener("click", event => {
+        if (event.target !== event.currentTarget) return;
+        categoryReassignmentTarget = null;
+        event.currentTarget.classList.add("hidden");
+    });
+    let editorSwipeStart = null;
+    $(".add-editor-viewport").addEventListener("touchstart", event => {
+        const touch = event.touches[0];
+        editorSwipeStart = touch ? { x: touch.clientX, y: touch.clientY } : null;
+    }, { passive: true });
+    $(".add-editor-viewport").addEventListener("touchend", event => {
+        if (!editorSwipeStart || editingProduct) return;
+        const touch = event.changedTouches[0];
+        const dx = touch.clientX - editorSwipeStart.x;
+        const dy = touch.clientY - editorSwipeStart.y;
+        editorSwipeStart = null;
+        if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy)) return;
+        if (dx > 0) setEditorPanel("category");
+        else setEditorPanel("product");
+    }, { passive: true });
     $("#product-discounted").addEventListener("change", syncProductDiscountEditor);
+    $("#existing-media").addEventListener("click", event => {
+        if (event.target.closest(".existing-media-add")) $("#product-media").click();
+    });
     $("#product-media").addEventListener("change", event => { const count = event.target.files.length; $("#selected-media-count").textContent = count ? `${count} new file${count === 1 ? "" : "s"} selected.` : "No new files selected."; });
     ["#product-search", "#category-filter", "#status-filter"].forEach(selector => $(selector).addEventListener(selector === "#product-search" ? "input" : "change", renderProducts));
     ["#category-filter", "#status-filter", "#product-category", "#product-status", "#product-shipping", "#discount-campaign-label"].forEach(selector => enhanceProductDropdown($(selector)));
-    document.addEventListener("click", () => document.querySelectorAll(".product-dropdown-menu:not([hidden])").forEach(menu => {
-        menu.hidden = true;
-        menu.previousElementSibling?.setAttribute("aria-expanded", "false");
-    }));
+    document.addEventListener("click", () => {
+        document.querySelectorAll(".product-dropdown-menu:not([hidden])").forEach(menu => {
+            menu.hidden = true;
+            menu.previousElementSibling?.setAttribute("aria-expanded", "false");
+        });
+        document.querySelectorAll(".category-product-menu:not([hidden])").forEach(menu => {
+            menu.hidden = true;
+            menu.previousElementSibling?.setAttribute("aria-expanded", "false");
+        });
+    });
     $("#homepage-search").addEventListener("input", renderHomepageProducts);
     $("#discount-search").addEventListener("input", renderDiscountProducts);
-    ["#offer-section-enabled"].forEach(selector => $(selector).addEventListener("change", event => {
-        const type = "discount";
-        const requestedValue = event.target.checked;
-        const currentValue = discountSectionEnabled;
-        event.target.checked = currentValue;
-        if (requestedValue !== currentValue) openHomepageSettingConfirmation(type, requestedValue);
-    }));
+    const closeHomepageSaveConfirmation = () => {
+        $("#homepage-save-modal").classList.add("hidden");
+        $("#save-homepage").focus();
+    };
+    $("#save-homepage").addEventListener("click", () => {
+        $("#homepage-save-modal").classList.remove("hidden");
+        $("#confirm-homepage-save").focus();
+    });
+    $("#cancel-homepage-save").addEventListener("click", closeHomepageSaveConfirmation);
+    $("#homepage-save-modal").addEventListener("click", event => {
+        if (event.target === event.currentTarget) closeHomepageSaveConfirmation();
+    });
+    $("#confirm-homepage-save").addEventListener("click", async event => {
+        const button = event.currentTarget;
+        clearTimeout(homepageAutosaveTimer);
+        homepageAutosaveMessage = "";
+        button.disabled = true;
+        button.textContent = "Saving…";
+        try {
+            await homepageAutosaveQueue;
+            await saveHomepageSettings();
+            notifyStorefrontChange();
+            $("#homepage-save-modal").classList.add("hidden");
+            showToast("Homepage changes saved.");
+        } catch (error) {
+            showToast(error?.message || "Unable to save the homepage.", "error");
+        } finally {
+            button.disabled = false;
+            button.textContent = "Save Changes";
+        }
+    });
+    $("#offer-section-enabled").addEventListener("change", syncHomepageSectionStates);
     $("#popular-mode-automatic").addEventListener("change", event => {
-        const requestedMode = event.target.checked ? "automatic" : "manual";
-        event.target.checked = popularMode === "automatic";
-        if (requestedMode !== popularMode) openHomepageSettingConfirmation("popularMode", requestedMode);
+        popularMode = event.target.checked ? "automatic" : "manual";
+        syncHomepageSectionStates();
+        renderHomepage();
     });
     $("#discount-mode-automatic").addEventListener("change", event => {
-        const requestedMode = event.target.checked ? "automatic" : "manual";
-        event.target.checked = discountMode === "automatic";
-        if (requestedMode !== discountMode) openHomepageSettingConfirmation("discountMode", requestedMode);
+        discountMode = event.target.checked ? "automatic" : "manual";
+        syncHomepageSectionStates();
+        renderHomepage();
     });
     $("#discount-campaign-label").addEventListener("change", event => {
-        const requestedValue = DISCOUNT_CAMPAIGN_LABELS.includes(event.target.value)
+        discountCampaignLabel = DISCOUNT_CAMPAIGN_LABELS.includes(event.target.value)
             ? event.target.value
             : DISCOUNT_CAMPAIGN_LABELS[0];
         event.target.value = discountCampaignLabel;
         productDropdownSync.get(event.target)?.();
-        if (requestedValue !== discountCampaignLabel) openHomepageSettingConfirmation("campaign", requestedValue);
+        $("#discount-campaign-preview").textContent = discountCampaignLabel;
     });
     homepagePanelResizeObserver = new ResizeObserver(syncHomepagePanelHeights);
     $$(".homepage-preview-card").forEach(panel => homepagePanelResizeObserver.observe(panel));
@@ -1108,9 +1400,7 @@ function bindEvents() {
         const id = item.dataset.id;
         const product = products.find(entry => String(entry.id) === id);
         if (!product) return;
-        if (popularIds.includes(id)) updateHomepageSelection(product, "remove", item);
-        else if (event.target.closest(".toggle-popular").classList.contains("is-blocked")) updateHomepageSelection(product, "add", item);
-        else openHomepageAdditionConfirmation(product, "popular", item);
+        updateHomepageSelection(product, popularIds.includes(id) ? "remove" : "add", item);
     });
     $("#popular-selection").addEventListener("click", event => {
         if (popularMode !== "manual") return;
@@ -1127,7 +1417,6 @@ function bindEvents() {
         closeHomepageRemovalConfirmation();
         renderPopularSelection();
         updateHomepageProductCard(id, false);
-        autosaveHomepageSettings();
     });
     $("#homepage-removal-modal").addEventListener("click", event => {
         if (event.target === event.currentTarget) closeHomepageRemovalConfirmation();
@@ -1138,9 +1427,7 @@ function bindEvents() {
         if (!item || !event.target.closest(".toggle-discount")) return;
         const product = products.find(entry => String(entry.id) === item.dataset.id);
         if (!product) return;
-        if (isHomepageDiscount(item.dataset.id)) updateDiscountSelection(product, "remove", item);
-        else if (event.target.closest(".toggle-discount").classList.contains("is-blocked")) updateDiscountSelection(product, "add", item);
-        else openHomepageAdditionConfirmation(product, "discount", item);
+        updateDiscountSelection(product, isHomepageDiscount(item.dataset.id) ? "remove" : "add", item);
     });
     $("#cancel-homepage-addition").addEventListener("click", closeHomepageAdditionConfirmation);
     $("#confirm-homepage-addition").addEventListener("click", async event => {
@@ -1269,7 +1556,6 @@ function bindEvents() {
         const selection = discountSelection(input.closest(".discount-item")?.dataset.id);
         if (selection) {
             selection.percent = Math.min(95, Math.max(1, Math.round(Number(input.value) || 1)));
-            autosaveHomepageSettings();
         }
     });
     $("#discount-selection").addEventListener("change", event => {
@@ -1289,7 +1575,6 @@ function bindEvents() {
         renderDiscountSelection();
         syncDiscountPickerAvailability();
         updateHomepageProductCard(id, false);
-        autosaveHomepageSettings();
     });
     $("#discount-removal-modal").addEventListener("click", event => {
         if (event.target === event.currentTarget) closeDiscountRemovalConfirmation();
@@ -1298,7 +1583,6 @@ function bindEvents() {
     $("#popular-selection").addEventListener("dragstart", event => { if (popularMode !== "manual") return event.preventDefault(); const item = event.target.closest(".popular-item"); if (item) { draggedId = item.dataset.id; item.classList.add("dragging"); } });
     $("#popular-selection").addEventListener("dragend", event => {
         event.target.closest(".popular-item")?.classList.remove("dragging");
-        if (draggedId) autosaveHomepageSettings();
         draggedId = null;
     });
     $("#popular-selection").addEventListener("dragover", event => { if (popularMode !== "manual") return; event.preventDefault(); const target = event.target.closest(".popular-item:not(.popular-item-placeholder)"); if (!draggedId || !target || target.dataset.id === draggedId) return; const from = popularIds.indexOf(draggedId); const to = popularIds.indexOf(target.dataset.id); popularIds.splice(to, 0, popularIds.splice(from, 1)[0]); renderPopularSelection(); });
@@ -1311,7 +1595,6 @@ function bindEvents() {
     });
     $("#discount-selection").addEventListener("dragend", event => {
         event.target.closest(".discount-item")?.classList.remove("dragging");
-        if (draggedDiscountId) autosaveHomepageSettings();
         draggedDiscountId = null;
     });
     $("#discount-selection").addEventListener("dragover", event => {
@@ -1329,14 +1612,21 @@ function bindEvents() {
 onAuthStateChanged(auth, async user => {
     if (!user) return void (window.location.href = "admin-login.html");
     try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (!userDoc.exists() || userDoc.data().role !== "admin") return void (window.location.href = "admin-login.html");
+        if (user.role !== "admin") {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (!userDoc.exists() || userDoc.data().role !== "admin") return void (window.location.href = "admin-login.html");
+        }
         db.kind = "admin";
         bindEvents();
         await loadData();
+        $("#management-app").hidden = false;
+        $("#management-page-loading").remove();
         document.documentElement.dataset.siteContentReady = "true";
         window.MPWRLoading?.ready();
     } catch (error) {
+        const loading = $("#management-page-loading");
+        loading?.classList.add("error");
+        if (loading) loading.querySelector("p").textContent = "MPWR Management is temporarily busy. Please refresh in a moment.";
         showToast(error?.message || "Unable to load MPWR Management.", "error");
     }
 });

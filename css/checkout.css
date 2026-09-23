@@ -181,6 +181,11 @@ input,textarea,select{
     outline:none
 }
 
+select{
+    padding-right:44px;
+    padding-left:22px
+}
+
 input:focus,textarea:focus,select:focus{
     border-color:var(--accent);
     box-shadow:0 0 0 3px rgba(229,164,132,.16)
@@ -353,7 +358,7 @@ input.is-invalid,textarea.is-invalid,select.is-invalid{
     align-items:center;
     justify-content:space-between;
     width:100%;
-    padding:13px 14px;
+    padding:13px 22px;
     border:1px solid #d9ceca;
     border-radius:9px;
     background:#fff;
@@ -796,5 +801,15 @@ body.checkout-exit-open{
     .checkout-form-panel select,
     .checkout-form-panel .network-picker-trigger{
         font-size:16px;
+    }
+
+    .checkout-form-panel select{
+        padding-right:44px;
+        padding-left:22px
+    }
+
+    .checkout-form-panel .network-picker-trigger{
+        padding-right:22px;
+        padding-left:22px
     }
 }

@@ -328,6 +328,11 @@ button,select{
     transition:border-color .2s ease,background-color .2s ease,box-shadow .2s ease
 }
 
+.filter-picker-trigger{
+    padding-right:22px;
+    padding-left:22px
+}
+
 .filter-picker-trigger:hover,
 .filter-picker-trigger:focus,
 .filter-picker-trigger[aria-expanded="true"],
@@ -437,6 +442,12 @@ button,select{
     width:100%;
     margin:20px 0 0;
     justify-content:start
+}
+
+@media(min-width:1024px){
+    .results-grid.product-content{
+        grid-template-columns:repeat(5,minmax(0,1fr));
+    }
 }
 
 .no-results{
@@ -556,6 +567,11 @@ button,select{
         gap:7px;
         padding:0 12px;
         font-size:12px
+    }
+
+    .filter-picker-trigger{
+        padding-right:22px;
+        padding-left:22px
     }
     
     .filter-picker[data-select-id="sort-results"]{

@@ -705,11 +705,13 @@ function resultCard(product) {
     card.dataset.id = product.id;
     card.tabIndex = 0;
     const isFavorite = getFavorites().some(item => String(item.id) === String(product.id));
+    const pricing = window.MPWRPricing.details(product);
     card.innerHTML = `
         <div class="img-box">
             <button class="wishlist-btn" type="button" aria-label="Add ${product.title} to wishlist">
                 <img src="${isFavorite ? "images/Heart7.PNG" : "images/optimized/heart-outline.png"}" class="wishlist-icon" alt="">
             </button>
+            ${pricing.discounted ? `<span class="discount-badge">${pricing.percent}% OFF</span>` : ""}
             <img src="${product.image}" alt="${product.title}" loading="lazy" decoding="async">
         </div>
         <h2 class="product-title">${product.title}</h2>
@@ -811,12 +813,14 @@ productModalFavorite.addEventListener("click",() => {
 
 function updateModalFavoriteButton(isFavorite = getFavorites().some(item => String(item.id) === String(selectedModalProduct?.id))) {
     if (!productModalFavorite) return;
-    const label = isFavorite ? "Remove from Favorites" : "Add to Favorites";
+    const label = isFavorite ? "Remove from Wishlist" : "Add to Wishlist";
     const icon = productModalFavorite.querySelector("img");
+    const text = productModalFavorite.querySelector("span");
 
     productModalFavorite.setAttribute("aria-label",label);
     productModalFavorite.setAttribute("title",label);
     productModalFavorite.classList.toggle("is-favorite",isFavorite);
+    if (text) text.textContent = label;
     icon?.setAttribute("src",isFavorite ? "images/Heart7.PNG" : "images/optimized/heart-outline.png");
 }
 

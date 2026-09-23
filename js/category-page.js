@@ -41,7 +41,8 @@
 
             markup = markup.replace(
                 '<a href="index.html" class="logo">MPWR</a>',
-                '<a href="index.html" class="category-back-button" aria-label="Back to home"></a>'
+                `<a href="index.html" class="category-back-button" aria-label="Back to home"></a>
+        <a href="index.html" class="logo">MPWR</a>`
             );
 
             markup = markup.replace(
@@ -52,6 +53,11 @@
     </a>
 
 <!--SEARCH ICON IN NAV-->`
+            );
+
+            markup = markup.replace(
+                /\s*<!--ACCOUNT ICON IN NAV-->\s*<div id="account-icon">[\s\S]*?<\/div>\s*<\/div>\s*(?=<!--SEARCH BAR-->)/,
+                "\n</div>\n\n"
             );
 
             document.open();
