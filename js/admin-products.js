@@ -1,6 +1,7 @@
 import { onAuthStateChanged } from "./auth-api.js";
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getManagementBootstrap, setDoc, updateDoc } from "./firestore-api.js";
 import { deleteImage, uploadImage } from "./media-api.js";
+import { openReviewLightbox } from "./review-lightbox.js?v=20260923-3";
 
 const auth = window.auth;
 const db = window.db;
@@ -50,6 +51,9 @@ let popularMode = "manual";
 let discountMode = "manual";
 let discountSectionEnabled = true;
 let editingProduct = null;
+let pendingMediaPreviewUrls = [];
+let selectedMediaFiles = [];
+let removedExistingImageUrls = new Set();
 let archiveTarget = null;
 let restoreTarget = null;
 let permanentDeleteTarget = null;
@@ -853,6 +857,10 @@ function setEditorPanel(panel, focusField = true) {
 }
 
 function closeEditor() {
+    pendingMediaPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    pendingMediaPreviewUrls = [];
+    selectedMediaFiles = [];
+    removedExistingImageUrls = new Set();
     $(".product-modal").classList.add("hidden");
     document.body.classList.remove("product-editor-open");
     $(".product-modal-content").classList.remove("is-editing");
@@ -861,6 +869,10 @@ function closeEditor() {
 }
 
 function openEditor(product = null) {
+    pendingMediaPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    pendingMediaPreviewUrls = [];
+    selectedMediaFiles = [];
+    removedExistingImageUrls = new Set();
     editingProduct = product;
     $(".product-modal-content").classList.toggle("is-editing", Boolean(product));
     resetCategoryEditor();
@@ -889,11 +901,69 @@ function openEditor(product = null) {
     const gallery = product?.gallery?.length ? product.gallery : (product?.image ? [product.image] : []);
     const videos = product?.videos || [];
     const existingMedia = $("#existing-media");
-    existingMedia.innerHTML = `${gallery.map(url => `<img src="${escapeHtml(url)}" alt="Existing product image">`).join("")}${videos.map(video => `<video src="${escapeHtml(video.url || video)}" muted aria-label="Existing product video"></video>`).join("")}<button class="existing-media-add" type="button" aria-label="Add another image or video"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></button>`;
+    existingMedia.innerHTML = `${gallery.map((url, index) => `<button class="existing-media-view" type="button" draggable="true" data-media-url="${escapeHtml(url)}" aria-label="View product image ${index + 1}" title="Drag to rearrange"><img src="${escapeHtml(url)}" alt="Product image ${index + 1}" draggable="false"></button>`).join("")}${videos.map(video => `<video src="${escapeHtml(video.url || video)}" muted aria-label="Existing product video"></video>`).join("")}<button class="existing-media-add" type="button" aria-label="Add another image or video"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></button>`;
     existingMedia.classList.remove("hidden");
     document.body.classList.add("product-editor-open");
     $(".product-modal").classList.remove("hidden");
     setEditorPanel("product");
+}
+
+function renderPendingMedia(files) {
+    pendingMediaPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    pendingMediaPreviewUrls = [];
+    const existingMedia = $("#existing-media");
+    existingMedia.querySelectorAll(".pending-media-preview").forEach(preview => preview.remove());
+    const addButton = existingMedia.querySelector(".existing-media-add");
+    files.forEach(file => {
+        const isVideo = file.type.startsWith("video/");
+        const preview = document.createElement(isVideo ? "video" : "img");
+        const url = URL.createObjectURL(file);
+        pendingMediaPreviewUrls.push(url);
+        preview.src = url;
+        preview.setAttribute("aria-label", `New media: ${file.name}`);
+        if (preview instanceof HTMLVideoElement) {
+            preview.className = "pending-media-preview";
+            preview.muted = true;
+            existingMedia.insertBefore(preview, addButton);
+            return;
+        }
+        const previewButton = document.createElement("button");
+        previewButton.type = "button";
+        previewButton.className = "existing-media-view pending-media-preview";
+        previewButton.draggable = true;
+        previewButton.title = "Drag to rearrange";
+        previewButton.dataset.pendingId = mediaFileId(file);
+        preview.draggable = false;
+        previewButton.setAttribute("aria-label", `View new image: ${file.name}`);
+        previewButton.appendChild(preview);
+        existingMedia.insertBefore(previewButton, addButton);
+    });
+}
+
+function mediaFileId(file) {
+    return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
+function confirmImageDeletion() {
+    const modal = $("#image-delete-confirm-modal");
+    const cancelButton = $("#cancel-image-delete");
+    const confirmButton = $("#confirm-image-delete");
+    modal.classList.remove("hidden");
+    confirmButton.focus({ preventScroll: true });
+    return new Promise(resolve => {
+        const finish = confirmed => {
+            modal.classList.add("hidden");
+            cancelButton.onclick = null;
+            confirmButton.onclick = null;
+            modal.onclick = null;
+            resolve(confirmed);
+        };
+        cancelButton.onclick = () => finish(false);
+        confirmButton.onclick = () => finish(true);
+        modal.onclick = event => {
+            if (event.target === modal) finish(false);
+        };
+    });
 }
 
 async function uploadMedia(files, saveButton) {
@@ -901,7 +971,7 @@ async function uploadMedia(files, saveButton) {
     for (let index = 0; index < files.length; index += 1) {
         saveButton.textContent = `Uploading ${index + 1} of ${files.length}…`;
         const result = await uploadImage(files[index], "product");
-        uploaded.push({ ...result, type: result.contentType || files[index].type, name: files[index].name });
+        uploaded.push({ ...result, type: result.contentType || files[index].type, name: files[index].name, pendingId: mediaFileId(files[index]) });
     }
     return uploaded;
 }
@@ -1078,9 +1148,13 @@ async function handleCategorySubmit(event) {
 async function handleProductSubmit(event) {
     event.preventDefault();
     const wasEditing = Boolean(editingProduct);
-    const files = [...$("#product-media").files];
-    const existingImages = editingProduct?.gallery?.length ? [...editingProduct.gallery] : (editingProduct?.image ? [editingProduct.image] : []);
+    const files = [...selectedMediaFiles];
+    const existingImages = (editingProduct?.gallery?.length ? [...editingProduct.gallery] : (editingProduct?.image ? [editingProduct.image] : [])).filter(url => !removedExistingImageUrls.has(url));
     const existingVideos = [...(editingProduct?.videos || [])];
+    const imageOrder = [...$("#existing-media").querySelectorAll(".existing-media-view")].map(button => ({
+        existingUrl: button.dataset.mediaUrl || "",
+        pendingId: button.dataset.pendingId || ""
+    }));
     const mediaError = validateMedia(files);
     const putOnDiscount = discountMode === "manual" && $("#product-discounted").checked;
     const discountPercent = Math.min(95, Math.max(1, Math.round(Number($("#product-discount-percent").value) || 15)));
@@ -1088,6 +1162,7 @@ async function handleProductSubmit(event) {
     if (mediaError) return showToast(mediaError, "error");
     if (putOnDiscount && $("#product-status").value !== "active") return showToast("Publish the product before putting it on discount.", "error");
     if (!editingProduct && !files.some(file => file.type.startsWith("image/"))) return showToast("Include at least one image to use as the product cover.", "error");
+    if (editingProduct && !existingImages.length && !files.some(file => file.type.startsWith("image/"))) return showToast("Keep or add at least one product image.", "error");
     if (existingImages.length + existingVideos.length + files.length > 10) return showToast("A product can have up to 10 images and videos in total.", "error");
     const button = $("#save-product");
     const uploaded = [];
@@ -1097,7 +1172,8 @@ async function handleProductSubmit(event) {
         uploaded.push(...await uploadMedia(files, button));
         const newImages = uploaded.filter(item => item.type.startsWith("image/"));
         const newVideos = uploaded.filter(item => item.type.startsWith("video/"));
-        const gallery = [...existingImages, ...newImages.map(item => item.url)];
+        const uploadedImageUrls = new Map(newImages.map(item => [item.pendingId, item.url]));
+        const gallery = imageOrder.map(item => item.existingUrl || uploadedImageUrls.get(item.pendingId)).filter(Boolean);
         const videos = [...existingVideos, ...newVideos];
         const active = $("#product-status").value === "active";
         const data = {
@@ -1232,10 +1308,117 @@ function bindEvents() {
         else setEditorPanel("product");
     }, { passive: true });
     $("#product-discounted").addEventListener("change", syncProductDiscountEditor);
-    $("#existing-media").addEventListener("click", event => {
-        if (event.target.closest(".existing-media-add")) $("#product-media").click();
+    const existingMediaStrip = $("#existing-media");
+    let draggedImage = null;
+    let touchDrag = null;
+    const positionDraggedImage = (dragged, target, clientX) => {
+        if (!dragged || !target || dragged === target) return;
+        const placeAfter = clientX > target.getBoundingClientRect().left + target.offsetWidth / 2;
+        existingMediaStrip.insertBefore(dragged, placeAfter ? target.nextSibling : target);
+    };
+    const suppressViewerClick = () => {
+        existingMediaStrip.dataset.suppressClick = "true";
+        setTimeout(() => { existingMediaStrip.dataset.suppressClick = "false"; }, 0);
+    };
+    existingMediaStrip.addEventListener("dragstart", event => {
+        draggedImage = event.target.closest(".existing-media-view");
+        if (!draggedImage) return;
+        draggedImage.classList.add("is-reordering");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", "reorder-product-image");
+        existingMediaStrip.dataset.suppressClick = "true";
     });
-    $("#product-media").addEventListener("change", event => { const count = event.target.files.length; $("#selected-media-count").textContent = count ? `${count} new file${count === 1 ? "" : "s"} selected.` : "No new files selected."; });
+    existingMediaStrip.addEventListener("dragover", event => {
+        const target = event.target.closest(".existing-media-view");
+        if (!draggedImage || !target) return;
+        event.preventDefault();
+        positionDraggedImage(draggedImage, target, event.clientX);
+    });
+    existingMediaStrip.addEventListener("drop", event => {
+        if (draggedImage) event.preventDefault();
+    });
+    existingMediaStrip.addEventListener("dragend", () => {
+        draggedImage?.classList.remove("is-reordering");
+        draggedImage = null;
+        suppressViewerClick();
+    });
+    existingMediaStrip.addEventListener("pointerdown", event => {
+        if (event.pointerType === "mouse") return;
+        const image = event.target.closest(".existing-media-view");
+        if (!image) return;
+        touchDrag = { image, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, active: false };
+        image.setPointerCapture?.(event.pointerId);
+    });
+    existingMediaStrip.addEventListener("pointermove", event => {
+        if (!touchDrag || touchDrag.pointerId !== event.pointerId) return;
+        const distance = Math.hypot(event.clientX - touchDrag.startX, event.clientY - touchDrag.startY);
+        if (!touchDrag.active && distance < 8) return;
+        touchDrag.active = true;
+        touchDrag.image.classList.add("is-reordering");
+        event.preventDefault();
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest(".existing-media-view");
+        if (target?.parentElement === existingMediaStrip) positionDraggedImage(touchDrag.image, target, event.clientX);
+    }, { passive: false });
+    const finishTouchReorder = event => {
+        if (!touchDrag || touchDrag.pointerId !== event.pointerId) return;
+        touchDrag.image.releasePointerCapture?.(event.pointerId);
+        touchDrag.image.classList.remove("is-reordering");
+        if (touchDrag.active) suppressViewerClick();
+        touchDrag = null;
+    };
+    existingMediaStrip.addEventListener("pointerup", finishTouchReorder);
+    existingMediaStrip.addEventListener("pointercancel", finishTouchReorder);
+    existingMediaStrip.addEventListener("click", event => {
+        if (event.currentTarget.dataset.suppressClick === "true") {
+            event.preventDefault();
+            return;
+        }
+        if (event.target.closest(".existing-media-add")) {
+            $("#product-media").click();
+            return;
+        }
+        const trigger = event.target.closest(".existing-media-view");
+        if (!trigger) return;
+        const imageButtons = [...existingMediaStrip.querySelectorAll(".existing-media-view")];
+        const images = imageButtons.map((button, index) => ({
+            url: button.querySelector("img")?.src || "",
+            name: button.querySelector("img")?.alt || `Product image ${index + 1}`,
+            element: button,
+            existingUrl: button.dataset.mediaUrl || "",
+            pendingId: button.dataset.pendingId || ""
+        }));
+        openReviewLightbox({
+            images,
+            index: imageButtons.indexOf(trigger),
+            review: {},
+            trigger,
+            action: {
+                label: "Delete image",
+                imageSrc: "images/Icon Folder/Delete Icon_White.PNG",
+                handler: async image => {
+                    if (!await confirmImageDeletion()) return false;
+                    if (image.existingUrl) {
+                        removedExistingImageUrls.add(image.existingUrl);
+                        image.element?.remove();
+                    } else if (image.pendingId) {
+                        selectedMediaFiles = selectedMediaFiles.filter(file => mediaFileId(file) !== image.pendingId);
+                        renderPendingMedia(selectedMediaFiles);
+                    }
+                    $("#selected-media-count").textContent = selectedMediaFiles.length ? `${selectedMediaFiles.length} new file${selectedMediaFiles.length === 1 ? "" : "s"} selected.` : "No new files selected.";
+                    showToast("Image will be deleted when you save the product.");
+                    return true;
+                }
+            }
+        });
+    });
+    $("#product-media").addEventListener("change", event => {
+        const knownFiles = new Set(selectedMediaFiles.map(mediaFileId));
+        const additions = [...event.target.files].filter(file => !knownFiles.has(mediaFileId(file)));
+        selectedMediaFiles = [...selectedMediaFiles, ...additions];
+        event.target.value = "";
+        renderPendingMedia(selectedMediaFiles);
+        $("#selected-media-count").textContent = selectedMediaFiles.length ? `${selectedMediaFiles.length} new file${selectedMediaFiles.length === 1 ? "" : "s"} selected.` : "No new files selected.";
+    });
     ["#product-search", "#category-filter", "#status-filter"].forEach(selector => $(selector).addEventListener(selector === "#product-search" ? "input" : "change", renderProducts));
     ["#category-filter", "#status-filter", "#product-category", "#product-status", "#product-shipping", "#discount-campaign-label"].forEach(selector => enhanceProductDropdown($(selector)));
     document.addEventListener("click", () => {

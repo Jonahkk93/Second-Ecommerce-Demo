@@ -10,6 +10,7 @@ let shareButton;
 let activeImages = [];
 let activeIndex = 0;
 let activeReview = null;
+let activeAction = null;
 let restoreFocus = null;
 let touchStartX = null;
 
@@ -17,6 +18,8 @@ const icon = path => `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         ${path}
     </svg>`;
+const shareIcon = icon('<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.5M8.2 13.2l7.6 4.5"/>');
+const deleteIcon = icon('<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>');
 
 function createButton(className, label, contents) {
     const button = document.createElement("button");
@@ -59,7 +62,7 @@ function ensureLightbox() {
     shareButton = createButton(
         "review-lightbox-share",
         "Share photo",
-        icon('<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.5M8.2 13.2l7.6 4.5"/>')
+        shareIcon
     );
     actions.append(zoomButton, shareButton);
     topBar.append(closeButton, lightboxCounter, actions);
@@ -100,7 +103,7 @@ function ensureLightbox() {
         zoomButton.setAttribute("aria-label", zoomed ? "Fit photo to screen" : "Zoom photo");
     });
     lightboxImage.addEventListener("click", () => zoomButton.click());
-    shareButton.addEventListener("click", shareCurrentImage);
+    shareButton.addEventListener("click", runCurrentAction);
     lightbox.addEventListener("click", event => {
         if (event.target === lightbox || event.target === stage) closeReviewLightbox();
     });
@@ -160,11 +163,28 @@ async function shareCurrentImage() {
     }
 }
 
-export function openReviewLightbox({ images, index = 0, review, trigger }) {
+async function runCurrentAction() {
+    const image = activeImages[activeIndex];
+    if (!image) return;
+    if (activeAction?.handler) {
+        const completed = await activeAction.handler(image, activeIndex);
+        if (completed !== false) closeReviewLightbox();
+        return;
+    }
+    await shareCurrentImage();
+}
+
+export function openReviewLightbox({ images, index = 0, review, trigger, action = null }) {
     ensureLightbox();
     activeImages = images.filter(image => image?.url);
     if (!activeImages.length) return;
     activeReview = review || {};
+    activeAction = action;
+    shareButton.className = activeAction ? "review-lightbox-delete" : "review-lightbox-share";
+    shareButton.setAttribute("aria-label", activeAction?.label || "Share photo");
+    shareButton.innerHTML = activeAction?.imageSrc
+        ? `<img src="${activeAction.imageSrc}" alt="">`
+        : activeAction ? deleteIcon : shareIcon;
     restoreFocus = trigger || document.activeElement;
     const rating = Math.max(0, Math.min(5, Number(activeReview.rating) || 0));
     lightboxStars.textContent = "★".repeat(rating) + "☆".repeat(5 - rating);
@@ -184,5 +204,6 @@ export function closeReviewLightbox() {
     document.body.classList.remove("review-lightbox-open");
     lightbox.hidden = true;
     lightboxImage.removeAttribute("src");
+    activeAction = null;
     restoreFocus?.focus?.({ preventScroll: true });
 }

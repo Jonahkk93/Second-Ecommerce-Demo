@@ -139,6 +139,17 @@ function orderCreatedAt(order) {
     return value && !Number.isNaN(value.getTime()) ? value : null;
 }
 
+const ORDER_STATUSES = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+
+function normalizedOrderStatus(value) {
+    const match = ORDER_STATUSES.find(status => status.toLowerCase() === String(value || "").toLowerCase());
+    return match || "Pending";
+}
+
+function safeOrderItems(order) {
+    return Array.isArray(order?.items) ? order.items.filter(item => item && typeof item === "object") : [];
+}
+
 function renderDashboard(orders, products) {
     const activeOrders = orders.filter(order => String(order.status).toLowerCase() !== "cancelled");
     const totalRevenue = activeOrders.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
@@ -261,8 +272,22 @@ document.getElementById("pending-orders").textContent = "...";
 document.getElementById("total-revenue").textContent = "Loading...";
 document.getElementById("total-customers").textContent = "...";
 
-    await loadAllOrders();
+    await loadOrdersWithFeedback();
 });
+
+
+async function loadOrdersWithFeedback() {
+    try {
+        await loadAllOrders();
+    } catch (error) {
+        console.error("Unable to load management orders:", error);
+        dashboardOverview?.classList.remove("is-loading");
+        dashboardOverview?.removeAttribute("aria-busy");
+        ordersList.innerHTML = `<div class="orders-error-state"><strong>Orders could not be loaded</strong><span>${dashboardEscape(error?.message || "Please check the management API and try again.")}</span><button type="button">Try again</button></div>`;
+        ordersList.querySelector("button")?.addEventListener("click", loadOrdersWithFeedback, { once: true });
+        showAdminToast("Orders could not be loaded. Please try again.", "error");
+    }
+}
 
 
 async function loadAllOrders() {
@@ -270,7 +295,7 @@ async function loadAllOrders() {
 ordersList.innerHTML = `
     <div class="loading-dashboard">
         <div class="loading-spinner"></div>
-        <p>Loading dashboard...</p>
+        <p>Loading orders...</p>
     </div>
 `;
 
@@ -297,39 +322,46 @@ ordersList.innerHTML = `
 for (const orderDoc of snapshot.docs) {
 
         const order = orderDoc.data();
-        const orderDate = order.createdAt
-    ? order.createdAt.toDate().toLocaleString()
-    : "Unknown";
-    const itemCount = order.items.reduce(
-    (total, item) => total + item.quantity,
-    0
-);
-        const itemsHTML = order.items.map(item => `
+        const apiOrderId = String(order.id || order.apiId || orderDoc.id);
+        const status = normalizedOrderStatus(order.status);
+        const items = safeOrderItems(order);
+        const createdAt = orderCreatedAt(order);
+        const orderDate = createdAt ? createdAt.toLocaleString("en-UG") : "Unknown";
+        const itemCount = items.reduce((total, item) => total + Math.max(1, Number(item.quantity) || 1), 0);
+        order.status = status;
+        const itemsHTML = items.length ? items.map(item => {
+            const selections = item.selectedOptions && typeof item.selectedOptions === "object"
+                ? Object.values(item.selectedOptions).filter(value => typeof value !== "object" && String(value).trim()).join(" • ")
+                : [item.color, item.size].filter(Boolean).join(" • ");
+            const image = window.normalizeMPWRImagePath?.(item.image, item.id) || item.image || "images/MPWR Logo.PNG";
+            return `
     <div class="admin-order-item">
 
         <img
-            src="${window.normalizeMPWRImagePath?.(item.image, item.id) || item.image}"
+            src="${dashboardEscape(image)}"
             class="admin-order-image"
+            alt="${dashboardEscape(item.title || "Ordered product")}" loading="lazy"
         >
 
         <div class="admin-order-details">
 
-            <h4>${item.title}</h4>
+            <h4>${dashboardEscape(item.title || "Product")}</h4>
 
-            <p>${item.color} • ${item.size}</p>
+            ${selections ? `<p>${dashboardEscape(selections)}</p>` : ""}
 
-            <p>Qty: ${item.quantity}</p>
+            <p>Qty: ${Math.max(1, Number(item.quantity) || 1)}</p>
 
         </div>
 
     </div>
-`).join("");
+`;
+        }).join("") : '<p class="admin-order-items-empty">No item details are available for this order.</p>';
         let customerName = `${order.customer?.firstName || ""} ${order.customer?.lastName || ""}`.trim() || order.customer?.name || "Unknown Customer";
 let customerEmail = order.customer?.email || "No email";
 
         totalOrders++;
 
-if (order.status === "Pending") {
+if (status === "Pending") {
     pendingOrders++;
 }
 
@@ -345,8 +377,8 @@ if (order.userId) {
 
         const orderCard = document.createElement("div");
         const statusBadge = `
-    <span class="status-badge ${order.status.toLowerCase()}">
-        ${order.status}
+    <span class="status-badge ${status.toLowerCase()}">
+        ${status}
     </span>
 `;
         orderCard.className = "order-card";
@@ -356,16 +388,16 @@ orderCard.innerHTML = `
 
     <div class="order-info">
 
-        <h3>Order #${orderDoc.id.slice(0,8).toUpperCase()}</h3>
+        <h3>Order #${dashboardEscape(String(orderDoc.id).slice(0,8).toUpperCase())}</h3>
 
-        <p><strong>Customer:</strong> ${customerName}</p>
-        <p><strong>Email:</strong> ${customerEmail}</p>
+        <p><strong>Customer:</strong> ${dashboardEscape(customerName)}</p>
+        <p><strong>Email:</strong> ${dashboardEscape(customerEmail)}</p>
 
         <p><strong>Subtotal:</strong> UGX ${orderSubtotal.toLocaleString()}</p>
-        <p><strong>Delivery:</strong> UGX ${deliveryFee.toLocaleString()}${order.delivery?.district ? ` to ${order.delivery.district}` : ""}</p>
+        <p><strong>Delivery:</strong> UGX ${deliveryFee.toLocaleString()}${order.delivery?.district ? ` to ${dashboardEscape(order.delivery.district)}` : ""}</p>
         <p><strong>Total:</strong> UGX ${orderTotal.toLocaleString()}</p>
-        ${order.delivery?.etaLabel ? `<p><strong>Delivery ETA:</strong> ${order.delivery.etaLabel}</p>` : ""}
-        <p><strong>Order Date:</strong> ${orderDate}</p>
+        ${order.delivery?.etaLabel ? `<p><strong>Delivery ETA:</strong> ${dashboardEscape(order.delivery.etaLabel)}</p>` : ""}
+        <p><strong>Order Date:</strong> ${dashboardEscape(orderDate)}</p>
         <p><strong>Items:</strong> ${itemCount}</p>
 
     </div>
@@ -377,13 +409,13 @@ orderCard.innerHTML = `
     ${statusBadge}
 
     <div class="status-picker">
-        <button class="status-picker-trigger" type="button" data-status="${order.status}" aria-expanded="false">
-            ${order.status}<span aria-hidden="true">⌄</span>
+        <button class="status-picker-trigger" type="button" data-status="${status}" aria-expanded="false">
+            ${status}<span aria-hidden="true">⌄</span>
         </button>
         <div class="status-picker-menu" hidden>
-            ${["Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map(status => `
-                <button type="button" data-status="${status}" class="${order.status === status ? "selected" : ""}">
-                    ${status}
+            ${ORDER_STATUSES.map(optionStatus => `
+                <button type="button" data-status="${optionStatus}" class="${status === optionStatus ? "selected" : ""}">
+                    ${optionStatus}
                 </button>
             `).join("")}
         </div>
@@ -409,8 +441,8 @@ orderCard.innerHTML = `
 `;
 
         orderCard.dataset.orderId = orderDoc.id.toUpperCase();
-        orderCard.dataset.customer = customerName.toUpperCase();
-        orderCard.dataset.status = order.status;
+        orderCard.dataset.customer = `${customerName} ${customerEmail}`.toUpperCase();
+        orderCard.dataset.status = status;
 
         ordersList.appendChild(orderCard);
         const itemsContainer = orderCard.querySelector(".admin-order-items");
@@ -458,10 +490,10 @@ option.addEventListener("click", async event => {
     statusTrigger.disabled = true;
 
     try {
-        await updateDoc(doc(db, "orders", orderDoc.id), { status: nextStatus });
+        await updateDoc(doc(db, "orders", apiOrderId), { status: nextStatus });
         order.status = nextStatus;
         if (!ordersPortal) {
-            const dashboardOrder = dashboardOrders.find(item => item.id === orderDoc.id);
+            const dashboardOrder = dashboardOrders.find(item => String(item.id) === apiOrderId);
             if (dashboardOrder) dashboardOrder.status = nextStatus;
             renderDashboard(dashboardOrders, management.products || []);
             try {
@@ -474,6 +506,10 @@ option.addEventListener("click", async event => {
                 console.error("Could not refresh the popular-products summary", error);
             }
         }
+    } catch (error) {
+        console.error("Unable to update order status:", error);
+        showAdminToast(error?.message || "The order status could not be updated.", "error");
+        return;
     } finally {
         statusTrigger.disabled = false;
     }
@@ -526,10 +562,14 @@ document.getElementById("pending-orders").textContent = pendingOrders;
 document.getElementById("total-revenue").textContent =
     `UGX ${totalRevenue.toLocaleString()}`;
 
-document.getElementById("total-customers").textContent =
+    document.getElementById("total-customers").textContent =
     customers.size;
 
     if (!ordersPortal) renderDashboard(dashboardOrders, management.products || []);
+
+    if (!snapshot.docs.length) {
+        ordersList.innerHTML = '<div class="orders-empty-state"><strong>No orders yet</strong><span>New customer orders will appear here.</span></div>';
+    }
 
 }
 

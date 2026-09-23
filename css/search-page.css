@@ -44,7 +44,7 @@ html.site-loading-enabled:not(.site-page-ready) .search-chip{overflow:hidden;col
 .search-results.product-content{
     width:100%;
     margin:20px 0 0;
-    justify-content:start;
+    justify-content:center;
 }
 
 @media(max-width:600px){.search-page-header{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none}}
@@ -53,6 +53,9 @@ html.site-loading-enabled:not(.site-page-ready) .search-chip{overflow:hidden;col
 
 @media(min-width:1024px){
     .search-page-header{padding-right:5%;padding-left:5%}
+    .search-results.product-content{
+        grid-template-columns:repeat(5,minmax(0,220px));
+    }
 }
 @media(max-width:600px){
     body{padding-top:65px}

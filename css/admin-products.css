@@ -19,8 +19,8 @@ body.product-editor-open{overflow:hidden}
 .existing-media-add{display:grid;width:68px;height:75px;flex:0 0 68px;padding:0;border:0;border-radius:9px;background:#fcfaf9;cursor:pointer;place-items:center}
 .existing-media .existing-media-add img{display:block;width:18px;height:18px;border-radius:0;background:transparent;object-fit:contain}
 .existing-media-add:hover,.existing-media-add:focus-visible{border-color:var(--peach);background:#fff8f4;outline:0;transform:translateY(-1px)}
-.media-dropzone{cursor:default}
-.media-dropzone:hover{border-color:transparent;background:#fcfaf9}
+.media-dropzone{cursor:pointer}
+.media-dropzone:hover,.media-dropzone:focus-within{border-color:var(--peach);background:#fff8f4}
 .admin-products-toast{position:fixed;top:95px;right:auto;bottom:auto;left:50%;z-index:100000;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;padding:14px 24px;border:1px solid rgba(255,255,255,.25);border-radius:30px;background:rgba(229,164,132,.96);color:#fff;box-shadow:0 10px 25px rgba(0,0,0,.18);font-size:15px;font-weight:500;letter-spacing:.3px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;pointer-events:none;transform:translateX(-50%) translateY(-20px);transition:all .35s ease;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.admin-products-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.admin-products-toast.success{background:rgba(59,217,67,.95)}.admin-products-toast.warning,.admin-products-toast.error{background:rgba(229,164,132,.96)}button:disabled{cursor:wait;opacity:.55}
 .product-card{grid-template-columns:72px minmax(170px,1.5fr) minmax(110px,.7fr) minmax(95px,.6fr) 96px 90px 130px}
 .product-card-actions button{display:grid;width:36px;height:36px;padding:0;place-items:center}.product-card-actions button img{display:block;width:17px;height:17px;object-fit:contain}
@@ -229,6 +229,18 @@ select.product-dropdown-native{position:absolute;width:1px;height:1px;margin:-1p
 .discount-editor-input input{min-width:0;flex:1}
 .discount-editor-input strong{flex:0 0 auto;color:var(--muted);font-size:12px;white-space:nowrap}
 @media(max-width:520px){.product-discount-row{gap:8px}.product-discount-field{width:min(130px,calc(100% - 72px));margin-left:72px}}
+
+/* Keep the native media input directly clickable across browsers. */
+.media-dropzone{position:relative;overflow:hidden}
+.media-dropzone input#product-media{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.existing-media-view{display:block;width:68px;height:75px;flex:0 0 68px;padding:0;overflow:hidden;border:0;border-radius:9px;background:#eee;cursor:grab;touch-action:pan-y}
+.existing-media .existing-media-view img{display:block;width:100%;height:100%;border-radius:0;object-fit:cover;transition:transform .2s ease}
+.existing-media-view:hover img,.existing-media-view:focus-visible img{transform:scale(1.06)}
+.existing-media-view:focus-visible{outline:2px solid var(--peach);outline-offset:2px}
+.existing-media-view.is-reordering{opacity:.55;cursor:grabbing;transform:scale(.96)}
+#product-price,#product-compare-price{-moz-appearance:textfield;appearance:textfield}
+#product-price::-webkit-inner-spin-button,#product-price::-webkit-outer-spin-button,#product-compare-price::-webkit-inner-spin-button,#product-compare-price::-webkit-outer-spin-button{margin:0;-webkit-appearance:none}
+#image-delete-confirm-modal{z-index:100001}
 
 /* Keep the management navigation flush with the viewport during scroll bounce. */
 html{background:#1e1a18;overscroll-behavior-y:none}

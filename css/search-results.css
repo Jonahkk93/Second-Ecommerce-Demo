@@ -34,13 +34,13 @@ button,select{
     left:0;
     z-index:1000;
     display:flex;
-    width:100vw;
+    width:100%;
     max-width:none;
     height:auto;
     min-height:0;
     flex-direction:column;
     gap:0;
-    padding:15px 5% 0;
+    padding:15px calc(5% + 9px) 0 5%;
     background:rgba(255,255,255,.98);
     border-bottom:1px solid #eee;
     box-shadow:0 5px 18px rgba(0,0,0,.045);
@@ -441,12 +441,12 @@ button,select{
 .results-grid{
     width:100%;
     margin:20px 0 0;
-    justify-content:start
+    justify-content:center
 }
 
 @media(min-width:1024px){
     .results-grid.product-content{
-        grid-template-columns:repeat(5,minmax(0,1fr));
+        grid-template-columns:repeat(5,minmax(0,220px));
     }
 }
 

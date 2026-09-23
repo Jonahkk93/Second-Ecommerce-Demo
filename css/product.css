@@ -1631,6 +1631,8 @@ align-items: center;
 
     text-align: center;
 
+    margin-top: auto;
+
     padding: 60px 25px;
 
     color: #888;
@@ -2409,6 +2411,7 @@ transition: .25s ease;
     align-items:center;
     justify-content:center;
     text-align:center;
+    margin-top:auto;
     padding:60px 25px;
     color:#888;
 }
@@ -4992,12 +4995,14 @@ body.review-lightbox-open{
     }
 
     .cart .total{
+        display:none!important;
         flex:0 0 auto;
         margin:0;
         padding:14px 20px 10px;
     }
 
     .cart .btn-buy{
+        display:none!important;
         flex:0 0 auto;
         margin:14px auto max(14px, env(safe-area-inset-bottom, 0px));
         padding:13px 14px;
@@ -5566,7 +5571,8 @@ html.site-loading-enabled :is(
 }
 
 .product-page-price .mpwr-original-price {
-    font-size: .62em;
+    font-size: 1em;
+    font-weight: 600;
 }
 
 .wishlist-details .wishlist-price .mpwr-sale-price,

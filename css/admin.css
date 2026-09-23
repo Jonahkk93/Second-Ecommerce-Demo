@@ -956,6 +956,8 @@ a[x-apple-data-detectors]{
     margin:0;
 }
 
+.orders-error-state,.orders-empty-state{display:grid;min-height:240px;padding:32px;border:1px solid #e7e1dd;border-radius:18px;background:#fff;place-content:center;text-align:center}.orders-error-state strong,.orders-empty-state strong{color:#2d2724;font-size:18px}.orders-error-state span,.orders-empty-state span{max-width:440px;margin-top:8px;color:#837a75;font-size:13px;line-height:1.55}.orders-error-state button{justify-self:center;margin-top:18px;padding:11px 17px;border:0;border-radius:11px;background:#292321;color:#fff;font-weight:750;cursor:pointer}.orders-error-state button:hover{box-shadow:0 7px 18px rgba(38,29,25,.16);transform:translateY(-1px)}.admin-order-items-empty{margin:0!important;color:#8b827d!important;font-size:13px!important}
+
 .loading-spinner{
     width:42px;
     height:42px;

@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPWR Management</title>
-    <link rel="stylesheet" href="css/admin-products.css?v=20260923-4">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260923-10">
+    <link rel="stylesheet" href="css/review-lightbox.css?v=20260923-2">
     <link rel="stylesheet" href="css/Larke.css">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
@@ -129,9 +130,9 @@
                 <div class="form-grid"><label class="field"><span>Colours</span><input type="text" id="product-colors" placeholder="Pink, Nude, Black"></label><label class="field"><span>Sizes / lengths</span><input type="text" id="product-sizes" placeholder="XS, S, M, L"></label></div>
             </section>
             <section class="form-section">
-                <div class="form-section-heading"><span>4</span><div><h3>Images and videos</h3><p>The first image is the cover. Add up to 10 media files.</p></div></div>
+                <div class="form-section-heading"><span>4</span><div><h3>Images and videos</h3><p>Drag images to rearrange them. The first image is the cover. Add up to 10 media files.</p></div></div>
                 <div id="existing-media" class="existing-media hidden"></div>
-                <div class="media-dropzone"><strong>Choose images or videos</strong><span>JPEG, PNG, WebP, GIF up to 5 MB · MP4, MOV, WebM up to 50 MB</span><input type="file" id="product-media" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm" multiple></div>
+                <label class="media-dropzone" for="product-media"><strong>Choose images or videos</strong><span>JPEG, PNG, WebP, GIF up to 5 MB · MP4, MOV, WebM up to 50 MB</span><input type="file" id="product-media" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm" multiple></label>
                 <p id="selected-media-count" class="product-media-help">No new files selected.</p>
             </section>
             <section class="form-section compact-section product-merchandising-options">
@@ -157,8 +158,9 @@
 <div class="confirm-modal hidden" id="homepage-removal-modal" role="dialog" aria-modal="true" aria-labelledby="homepage-removal-title" aria-describedby="homepage-removal-message"><div class="confirm-card"><h2 id="homepage-removal-title">Remove product?</h2><p id="homepage-removal-message">This product will be removed from the homepage Popular section when you save your changes.</p><div><button class="secondary-button" id="cancel-homepage-removal" type="button">Cancel</button><button class="danger-button" id="confirm-homepage-removal" type="button">Remove Product</button></div></div></div>
 <div class="confirm-modal hidden" id="discount-removal-modal" role="dialog" aria-modal="true" aria-labelledby="discount-removal-title" aria-describedby="discount-removal-message"><div class="confirm-card"><h2 id="discount-removal-title">Remove discount product?</h2><p id="discount-removal-message">This product will be removed from the homepage discount section when you save your changes.</p><div><button class="secondary-button" id="cancel-discount-removal" type="button">Cancel</button><button class="danger-button" id="confirm-discount-removal" type="button">Remove Product</button></div></div></div>
 <div class="confirm-modal hidden" id="change-category-modal" role="dialog" aria-modal="true" aria-labelledby="change-category-title" aria-describedby="change-category-message"><div class="confirm-card"><h2 id="change-category-title">Change category?</h2><p id="change-category-message">Are you sure you want to move this product to the new category?</p><div><button class="secondary-button" id="cancel-change-category" type="button">Cancel</button><button class="primary-button" id="confirm-change-category" type="button">Change Category</button></div></div></div>
+<div class="confirm-modal hidden" id="image-delete-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="image-delete-confirm-title" aria-describedby="image-delete-confirm-message"><div class="confirm-card"><h2 id="image-delete-confirm-title">Delete image?</h2><p id="image-delete-confirm-message">This image will be removed from the product when you save your changes.</p><div><button class="secondary-button" id="cancel-image-delete" type="button">Cancel</button><button class="danger-button" id="confirm-image-delete" type="button">Delete Image</button></div></div></div>
 <div class="admin-products-toast" role="status" aria-live="polite"></div>
 <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/admin-products.js?v=20260923-6"></script>
+    <script type="module" src="js/admin-products.js?v=20260923-11"></script>
  </body>
 </html>
