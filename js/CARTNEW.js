@@ -20,7 +20,7 @@
    NAVIGATION
 ============================================================ */
 
-import { mountMPWRDrawers } from "./drawer-component.js?v=20260816-6";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20260924-7";
 
 mountMPWRDrawers(document.body);
 
@@ -600,6 +600,8 @@ function updateCartCount() {
         titleCount.textContent = `(${cartItemCount})`;
     }
 
+    if (!badge) return;
+
     if (cartItemCount > 0) {
 
         badge.style.visibility = "visible";
@@ -656,7 +658,10 @@ function updateTotalPrice() {
 
 function updateCartUI() {
 
-    if (cartItems.length === 0) {
+    const isEmpty = cartItems.length === 0;
+    cart?.classList.toggle("is-empty", isEmpty);
+
+    if (isEmpty) {
 
         cartContent.style.display = "none";
         cartEmpty.style.display = "flex";

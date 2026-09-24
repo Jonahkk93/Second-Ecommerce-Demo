@@ -1,4 +1,4 @@
-import { mountMPWRDrawers } from "./drawer-component.js?v=20260816-6";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20260924-7";
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from "./firestore-api.js";
 import { onAuthStateChanged } from "./auth-api.js";
 
@@ -148,12 +148,15 @@ function mergeCartItems(accountItems,localItems,combineQuantities) {
 
 function updateCartBadge(cart = getCart()) {
     const count = cart.reduce((total,item) => total + Math.max(1,Number(item.quantity) || 1),0);
-    const badge = cartTrigger.querySelector(".cart-item-count");
-    badge.textContent = count ? String(count) : "";
-    badge.style.display = count ? "flex" : "none";
-    badge.style.visibility = count ? "visible" : "hidden";
-    badge.style.opacity = count ? "1" : "0";
-    cartDrawer.querySelector(".cart-title-count").textContent = `(${count})`;
+    const badge = cartTrigger?.querySelector(".cart-item-count");
+    if (badge) {
+        badge.textContent = count ? String(count) : "";
+        badge.style.display = count ? "flex" : "none";
+        badge.style.visibility = count ? "visible" : "hidden";
+        badge.style.opacity = count ? "1" : "0";
+    }
+    const titleCount = cartDrawer?.querySelector(".cart-title-count");
+    if (titleCount) titleCount.textContent = `(${count})`;
 }
 
 function requestCartDelete(action, deletingAll = false, icon = null, source = "cart") {
@@ -262,6 +265,7 @@ function renderCart() {
     });
 
     const empty = cart.length === 0;
+    cartDrawer.classList.toggle("is-empty", empty);
     cartDrawer.querySelector(".cart-empty").style.display = empty ? "flex" : "none";
     cartContent.style.display = empty ? "none" : "block";
     cartDrawer.querySelector(".total").style.display = empty ? "none" : "flex";

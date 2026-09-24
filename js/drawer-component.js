@@ -1,7 +1,7 @@
 export function mountMPWRDrawers(target = document.body) {
     if (target.querySelector(":scope > .cart") || target.querySelector(":scope > .wishlist")) return;
     target.insertAdjacentHTML("beforeend", `
-        <div class="cart">
+        <div class="cart is-empty">
             <h2 class="cart-title">My Cart <span class="cart-title-count" aria-live="polite">(0)</span></h2>
             <div class="cart-header-actions">
                 <button class="cart-menu-toggle" type="button" aria-label="Cart options" aria-expanded="false" aria-controls="cart-actions-menu"><img src="images/optimized/more.png" alt=""></button>

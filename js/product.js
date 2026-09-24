@@ -1585,10 +1585,7 @@ function updateCartBadge() {
 
     console.log("updateCartBadge()", cartItems);
 
-    if (!cartBadge) {
-        console.error(".cart-item-count element not found");
-        return;
-    }
+    if (!cartBadge) return;
 
     const totalItems = cartItems.reduce(
         (sum, item) => sum + Number(item.quantity || 1),
@@ -1599,10 +1596,10 @@ function updateCartBadge() {
         titleCount.textContent = `(${totalItems})`;
     }
 
-    cartBadge.textContent = String(totalItems);
+    cartBadge.textContent = totalItems > 0 ? String(totalItems) : "";
     cartBadge.style.display = totalItems > 0 ? "flex" : "none";
-    cartBadge.style.visibility = "visible";
-    cartBadge.style.opacity = "1";
+    cartBadge.style.visibility = totalItems > 0 ? "visible" : "hidden";
+    cartBadge.style.opacity = totalItems > 0 ? "1" : "0";
     cartBadge.style.zIndex = "9999";
 
     console.log("Badge updated:", totalItems, cartBadge);
@@ -1749,6 +1746,8 @@ function updateTotalPrice(cartItems) {
 
 function updateCartUI(cartItems) {
     const isEmpty = cartItems.length === 0;
+
+    cart?.classList.toggle("is-empty", isEmpty);
 
     cartContent.style.display = isEmpty ? "none" : "block";
     cartEmpty.style.display = isEmpty ? "flex" : "none";

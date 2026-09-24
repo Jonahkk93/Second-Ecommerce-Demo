@@ -1,4 +1,4 @@
-import { mountMPWRDrawers } from "./drawer-component.js?v=20260816-6";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20260924-7";
 
 await (window.MPWRCatalogueReady || Promise.resolve(window.products));
 
@@ -68,6 +68,7 @@ let selectedModalRegularPrice = 0;
 function updateCartButton() {
     const count = getCart().reduce((total,item) => total + Number(item.quantity || 1),0);
     const badge = document.querySelector(".cart-item-count");
+    if (!badge) return;
     badge.textContent = count > 0 ? String(count) : "";
     badge.style.visibility = count > 0 ? "visible" : "hidden";
 }
@@ -364,7 +365,9 @@ function renderWishlistDrawer() {
 function renderCartDrawer() {
     const cart = getCart();
     const count = cart.reduce((sum,item) => sum + Math.max(1,Number(item.quantity) || 1),0);
-    document.querySelector(".cart-title-count").textContent = `(${count})`;
+    const titleCount = cartDrawer?.querySelector(".cart-title-count");
+    if (titleCount) titleCount.textContent = `(${count})`;
+    cartDrawer?.classList.toggle("is-empty", cart.length === 0);
     drawerItems.replaceChildren();
     cart.forEach((item,index) => {
         const quantity = Math.max(1,Number(item.quantity) || 1);

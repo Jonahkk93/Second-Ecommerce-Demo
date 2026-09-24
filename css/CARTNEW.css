@@ -1199,6 +1199,20 @@ e
     color:#888;
 }
 
+/* Empty carts must never expose totals or a checkout action. The class is
+   initialized in the drawer markup and synchronized by every cart renderer. */
+.cart.is-empty .cart-content,
+.cart.is-empty .total,
+.cart.is-empty .btn-buy,
+.cart.is-empty .btn-buy + br,
+.cart.is-empty .btn-buy + br + br{
+    display:none!important;
+}
+
+.cart.is-empty .cart-empty{
+    display:flex!important;
+}
+
 .continue-shopping{
     margin-top:25px;
     padding:12px 28px;
