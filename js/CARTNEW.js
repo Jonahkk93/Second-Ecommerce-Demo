@@ -348,6 +348,7 @@ async function saveCartToFirestore() {
         );
 
         localStorage.setItem("mpwrCartOwnerUid", user.uid);
+        window.MPWRCartStorage.consumeGuest();
 
         console.log("Cart saved to Firestore.");
 
@@ -506,9 +507,7 @@ async function loadOrdersFromFirestore() {
    LOCAL STORAGE
 ============================================================ */
 
-let cartItems = JSON.parse(
-    localStorage.getItem("cart")
-) || [];
+let cartItems = window.MPWRCartStorage?.current() || [];
 
 let favorites = JSON.parse(
     localStorage.getItem("favorites")
@@ -714,12 +713,9 @@ function updateWishlistUI() {
 
 function saveCart() {
 
-    cartItems = window.normalizeMPWRCartItems?.(cartItems) || cartItems;
-
-    localStorage.setItem(
-        "cart",
-        JSON.stringify(cartItems)
-    );
+    cartItems = window.MPWRCartStorage?.save(cartItems, auth.currentUser)
+        || window.normalizeMPWRCartItems?.(cartItems)
+        || cartItems;
 
     saveCartToFirestore();
 
@@ -740,8 +736,12 @@ function saveCart() {
         const accountCart = cartDoc.exists()
             ? cartDoc.data().items || []
             : [];
-        const localCart = JSON.parse(localStorage.getItem("cart")) || [];
         const localOwner = localStorage.getItem("mpwrCartOwnerUid");
+        const localCart = localOwner === user.uid
+            ? window.MPWRCartStorage.read("cart")
+            : (localStorage.getItem("mpwrGuestCart") !== null
+                ? window.MPWRCartStorage.read("mpwrGuestCart")
+                : window.MPWRCartStorage.read("cart"));
 
         cartItems = mergeCartItems(
             accountCart,
@@ -752,6 +752,7 @@ function saveCart() {
 
         localStorage.setItem("cart", JSON.stringify(cartItems));
         localStorage.setItem("mpwrCartOwnerUid", user.uid);
+        window.MPWRCartStorage.consumeGuest();
         await setDoc(doc(db, "carts", user.uid), { items: cartItems });
 
         renderSavedCart();
@@ -1172,10 +1173,9 @@ function attachCartSwipe(cartBox) {
 ============================================================ */
 
 function renderSavedCart() {
-    cartItems = JSON.parse(localStorage.getItem("cart")) || [];
-    cartItems = window.normalizeMPWRCartItems?.(cartItems) || cartItems;
+    cartItems = window.MPWRCartStorage?.current() || [];
     localStorage.setItem("cart", JSON.stringify(cartItems));
-cartContent.innerHTML = "";
+    cartContent.innerHTML = "";
 
 
     cartItems.forEach(cartItem => {
@@ -1409,7 +1409,7 @@ document.querySelector(".cart-delete-all").addEventListener("click", () => {
 });
 
 document.querySelector(".cart-share-all").addEventListener("click", async () => {
-    const items = JSON.parse(localStorage.getItem("cart")) || [];
+    const items = window.MPWRCartStorage?.current() || [];
     if (!items.length) { closeCartActionsMenu(); showToast("Your cart is empty 🛒", "warning"); return; }
     const text = items.map(item => `${item.quantity || 1} × ${item.title}`).join("\n");
     try {
@@ -2631,9 +2631,7 @@ onAuthStateChanged(auth, async (user) => {
 
     } else {
 
-        cartItems = JSON.parse(
-            localStorage.getItem("cart")
-        ) || [];
+        cartItems = window.MPWRCartStorage?.activateGuest() || [];
 
         favorites = JSON.parse(
             localStorage.getItem("favorites")

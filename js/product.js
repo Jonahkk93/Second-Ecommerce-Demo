@@ -885,7 +885,7 @@ productModalCart?.addEventListener("click", () => {
         size: selectedModalOptions.size || selectedModalOptions.length || "",
         quantity: 1
     };
-    const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+    const cartItems = window.MPWRCartStorage?.current() || [];
     if (cartItems.some(item => item.id === cartItem.id && sameCartSelection(item, cartItem))) {
         showToast("This product is already in your cart⚠️", "warning");
         return;
@@ -1580,9 +1580,7 @@ favorites = window.normalizeMPWRItems?.(favorites) || favorites;
 localStorage.setItem("favorites", JSON.stringify(favorites));
 
 function updateCartBadge() {
-    const cartItems = window.normalizeMPWRCartItems?.(
-        JSON.parse(localStorage.getItem("cart")) || []
-    ) || [];
+    const cartItems = window.MPWRCartStorage?.current() || [];
     const titleCount = document.querySelector(".cart-title-count");
 
     console.log("updateCartBadge()", cartItems);
@@ -1605,8 +1603,9 @@ function updateCartBadge() {
 }
 
 function saveCart(cartItems) {
-    cartItems = window.normalizeMPWRCartItems?.(cartItems) || cartItems;
-    localStorage.setItem("cart", JSON.stringify(cartItems));
+    cartItems = window.MPWRCartStorage?.save(cartItems, auth.currentUser)
+        || window.normalizeMPWRCartItems?.(cartItems)
+        || cartItems;
     saveCartToFirestore();
 }
 
@@ -1618,7 +1617,7 @@ async function saveCartToFirestore() {
 
     try {
 
-        const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+        const cartItems = window.MPWRCartStorage?.current() || [];
 
         await setDoc(
             doc(db, "carts", user.uid),
@@ -1709,12 +1708,14 @@ async function saveFavoritesToFirestore() {
 
             const data = cartDoc.data();
 
-            const cartItems = window.normalizeMPWRItems?.(data.items || []) || data.items || [];
+            const cartItems = window.normalizeMPWRCartItems?.(data.items || []) || data.items || [];
 
             localStorage.setItem(
                 "cart",
                 JSON.stringify(cartItems)
             );
+            localStorage.setItem("mpwrCartOwnerUid", user.uid);
+            window.MPWRCartStorage.consumeGuest();
 
             renderSavedCart();
 
@@ -1838,7 +1839,7 @@ function attachCartEvents(cartBox, cartItem) {
 
     const confirmCartItemDeletion = () => {
         requestItemDeletion("cart", () => {
-            let savedCartItems = JSON.parse(localStorage.getItem("cart")) || [];
+            let savedCartItems = window.MPWRCartStorage?.current() || [];
 
             savedCartItems = savedCartItems.filter(item => !(
                 item.id === cartItem.id && sameCartSelection(item, cartItem)
@@ -1897,7 +1898,7 @@ function attachCartEvents(cartBox, cartItem) {
         event.stopPropagation();
 
         pendingMoveToWishlist = () => {
-            let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+            let cartItems = window.MPWRCartStorage?.current() || [];
             const isAlreadySaved = favorites.some(item =>
                 String(item.id) === String(cartItem.id)
             );
@@ -1953,7 +1954,7 @@ function attachCartEvents(cartBox, cartItem) {
     });
 
     increment.addEventListener("click", () => {
-        let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+        let cartItems = window.MPWRCartStorage?.current() || [];
 
         const item = cartItems.find(i =>
             i.id === cartItem.id && sameCartSelection(i, cartItem)
@@ -1971,7 +1972,7 @@ function attachCartEvents(cartBox, cartItem) {
     });
 
     decrement.addEventListener("click", () => {
-        let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+        let cartItems = window.MPWRCartStorage?.current() || [];
 
         const item = cartItems.find(i =>
             i.id === cartItem.id && sameCartSelection(i, cartItem)
@@ -2079,9 +2080,7 @@ function attachCartSwipe(cartBox) {
 }
 
 function renderSavedCart() {
-    const cartItems = window.normalizeMPWRCartItems?.(
-        JSON.parse(localStorage.getItem("cart")) || []
-    ) || [];
+    const cartItems = window.MPWRCartStorage?.current() || [];
     localStorage.setItem("cart", JSON.stringify(cartItems));
 
     cartContent.innerHTML = "";
@@ -2260,7 +2259,7 @@ addTocartIcon.addEventListener("click", () => {
         quantity: quantity
     };
 
-    let cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+    let cartItems = window.MPWRCartStorage?.current() || [];
 
     const existingItem = cartItems.find(item => {
         return item.id === cartItem.id && sameCartSelection(item, cartItem);
@@ -2716,7 +2715,7 @@ document.querySelector(".cart-delete-all").addEventListener("click", () => {
 });
 
 document.querySelector(".cart-share-all").addEventListener("click", async () => {
-    const items = JSON.parse(localStorage.getItem("cart")) || [];
+    const items = window.MPWRCartStorage?.current() || [];
     if (!items.length) { closeCartActionsMenu(); showToast("Your cart is empty 🛒", "warning"); return; }
     const text = items.map(item => `${item.quantity || 1} × ${item.title}`).join("\n");
     try {
@@ -2812,7 +2811,7 @@ checkoutButton.addEventListener("click", () => {
         return;
     }
 
-    const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+    const cartItems = window.MPWRCartStorage?.current() || [];
 
     if (cartItems.length === 0) {
         showToast("Your cart is empty 🛒", "warning");
@@ -2867,11 +2866,13 @@ loadProductReviews();
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         await loadCartFromFirestore();
+    } else {
+        window.MPWRCartStorage?.activateGuest();
     }
     await initializeReviewForm(user);
     await loadProductReviews();
     renderSavedCart();
-    updateTotalPrice(JSON.parse(localStorage.getItem("cart")) || []);
+    updateTotalPrice(window.MPWRCartStorage?.current() || []);
     updateCartBadge();
 });
 
@@ -2879,7 +2880,7 @@ onAuthStateChanged(auth, async (user) => {
 window.addEventListener("storage", event => {
     if (event.storageArea !== localStorage) return;
     if (event.key === "cart") {
-        const latestCart = window.normalizeMPWRItems?.(JSON.parse(event.newValue || "[]")) || JSON.parse(event.newValue || "[]");
+        const latestCart = window.normalizeMPWRCartItems?.(JSON.parse(event.newValue || "[]")) || [];
         renderSavedCart();
         updateTotalPrice(latestCart);
         updateCartBadge();

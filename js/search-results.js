@@ -279,13 +279,13 @@ async function saveCommerceToAccount(collectionName,items) {
 }
 
 function getCart() {
-    try { return normalizeCommerceItems(JSON.parse(localStorage.getItem("cart")) || [],true); }
+    try { return window.MPWRCartStorage?.current() || normalizeCommerceItems(JSON.parse(localStorage.getItem("cart")) || [],true); }
     catch { return []; }
 }
 
 function saveCart(cart) {
-    const normalizedCart = normalizeCommerceItems(cart,true);
-    localStorage.setItem("cart",JSON.stringify(normalizedCart));
+    const normalizedCart = window.MPWRCartStorage?.save(cart, window.auth?.currentUser)
+        || normalizeCommerceItems(cart,true);
     void saveCommerceToAccount("carts",normalizedCart);
     renderCartDrawer();
     updateCartButton();
@@ -1026,7 +1026,12 @@ window.addEventListener("storage",event => {
 loadFirebaseServices().then(({ auth, db, doc, getDoc, setDoc, onAuthStateChanged }) => {
     if (!auth || !db) return;
     onAuthStateChanged(auth,user => {
-        if (!user) return;
+        if (!user) {
+            window.MPWRCartStorage?.activateGuest();
+            updateCartButton();
+            if (cartDrawer.classList.contains("active")) renderCartDrawer();
+            return;
+        }
         void queueCommerceSync(async () => {
             try {
                 const [cartDocument,favoritesDocument] = await Promise.all([
@@ -1038,6 +1043,7 @@ loadFirebaseServices().then(({ auth, db, doc, getDoc, setDoc, onAuthStateChanged
                 localStorage.setItem("cart",JSON.stringify(mergedCart));
                 localStorage.setItem("favorites",JSON.stringify(mergedFavorites));
                 localStorage.setItem("mpwrCartOwnerUid",user.uid);
+                window.MPWRCartStorage?.consumeGuest();
                 localStorage.setItem("mpwrFavoritesOwnerUid",user.uid);
                 await Promise.all([
                     setDoc(doc(db,"carts",user.uid),{items:mergedCart}),

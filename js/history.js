@@ -62,7 +62,7 @@ function showToast(message,type = "success") {
 
 function getCart() {
     try {
-        const cart = JSON.parse(localStorage.getItem("cart")) || [];
+        const cart = window.MPWRCartStorage?.current() || JSON.parse(localStorage.getItem("cart")) || [];
         if (!Array.isArray(cart)) return [];
         return window.normalizeMPWRCartItems?.(cart) || cart;
     } catch {
@@ -110,8 +110,9 @@ function cartProductLink(item) {
 }
 
 function saveCart(cart, shouldRender = true) {
-    cart = window.normalizeMPWRCartItems?.(cart) || cart;
-    localStorage.setItem("cart",JSON.stringify(cart));
+    cart = window.MPWRCartStorage?.save(cart, window.auth?.currentUser)
+        || window.normalizeMPWRCartItems?.(cart)
+        || cart;
     void saveCartToAccount(cart);
     if (shouldRender) renderCart();
 }
@@ -985,6 +986,7 @@ window.addEventListener("storage",event => {
 if (window.auth && window.db) {
     onAuthStateChanged(window.auth,user => {
         if (!user) {
+            window.MPWRCartStorage?.activateGuest();
             renderCart();
             renderWishlist();
             return;
@@ -1005,6 +1007,7 @@ if (window.auth && window.db) {
                 );
                 localStorage.setItem("cart",JSON.stringify(mergedCart));
                 localStorage.setItem("mpwrCartOwnerUid",user.uid);
+                window.MPWRCartStorage?.consumeGuest();
                 await setDoc(doc(window.db,"carts",user.uid),{items:mergedCart});
 
                 const accountFavorites = favoritesDocument.exists() ? favoritesDocument.data().items || [] : [];

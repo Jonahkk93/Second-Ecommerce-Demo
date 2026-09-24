@@ -570,28 +570,64 @@ function mpwrCartItemIdentity(item = {}) {
 }
 
 function normalizeMPWRCartItems(items = []) {
+    const catalogueIds = new Set(products.map(product => String(product.id)));
     const merged = new Map();
+
     normalizeMPWRItems(Array.isArray(items) ? items : []).forEach(item => {
+        if (!item?.id || !catalogueIds.has(String(item.id))) return;
         const normalizedItem = {
             ...item,
             quantity: Math.max(1, Math.floor(Number(item.quantity) || 1))
         };
         const key = mpwrCartItemIdentity(normalizedItem);
         const existing = merged.get(key);
-        if (!existing) {
-            merged.set(key, normalizedItem);
-            return;
-        }
-        // Repair duplicate rows left by older cart code without multiplying
-        // the quantity visible to the shopper.
-        existing.quantity = Math.max(existing.quantity, normalizedItem.quantity);
+        if (!existing) merged.set(key, normalizedItem);
+        else existing.quantity = Math.max(existing.quantity, normalizedItem.quantity);
     });
+
     return [...merged.values()];
 }
 
 window.normalizeMPWRImagePath = normalizeMPWRImagePath;
 window.normalizeMPWRItems = normalizeMPWRItems;
 window.normalizeMPWRCartItems = normalizeMPWRCartItems;
+window.MPWRCartStorage = Object.freeze({
+    read(key = "cart") {
+        try {
+            return normalizeMPWRCartItems(JSON.parse(localStorage.getItem(key) || "[]"));
+        } catch {
+            return [];
+        }
+    },
+    current() {
+        if (window.auth?.currentUser) return this.read("cart");
+        if (localStorage.getItem("mpwrGuestCart") !== null) {
+            return this.read("mpwrGuestCart");
+        }
+        // The legacy shared key may contain a previous account's cached cart.
+        // Never expose that data as a guest cart.
+        return [];
+    },
+    save(items, user = window.auth?.currentUser || null) {
+        const normalized = normalizeMPWRCartItems(items);
+        localStorage.setItem("cart", JSON.stringify(normalized));
+        if (!user) localStorage.setItem("mpwrGuestCart", JSON.stringify(normalized));
+        return normalized;
+    },
+    activateGuest() {
+        const hasGuestCart = localStorage.getItem("mpwrGuestCart") !== null;
+        const guestCart = hasGuestCart
+            ? this.read("mpwrGuestCart")
+            : [];
+        localStorage.setItem("mpwrGuestCart", JSON.stringify(guestCart));
+        localStorage.setItem("cart", JSON.stringify(guestCart));
+        localStorage.removeItem("mpwrCartOwnerUid");
+        return guestCart;
+    },
+    consumeGuest() {
+        localStorage.removeItem("mpwrGuestCart");
+    }
+});
 
 function apiProduct(row) {
     const metadata = row?.metadata && typeof row.metadata === "object" ? row.metadata : {};
