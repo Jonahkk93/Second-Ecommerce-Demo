@@ -4956,14 +4956,12 @@ body.search-open::before{
     }
 
     .cart .total{
-        display:none!important;
         flex:0 0 auto;
         margin:0;
         padding:14px 20px 10px;
     }
 
     .cart .btn-buy{
-        display:none!important;
         flex:0 0 auto;
         margin:14px auto max(14px, env(safe-area-inset-bottom, 0px));
         padding:13px 14px;
