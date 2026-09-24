@@ -514,7 +514,7 @@ let favorites = JSON.parse(
     localStorage.getItem("favorites")
 ) || [];
 
-cartItems = window.normalizeMPWRItems?.(cartItems) || cartItems;
+cartItems = window.normalizeMPWRCartItems?.(cartItems) || cartItems;
 favorites = window.normalizeMPWRItems?.(favorites) || favorites;
 localStorage.setItem("cart", JSON.stringify(cartItems));
 localStorage.setItem("favorites", JSON.stringify(favorites));
@@ -591,10 +591,7 @@ function updateCartCount() {
     const badge = document.querySelector(".cart-item-count");
     const titleCount = document.querySelector(".cart-title-count");
 
-    cartItemCount = cartItems.reduce(
-    (sum, item) => sum + Number(item.quantity || 1),
-    0
-);
+    cartItemCount = cartItems.length;
 
     if (titleCount) {
         titleCount.textContent = `(${cartItemCount})`;
@@ -717,7 +714,7 @@ function updateWishlistUI() {
 
 function saveCart() {
 
-    cartItems = window.normalizeMPWRItems?.(cartItems) || cartItems;
+    cartItems = window.normalizeMPWRCartItems?.(cartItems) || cartItems;
 
     localStorage.setItem(
         "cart",
@@ -751,7 +748,7 @@ function saveCart() {
             localCart,
             Boolean(localCart.length) && localOwner !== user.uid
         );
-        cartItems = window.normalizeMPWRItems?.(cartItems) || cartItems;
+        cartItems = window.normalizeMPWRCartItems?.(cartItems) || cartItems;
 
         localStorage.setItem("cart", JSON.stringify(cartItems));
         localStorage.setItem("mpwrCartOwnerUid", user.uid);
@@ -1176,6 +1173,8 @@ function attachCartSwipe(cartBox) {
 
 function renderSavedCart() {
     cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+    cartItems = window.normalizeMPWRCartItems?.(cartItems) || cartItems;
+    localStorage.setItem("cart", JSON.stringify(cartItems));
 cartContent.innerHTML = "";
 
 
@@ -2652,7 +2651,7 @@ window.addEventListener("storage", event => {
     if (event.storageArea !== localStorage) return;
     if (event.key === "cart") {
         cartItems = JSON.parse(event.newValue || "[]");
-        cartItems = window.normalizeMPWRItems?.(cartItems) || cartItems;
+        cartItems = window.normalizeMPWRCartItems?.(cartItems) || cartItems;
         renderSavedCart();
         updateCartCount();
         updateTotalPrice();

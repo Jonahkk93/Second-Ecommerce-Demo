@@ -560,8 +560,38 @@ function normalizeMPWRItems(items = []) {
     });
 }
 
+function mpwrCartItemIdentity(item = {}) {
+    const selections = item.selectedOptions && Object.keys(item.selectedOptions).length
+        ? Object.entries(item.selectedOptions).sort(([a], [b]) => a.localeCompare(b))
+        : [["color", item.color || ""], ["size", item.size || ""]];
+    return [item.id, JSON.stringify(selections)]
+        .map(value => String(value).trim().toLowerCase())
+        .join("::");
+}
+
+function normalizeMPWRCartItems(items = []) {
+    const merged = new Map();
+    normalizeMPWRItems(Array.isArray(items) ? items : []).forEach(item => {
+        const normalizedItem = {
+            ...item,
+            quantity: Math.max(1, Math.floor(Number(item.quantity) || 1))
+        };
+        const key = mpwrCartItemIdentity(normalizedItem);
+        const existing = merged.get(key);
+        if (!existing) {
+            merged.set(key, normalizedItem);
+            return;
+        }
+        // Repair duplicate rows left by older cart code without multiplying
+        // the quantity visible to the shopper.
+        existing.quantity = Math.max(existing.quantity, normalizedItem.quantity);
+    });
+    return [...merged.values()];
+}
+
 window.normalizeMPWRImagePath = normalizeMPWRImagePath;
 window.normalizeMPWRItems = normalizeMPWRItems;
+window.normalizeMPWRCartItems = normalizeMPWRCartItems;
 
 function apiProduct(row) {
     const metadata = row?.metadata && typeof row.metadata === "object" ? row.metadata : {};

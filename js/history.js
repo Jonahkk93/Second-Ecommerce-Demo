@@ -64,7 +64,7 @@ function getCart() {
     try {
         const cart = JSON.parse(localStorage.getItem("cart")) || [];
         if (!Array.isArray(cart)) return [];
-        return window.normalizeMPWRItems?.(cart) || cart;
+        return window.normalizeMPWRCartItems?.(cart) || cart;
     } catch {
         return [];
     }
@@ -110,7 +110,7 @@ function cartProductLink(item) {
 }
 
 function saveCart(cart, shouldRender = true) {
-    cart = window.normalizeMPWRItems?.(cart) || cart;
+    cart = window.normalizeMPWRCartItems?.(cart) || cart;
     localStorage.setItem("cart",JSON.stringify(cart));
     void saveCartToAccount(cart);
     if (shouldRender) renderCart();
@@ -147,7 +147,7 @@ function mergeCartItems(accountItems,localItems,combineQuantities) {
 }
 
 function updateCartBadge(cart = getCart()) {
-    const count = cart.reduce((total,item) => total + Math.max(1,Number(item.quantity) || 1),0);
+    const count = cart.length;
     const badge = cartTrigger?.querySelector(".cart-item-count");
     if (badge) {
         badge.textContent = count ? String(count) : "";

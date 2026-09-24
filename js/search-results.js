@@ -66,7 +66,7 @@ let selectedModalPrice = 0;
 let selectedModalRegularPrice = 0;
 
 function updateCartButton() {
-    const count = getCart().reduce((total,item) => total + Number(item.quantity || 1),0);
+    const count = getCart().length;
     const badge = document.querySelector(".cart-item-count");
     if (!badge) return;
     badge.textContent = count > 0 ? String(count) : "";
@@ -236,7 +236,9 @@ function closeOpenCartSwipes(except = null) {
 }
 
 function normalizeCommerceItems(items,includeQuantity = false) {
-    const normalized = window.normalizeMPWRItems?.(items) || items;
+    const normalized = includeQuantity
+        ? (window.normalizeMPWRCartItems?.(items) || items)
+        : (window.normalizeMPWRItems?.(items) || items);
     return normalized.map(item => ({
         ...item,
         id:String(item.id),
@@ -364,7 +366,7 @@ function renderWishlistDrawer() {
 
 function renderCartDrawer() {
     const cart = getCart();
-    const count = cart.reduce((sum,item) => sum + Math.max(1,Number(item.quantity) || 1),0);
+    const count = cart.length;
     const titleCount = cartDrawer?.querySelector(".cart-title-count");
     if (titleCount) titleCount.textContent = `(${count})`;
     cartDrawer?.classList.toggle("is-empty", cart.length === 0);
