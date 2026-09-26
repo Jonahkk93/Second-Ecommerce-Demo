@@ -13,7 +13,7 @@
             markup = markup.replace(
                 '<a href="Nails.html">',
                 `<a href="index.html" class="category-sidebar-home">
-                    <img src="images/Icon Folder/Home Icon_E5A484.PNG" class="sidebar-item-icon" alt="">
+                    <img src="images/Icon Folder/Home Icon_333.PNG" class="sidebar-item-icon" alt="">
                     <span>Home</span>
                 </a>
             </li>

@@ -18,6 +18,8 @@ const categoryLabels = Object.fromEntries(DEFAULT_CATEGORIES.map(category => [ca
 categoryLabels[UNCATEGORIZED_CATEGORY] = "No Category";
 const POPULAR_PRODUCT_LIMIT = 10;
 const HOMEPAGE_DISCOUNT_PRODUCT_LIMIT = 10;
+const SEARCH_POPULAR_PRODUCT_LIMIT = 12;
+const DEFAULT_SEARCH_SUGGESTIONS = ["Press-ons", "Wigs", "Lashes", "Nail polish", "Moisturizer", "Pink", "Black", "Shoulder"];
 const DEFAULT_DISCOUNTS = ["12", "15", "1", "4", "11"].map(id => ({ id, percent: 15 }));
 const DISCOUNT_CAMPAIGN_LABELS = ["Limited Offers", "Valentines Offers", "Christmas Offers", "Black Friday"];
 const LEGACY_DISCOUNT_CAMPAIGN_LABELS = { Valentines: "Valentines Offers", Christmas: "Christmas Offers" };
@@ -50,6 +52,7 @@ let discountCampaignLabel = DISCOUNT_CAMPAIGN_LABELS[0];
 let popularMode = "manual";
 let discountMode = "manual";
 let discountSectionEnabled = true;
+let searchSettings = { suggestions: [...DEFAULT_SEARCH_SUGGESTIONS], popularProducts: [], popularMode: "automatic", suggestionsEnabled: true, popularEnabled: true, suggestionsHeading: "Suggested searches", popularHeading: "Popular picks", defaultSort: "relevance" };
 let editingProduct = null;
 let pendingMediaPreviewUrls = [];
 let selectedMediaFiles = [];
@@ -71,7 +74,7 @@ let categoryProductIds = new Set();
 let categoryReassignmentIds = new Set();
 let categoryReassignmentTarget = null;
 const catalogueChannel = "BroadcastChannel" in window ? new BroadcastChannel("mpwr-catalogue") : null;
-const panelHashes = { catalogue: "products", homepage: "homepage", deleted: "deleted-products" };
+const panelHashes = { catalogue: "products", homepage: "homepage", search: "search-page", deleted: "deleted-products" };
 const hashPanels = Object.fromEntries(Object.entries(panelHashes).map(([panel, hash]) => [hash, panel]));
 
 function notifyStorefrontChange() {
@@ -101,6 +104,7 @@ function activateManagementPanel(panelName, updateHistory = false) {
     $$(".management-panel").forEach(section => section.classList.toggle("active", section.dataset.panelContent === panel));
     $("#add-product-btn").classList.toggle("hidden", panel !== "catalogue");
     if (panel === "homepage") requestAnimationFrame(syncHomepagePanelHeights);
+    if (panel === "search") requestAnimationFrame(renderSearchSettings);
 
     if (updateHistory) {
         const nextHash = `#${panelHashes[panel]}`;
@@ -495,6 +499,7 @@ async function loadData() {
     const popularSetting = bootstrap.settings.popular || {};
     const bestsellerSetting = bootstrap.settings.bestsellers || {};
     const discountSetting = bootstrap.settings.discounts || {};
+    const storedSearch = bootstrap.settings.search || {};
     products = bootstrap.products;
     deletedProducts = bootstrap.deletedProducts;
     categories = normalizeCategories(bootstrap.settings.categories?.items);
@@ -515,6 +520,16 @@ async function loadData() {
     discountCampaignLabel = normalizeDiscountCampaignLabel(discountSetting.label);
     discountMode = discountSetting.mode === "automatic" ? "automatic" : "manual";
     discountSectionEnabled = discountSetting.enabled !== false;
+    searchSettings = {
+        suggestions: Array.isArray(storedSearch.suggestions) ? storedSearch.suggestions.map(String).filter(Boolean).slice(0, 20) : [...DEFAULT_SEARCH_SUGGESTIONS],
+        popularProducts: Array.isArray(storedSearch.popularProducts) ? storedSearch.popularProducts.map(item => String(item.id || item)).slice(0, SEARCH_POPULAR_PRODUCT_LIMIT) : [],
+        popularMode: storedSearch.popularMode === "manual" ? "manual" : "automatic",
+        suggestionsEnabled: storedSearch.suggestionsEnabled !== false,
+        popularEnabled: storedSearch.popularEnabled !== false,
+        suggestionsHeading: String(storedSearch.suggestionsHeading || "Suggested searches").slice(0, 60),
+        popularHeading: String(storedSearch.popularHeading || "Popular picks").slice(0, 60),
+        defaultSort: ["relevance", "popular", "newest", "low", "high"].includes(storedSearch.defaultSort) ? storedSearch.defaultSort : "relevance"
+    };
     $("#popular-mode-automatic").checked = popularMode === "automatic";
     $("#discount-mode-automatic").checked = discountMode === "automatic";
     $("#offer-section-enabled").checked = discountSectionEnabled;
@@ -523,6 +538,7 @@ async function loadData() {
     productDropdownSync.get($("#discount-campaign-label"))?.();
     $("#discount-campaign-preview").textContent = discountCampaignLabel;
     renderAll();
+    renderSearchSettings();
 }
 
 function renderStats() {
@@ -837,6 +853,53 @@ function renderAll() {
     renderDeletedProducts();
 }
 
+function searchPopularSelection() {
+    const ids = searchSettings.popularMode === "automatic"
+        ? [...automaticPopularIds, ...products.map(product => String(product.id))]
+        : searchSettings.popularProducts;
+    return [...new Set(ids)].map(id => products.find(product => String(product.id) === id && product.active !== false)).filter(Boolean).slice(0, SEARCH_POPULAR_PRODUCT_LIMIT);
+}
+
+function renderSearchSettings() {
+    if (!$("#search-suggestion-list")) return;
+    $("#search-suggestions-enabled").checked = searchSettings.suggestionsEnabled;
+    $("#search-popular-enabled").checked = searchSettings.popularEnabled;
+    $("#search-popular-automatic").checked = searchSettings.popularMode === "automatic";
+    $("#search-suggestions-heading").value = searchSettings.suggestionsHeading;
+    $("#search-popular-heading").value = searchSettings.popularHeading;
+    $("#search-default-sort").value = searchSettings.defaultSort;
+    $("#search-suggestions-enabled").closest(".toggle-row").querySelector(".search-toggle-label").textContent = searchSettings.suggestionsEnabled ? "Shown" : "Hidden";
+    $("#search-popular-enabled").closest(".toggle-row").querySelector(".search-toggle-label").textContent = searchSettings.popularEnabled ? "Shown" : "Hidden";
+    $(".search-mode-label").textContent = searchSettings.popularMode === "automatic" ? "Automatic" : "Manual";
+    $("#search-suggestion-list").innerHTML = searchSettings.suggestions.map((label, index) => `<div class="search-suggestion-row" data-index="${index}"><button class="search-suggestion-drag" type="button" aria-label="Drag ${escapeHtml(label)} to reorder"><img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt=""></button><span>${escapeHtml(label)}</span><button type="button" data-remove aria-label="Remove ${escapeHtml(label)}">×</button></div>`).join("") || '<p class="search-setting-empty">No suggested searches added.</p>';
+    const query = $("#search-popular-product-search").value.trim().toLowerCase();
+    const manual = searchSettings.popularMode === "manual";
+    const selected = new Set(searchSettings.popularProducts);
+    $("#search-popular-products").innerHTML = products.filter(product => product.active !== false && (!query || `${product.title} ${product.category || ""}`.toLowerCase().includes(query))).map(product => {
+        const id = String(product.id);
+        const selectedIndex = searchSettings.popularProducts.indexOf(id);
+        const controls = selected.has(id) && manual
+            ? `<div class="search-product-controls"><button type="button" data-move="up" aria-label="Move ${escapeHtml(product.title)} up">↑</button><button type="button" data-move="down" aria-label="Move ${escapeHtml(product.title)} down">↓</button><button type="button" data-toggle aria-label="Remove ${escapeHtml(product.title)}">✓</button></div>`
+            : `<button type="button" data-toggle ${manual ? "" : "disabled"} aria-label="${selected.has(id) ? "Remove" : "Add"} ${escapeHtml(product.title)}">${selected.has(id) ? "✓" : "+"}</button>`;
+        return `<div class="search-product-row ${selected.has(id) ? "selected" : ""}" data-id="${escapeHtml(id)}"><img src="${escapeHtml(productImage(product))}" alt=""><div><strong>${escapeHtml(product.title)}</strong><small>${selected.has(id) ? `Selected · position ${selectedIndex + 1}` : (categoryLabels[productCategory(product)] || "Products")}</small></div>${controls}</div>`;
+    }).join("");
+    $("#search-popular-product-search").disabled = !manual;
+    $("#search-popular-products").classList.toggle("is-disabled", !manual);
+    $("#search-preview-suggestions-heading").textContent = searchSettings.suggestionsHeading;
+    $("#search-preview-suggestions-heading").hidden = !searchSettings.suggestionsEnabled;
+    $("#search-preview-chips").hidden = !searchSettings.suggestionsEnabled;
+    $("#search-preview-chips").innerHTML = searchSettings.suggestions.map(label => `<span>${escapeHtml(label)}</span>`).join("");
+    $("#search-preview-popular-heading").textContent = searchSettings.popularHeading;
+    $("#search-preview-popular-heading").hidden = !searchSettings.popularEnabled;
+    $("#search-preview-products").hidden = !searchSettings.popularEnabled;
+    $("#search-preview-products").innerHTML = searchPopularSelection().slice(0, 6).map(product => `<div><img src="${escapeHtml(productImage(product))}" alt=""><span>${escapeHtml(product.title)}</span></div>`).join("");
+}
+
+async function saveSearchSettings() {
+    const selected = searchSettings.popularProducts.map(id => products.find(product => String(product.id) === id)).filter(Boolean);
+    await setDoc(doc(db, "storefront", "search"), { ...searchSettings, popularProducts: selected.map(product => ({ id: String(product.id), title: product.title, image: productImage(product) })) });
+}
+
 function setEditorPanel(panel, focusField = true) {
     const content = $(".product-modal-content");
     const nextPanel = panel === "category" && !editingProduct ? "category" : "product";
@@ -901,7 +964,7 @@ function openEditor(product = null) {
     const gallery = product?.gallery?.length ? product.gallery : (product?.image ? [product.image] : []);
     const videos = product?.videos || [];
     const existingMedia = $("#existing-media");
-    existingMedia.innerHTML = `${gallery.map((url, index) => `<button class="existing-media-view" type="button" draggable="true" data-media-url="${escapeHtml(url)}" aria-label="View product image ${index + 1}" title="Drag to rearrange"><img src="${escapeHtml(url)}" alt="Product image ${index + 1}" draggable="false"></button>`).join("")}${videos.map(video => `<video src="${escapeHtml(video.url || video)}" muted aria-label="Existing product video"></video>`).join("")}<button class="existing-media-add" type="button" aria-label="Add another image or video"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></button>`;
+    existingMedia.innerHTML = `${gallery.map((url, index) => `<button class="existing-media-view" type="button" draggable="true" data-media-url="${escapeHtml(url)}" aria-label="View product image ${index + 1}" title="Drag to rearrange"><img src="${escapeHtml(url)}" alt="Product image ${index + 1}" draggable="false"><span class="existing-media-remove" aria-label="Remove product image"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></span></button>`).join("")}${videos.map(video => `<video src="${escapeHtml(video.url || video)}" muted aria-label="Existing product video"></video>`).join("")}<button class="existing-media-add" type="button" aria-label="Add another image or video"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></button>`;
     existingMedia.classList.remove("hidden");
     document.body.classList.add("product-editor-open");
     $(".product-modal").classList.remove("hidden");
@@ -935,7 +998,11 @@ function renderPendingMedia(files) {
         previewButton.dataset.pendingId = mediaFileId(file);
         preview.draggable = false;
         previewButton.setAttribute("aria-label", `View new image: ${file.name}`);
-        previewButton.appendChild(preview);
+        const remove = document.createElement("span");
+        remove.className = "existing-media-remove";
+        remove.setAttribute("aria-label", "Remove new product image");
+        remove.innerHTML = '<img src="images/Icon Folder/Close Icon_333.PNG" alt="">';
+        previewButton.append(preview, remove);
         existingMedia.insertBefore(previewButton, addButton);
     });
 }
@@ -1221,6 +1288,84 @@ async function handleProductSubmit(event) {
 }
 
 function bindEvents() {
+    $("#search-suggestion-form").addEventListener("submit", event => {
+        event.preventDefault();
+        const input = $("#search-suggestion-input");
+        const label = input.value.trim().replace(/\s+/g, " ").slice(0, 40);
+        if (!label) return;
+        if (searchSettings.suggestions.some(item => item.toLowerCase() === label.toLowerCase())) return showToast("That suggested search already exists.", "error");
+        if (searchSettings.suggestions.length >= 20) return showToast("Add up to 20 suggested searches.", "error");
+        searchSettings.suggestions.push(label);
+        input.value = "";
+        renderSearchSettings();
+    });
+    $("#search-suggestion-list").addEventListener("click", event => {
+        const row = event.target.closest(".search-suggestion-row");
+        if (!row) return;
+        const index = Number(row.dataset.index);
+        if (event.target.closest("[data-remove]")) searchSettings.suggestions.splice(index, 1);
+        else return;
+        renderSearchSettings();
+    });
+    let suggestionDrag = null;
+    $("#search-suggestion-list").addEventListener("pointerdown", event => {
+        const handle = event.target.closest(".search-suggestion-drag");
+        const row = handle?.closest(".search-suggestion-row");
+        if (!handle || !row) return;
+        event.preventDefault();
+        suggestionDrag = { row, handle, original: [...searchSettings.suggestions] };
+        row.classList.add("dragging");
+        handle.setPointerCapture(event.pointerId);
+    });
+    $("#search-suggestion-list").addEventListener("pointermove", event => {
+        if (!suggestionDrag) return;
+        event.preventDefault();
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest(".search-suggestion-row");
+        if (!target || target === suggestionDrag.row || target.parentElement !== suggestionDrag.row.parentElement) return;
+        const rect = target.getBoundingClientRect();
+        target.parentElement.insertBefore(suggestionDrag.row, event.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+    });
+    const finishSuggestionDrag = event => {
+        if (!suggestionDrag) return;
+        if (suggestionDrag.handle.hasPointerCapture(event.pointerId)) suggestionDrag.handle.releasePointerCapture(event.pointerId);
+        searchSettings.suggestions = [...$("#search-suggestion-list").querySelectorAll(".search-suggestion-row")].map(row => suggestionDrag.original[Number(row.dataset.index)]);
+        suggestionDrag.row.classList.remove("dragging");
+        suggestionDrag = null;
+        renderSearchSettings();
+    };
+    $("#search-suggestion-list").addEventListener("pointerup", finishSuggestionDrag);
+    $("#search-suggestion-list").addEventListener("pointercancel", finishSuggestionDrag);
+    $("#search-popular-products").addEventListener("click", event => {
+        const row = event.target.closest(".search-product-row");
+        if (!row || searchSettings.popularMode !== "manual" || !event.target.closest("button")) return;
+        const id = row.dataset.id;
+        const index = searchSettings.popularProducts.indexOf(id);
+        if (event.target.closest('[data-move="up"]') && index > 0) [searchSettings.popularProducts[index - 1], searchSettings.popularProducts[index]] = [searchSettings.popularProducts[index], searchSettings.popularProducts[index - 1]];
+        else if (event.target.closest('[data-move="down"]') && index >= 0 && index < searchSettings.popularProducts.length - 1) [searchSettings.popularProducts[index + 1], searchSettings.popularProducts[index]] = [searchSettings.popularProducts[index], searchSettings.popularProducts[index + 1]];
+        else if (searchSettings.popularProducts.includes(id)) searchSettings.popularProducts = searchSettings.popularProducts.filter(value => value !== id);
+        else if (searchSettings.popularProducts.length < SEARCH_POPULAR_PRODUCT_LIMIT) searchSettings.popularProducts.push(id);
+        else return showToast(`Choose up to ${SEARCH_POPULAR_PRODUCT_LIMIT} Popular Picks.`, "error");
+        renderSearchSettings();
+    });
+    $("#search-popular-product-search").addEventListener("input", renderSearchSettings);
+    $("#search-suggestions-enabled").addEventListener("change", event => { searchSettings.suggestionsEnabled = event.target.checked; renderSearchSettings(); });
+    $("#search-popular-enabled").addEventListener("change", event => { searchSettings.popularEnabled = event.target.checked; renderSearchSettings(); });
+    $("#search-popular-automatic").addEventListener("change", event => { searchSettings.popularMode = event.target.checked ? "automatic" : "manual"; renderSearchSettings(); });
+    $("#search-suggestions-heading").addEventListener("input", event => { searchSettings.suggestionsHeading = event.target.value.trimStart().slice(0, 60) || "Suggested searches"; $("#search-preview-suggestions-heading").textContent = searchSettings.suggestionsHeading; });
+    $("#search-popular-heading").addEventListener("input", event => { searchSettings.popularHeading = event.target.value.trimStart().slice(0, 60) || "Popular picks"; $("#search-preview-popular-heading").textContent = searchSettings.popularHeading; });
+    $("#search-default-sort").addEventListener("change", event => { searchSettings.defaultSort = event.target.value; });
+    $("#save-search-settings").addEventListener("click", () => { $("#search-save-modal").classList.remove("hidden"); $("#confirm-search-save").focus(); });
+    const closeSearchSave = () => { $("#search-save-modal").classList.add("hidden"); $("#save-search-settings").focus(); };
+    $("#cancel-search-save").addEventListener("click", closeSearchSave);
+    $("#search-save-modal").addEventListener("click", event => { if (event.target === event.currentTarget) closeSearchSave(); });
+    $("#confirm-search-save").addEventListener("click", async event => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        button.textContent = "Saving…";
+        try { await saveSearchSettings(); notifyStorefrontChange(); closeSearchSave(); showToast("Search Page changes saved."); }
+        catch (error) { showToast(error?.message || "Unable to save the Search Page.", "error"); }
+        finally { button.disabled = false; button.textContent = "Save Changes"; }
+    });
     $$('[data-coming-soon]').forEach(button => button.addEventListener("click", () => showToast(`${button.dataset.comingSoon} management is the next workspace to connect.`)));
     $("#add-product-btn").addEventListener("click", () => openEditor());
     $$(".add-editor-tab").forEach(tab => tab.addEventListener("click", () => setEditorPanel(tab.dataset.editorPanel)));
@@ -1344,6 +1489,7 @@ function bindEvents() {
     });
     existingMediaStrip.addEventListener("pointerdown", event => {
         if (event.pointerType === "mouse") return;
+        if (event.target.closest(".existing-media-remove")) return;
         const image = event.target.closest(".existing-media-view");
         if (!image) return;
         touchDrag = { image, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, active: false };
@@ -1368,13 +1514,30 @@ function bindEvents() {
     };
     existingMediaStrip.addEventListener("pointerup", finishTouchReorder);
     existingMediaStrip.addEventListener("pointercancel", finishTouchReorder);
-    existingMediaStrip.addEventListener("click", event => {
+    existingMediaStrip.addEventListener("click", async event => {
         if (event.currentTarget.dataset.suppressClick === "true") {
             event.preventDefault();
             return;
         }
         if (event.target.closest(".existing-media-add")) {
             $("#product-media").click();
+            return;
+        }
+        const removeControl = event.target.closest(".existing-media-remove");
+        if (removeControl) {
+            event.preventDefault();
+            event.stopPropagation();
+            const imageButton = removeControl.closest(".existing-media-view");
+            if (!imageButton || !await confirmImageDeletion()) return;
+            if (imageButton.dataset.mediaUrl) {
+                removedExistingImageUrls.add(imageButton.dataset.mediaUrl);
+                imageButton.remove();
+                showToast("Image will be deleted when you save the product.");
+            } else if (imageButton.dataset.pendingId) {
+                selectedMediaFiles = selectedMediaFiles.filter(file => mediaFileId(file) !== imageButton.dataset.pendingId);
+                renderPendingMedia(selectedMediaFiles);
+            }
+            $("#selected-media-count").textContent = selectedMediaFiles.length ? `${selectedMediaFiles.length} new file${selectedMediaFiles.length === 1 ? "" : "s"} selected.` : "No new files selected.";
             return;
         }
         const trigger = event.target.closest(".existing-media-view");

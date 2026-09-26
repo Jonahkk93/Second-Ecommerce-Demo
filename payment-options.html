@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
     <title>My Payment Options | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/payment-options.css?v=20260920-3">
+    <link rel="stylesheet" href="css/payment-options.css?v=20260925-1">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
     <script src="js/loading-states.js?v=20260816-24" defer></script>
@@ -80,7 +80,18 @@
                 </div>
 
                 <div class="payment-fields" data-payment-fields="card">
-                    <p class="payment-safe-note">Your card details will be entered securely when you pay. MPWR saves only this preference.</p>
+                    <label>Name on card<input name="cardholderName" type="text" autocomplete="cc-name" placeholder="Name as shown on card"></label>
+                    <div class="payment-card-row">
+                        <label>Last 4 digits<input name="cardLast4" type="text" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="1234"></label>
+                        <label>Expiry<input name="cardExpiry" type="text" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="MM/YY"></label>
+                    </div>
+                    <label>Card type
+                        <select name="cardBrand">
+                            <option value="Visa">Visa</option>
+                            <option value="Mastercard">Mastercard</option>
+                        </select>
+                    </label>
+                    <p class="payment-safe-note"><strong>For your security:</strong> MPWR saves only these card identifiers. You’ll enter the full card number and security code on Pesapal’s secure payment page when you pay.</p>
                 </div>
 
                 <div class="payment-fields" data-payment-fields="mtn_momo" hidden>
@@ -109,6 +120,6 @@
     <div class="payment-toast" role="status" aria-live="polite"></div>
 
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/payment-options.js?v=20260829-1"></script>
+    <script type="module" src="js/payment-options.js?v=20260925-2"></script>
 </body>
 </html>

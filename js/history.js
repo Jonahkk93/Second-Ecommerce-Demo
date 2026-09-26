@@ -157,7 +157,10 @@ function updateCartBadge(cart = getCart()) {
         badge.style.opacity = count ? "1" : "0";
     }
     const titleCount = cartDrawer?.querySelector(".cart-title-count");
-    if (titleCount) titleCount.textContent = `(${count})`;
+    if (titleCount) {
+        titleCount.textContent = count > 0 ? `(${count})` : "";
+        titleCount.hidden = count === 0;
+    }
 }
 
 function requestCartDelete(action, deletingAll = false, icon = null, source = "cart") {
@@ -718,6 +721,11 @@ function createProductCard(product, favorites) {
         wishlistIcon.src = isRemoving
             ? "images/optimized/heart-outline.png"
             : "images/Heart7.PNG";
+        if (!isRemoving) {
+            wishlistIcon.classList.remove("heart-pop");
+            void wishlistIcon.offsetWidth;
+            wishlistIcon.classList.add("heart-pop");
+        }
         wishlistButton.setAttribute("aria-label",isRemoving ? "Add to favorites" : "Remove from favorites");
     });
 

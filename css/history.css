@@ -10,14 +10,19 @@ body{
     display:flex;
     flex-direction:column;
     height:100dvh;
+    padding-top:84px;
+    box-sizing:border-box;
     overflow:hidden;
     color:var(--history-ink);
     background:#fff;
 }
 
 .history-header{
-    position:sticky;
+    position:fixed;
     top:0;
+    right:0;
+    left:0;
+    width:100%;
     z-index:20;
     display:grid;
     grid-template-columns:1fr auto 1fr;
@@ -33,7 +38,7 @@ body{
 .history-header .logo{
     color:var(--history-accent);
     text-decoration:none;
-    font-size:24px;
+    font-size:31px;
 }
 
 .history-back{
@@ -344,13 +349,17 @@ body.history-cart-open .history-cart-backdrop{
 }
 
 @media screen and (max-width:600px){
+    body{
+        padding-top:70px;
+    }
+
     .history-header{
         min-height:70px;
         padding:0 20px;
     }
 
     .history-header .logo{
-        font-size:22px;
+        font-size:25px;
     }
 
     .history-nav-actions{

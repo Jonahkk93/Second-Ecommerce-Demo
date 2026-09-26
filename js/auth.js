@@ -24,6 +24,14 @@ const homeAccountEmail = document.getElementById("home-account-email");
 const homeSignout = document.getElementById("home-signout");
 const defaultAccountImage = "images/Account Logo 3.PNG";
 
+function setAccountScrollLock(locked) {
+    document.documentElement.classList.toggle("account-modal-open", locked);
+    document.body.classList.toggle("account-modal-open", locked);
+    document.body.style.overflow = locked ? "hidden" : "";
+}
+
+window.setMPWRAccountScrollLock = setAccountScrollLock;
+
 function initializeAccountControls() {
     if (!accountIcon) return;
 
@@ -39,7 +47,8 @@ function initializeAccountControls() {
         registerView?.classList.remove("active");
         signinView?.classList.remove("hide");
         accountOverlay?.classList.add("active");
-        document.body.style.overflow = "hidden";
+        accountOverlay?.setAttribute("aria-hidden", "false");
+        setAccountScrollLock(true);
         accountOverlay?.querySelector(".account-modal")?.scrollTo(0, 0);
         requestAnimationFrame(() => {
             document.getElementById("signin-email")?.focus({ preventScroll: true });
@@ -48,7 +57,8 @@ function initializeAccountControls() {
 
     const closeAccount = () => {
         accountOverlay?.classList.remove("active");
-        document.body.style.overflow = "";
+        accountOverlay?.setAttribute("aria-hidden", "true");
+        setAccountScrollLock(false);
         registerView?.classList.remove("active");
         signinView?.classList.remove("hide");
     };
@@ -289,7 +299,8 @@ if (typeof loadCartFromFirestore === "function") {
 
     if (user) {
         document.querySelector(".account-overlay")?.classList.remove("active");
-        document.body.style.overflow = "";
+        document.querySelector(".account-overlay")?.setAttribute("aria-hidden", "true");
+        setAccountScrollLock(false);
         registerContainer.classList.remove("active");
         signinContainer.classList.remove("hide");
         accountPanel.style.display = "none";

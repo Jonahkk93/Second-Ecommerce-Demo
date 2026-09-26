@@ -41,6 +41,25 @@
 }
 
 /* Use the shared lift-and-scale interaction instead of a hover box. */
-.management-sidebar .management-nav-item{transition:transform .25s ease,opacity .25s ease,color .25s ease}
-.management-sidebar .management-nav-item:is(:hover,:focus-visible):not(.active){background:transparent!important;opacity:.92;outline:none;transform:translateY(-1px) scale(1.04)!important}
-.management-sidebar .management-nav-item:active:not(.active){background:transparent!important;transform:scale(.96)!important}
+.management-sidebar .management-nav-item{touch-action:manipulation;transition:transform .25s ease,opacity .25s ease,color .25s ease;-webkit-tap-highlight-color:transparent}
+.management-sidebar .management-nav-item:focus-visible:not(.active){background:transparent!important;opacity:.92;outline:none;transform:translateY(-1px) scale(1.04)!important}
+@media(hover:hover) and (pointer:fine){.management-sidebar .management-nav-item:hover:not(.active){background:transparent!important;opacity:.92;outline:none;transform:translateY(-1px) scale(1.04)!important}}
+.management-sidebar .management-nav-item:active:not(.active){background:transparent!important;opacity:.92;transform:scale(.96)!important;transition-duration:.1s}
+
+/* Option A: minimal peach accent for the selected management destination. */
+.management-sidebar .management-nav-item.active{
+    background:transparent;
+    box-shadow:none;
+    color:#e5a484;
+    font-weight:700;
+    transform:none;
+}
+.management-sidebar .management-nav-item.active[href="admin.html"] img{content:url("../images/Icon Folder/Dashboard Icon_E5A484.PNG")}
+.management-sidebar .management-nav-item.active:is([href="#orders"],[href="admin.html#orders"]) img{content:url("../images/Icon Folder/Order status_E5A484.PNG")}
+.management-sidebar .management-nav-item.active[data-panel="catalogue"] img{content:url("../images/Icon Folder/Products 2 Icon_E5A484.PNG")}
+.management-sidebar .management-nav-item.active[data-panel="homepage"] img{content:url("../images/Icon Folder/Home Icon_E5A484.PNG")}
+.management-sidebar .management-nav-item.active[data-panel="search"] img{content:url("../images/Icon Folder/Search Icon_E5A484.PNG")}
+.management-sidebar .management-nav-item.active[data-panel="deleted"] img{content:url("../images/Icon Folder/Delete Icon_E5A484.PNG")}
+.management-sidebar .management-nav-item.active[href="admin-customers.html"] img{content:url("../images/Icon Folder/Customers Icon_E5A484.PNG")}
+.management-sidebar .management-nav-item.active[href="admin-reviews.html"] img{content:url("../images/Icon Folder/Reviews Icon_E5A484.PNG")}
+.management-sidebar .management-nav-item.active[href="admin-analytics.html"] img{content:url("../images/Icon Folder/Analytics Icon_E5A484.PNG")}

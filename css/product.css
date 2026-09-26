@@ -27,6 +27,7 @@
 .account-divider{text-align:center;margin:25px 0;color:#888}
 .account-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;justify-content:center;align-items:center;opacity:0;visibility:hidden;transition:opacity .3s ease,visibility .3s ease;z-index:99999}
 .account-overlay.active{opacity:1;visibility:visible}
+html.account-modal-open,body.account-modal-open{overflow:hidden;overscroll-behavior:none}
 .account-modal{width:100%;max-width:460px;max-height:90vh;background:#fff;border-radius:22px;padding:40px;position:relative;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;box-shadow:0 25px 70px rgba(0,0,0,.18);transform:scale(.95);opacity:0;transition:transform .3s ease,opacity .3s ease}
 .account-overlay.active .account-modal{transform:scale(1);opacity:1}
 .account-modal::-webkit-scrollbar{display:none;width:0;height:0}
@@ -1623,6 +1624,10 @@ align-items: center;
 
     display: none;
 
+    flex: 1 1 auto;
+
+    min-height: 0;
+
     flex-direction: column;
 
     align-items: center;
@@ -1631,7 +1636,7 @@ align-items: center;
 
     text-align: center;
 
-    margin-top: auto;
+    margin: 0;
 
     padding: 60px 25px;
 
@@ -1643,11 +1648,15 @@ align-items: center;
 
 .wishlist-empty-icon{
 
+    display: block;
+
     width: 70px;
 
     opacity: .25;
 
-    margin-bottom: 18px;
+    margin: 0 auto 18px;
+
+    align-self: center;
 
 }
 
@@ -2427,6 +2436,9 @@ transition: .25s ease;
 
 .cart.is-empty .cart-empty{
     display:flex!important;
+    min-height:0;
+    margin:0;
+    flex:1 1 auto;
 }
 
 .continue-shopping{
@@ -2522,9 +2534,11 @@ transition: .25s ease;
 }
 
 .empty-cart-icon{
+    display:block;
     width:70px;
     opacity:.25;
-    margin-bottom:18px;
+    margin:0 auto 18px;
+    align-self:center;
 }
 
 /*Numbers in cart*/

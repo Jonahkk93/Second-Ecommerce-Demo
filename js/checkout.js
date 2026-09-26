@@ -1,6 +1,6 @@
 import { addDoc, collection, doc, getDoc, initializePayment, serverTimestamp, setDoc } from "./firestore-api.js";
 import { onAuthStateChanged } from "./auth-api.js";
-import { deliveryQuoteFor, populateUgandaDistricts } from "./shipping-config.js?v=20260827-2";
+import { deliveryQuoteFor, populateUgandaDistricts } from "./shipping-config.js?v=20260925-1";
 
 await (window.MPWRCatalogueReady || Promise.resolve(window.products));
 
@@ -203,6 +203,7 @@ onAuthStateChanged(auth, async user => {
     currentUser = user;
     if (!user) {
         sessionStorage.setItem("mpwrReturnAfterSignin", "checkout.html");
+        sessionStorage.setItem("openAccountSignIn", "true");
         window.location.replace("index.html");
         return;
     }
@@ -325,7 +326,7 @@ form.addEventListener("submit", async event => {
         window.location.assign(payment.checkoutUrl);
     } catch (error) {
         console.error("Checkout failed", error);
-        errorElement.textContent = "We couldn’t start the secure payment. Please check your connection and try again.";
+        errorElement.textContent = error?.message || "We couldn’t start the secure payment. Please check your connection and try again.";
         submitButton.disabled = false;
         submitButton.textContent = "Continue to secure payment";
     }

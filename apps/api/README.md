@@ -21,6 +21,12 @@ Enable the Google Geocoding API and Routes API. Restrict the server key to those
 5. Initialize hosted checkout through `POST /v1/payments/initialize/:orderId` and redirect to `checkoutUrl`.
 6. Pesapal calls `POST /v1/payments/webhooks/pesapal`; the API retrieves the transaction directly from Pesapal and verifies its reference, amount, currency, and completion state before marking the order as processing.
 
+## Refund workflow
+
+Cancelling an order with a successful payment automatically creates a full-refund case on the order. This also covers a payment that succeeds after the order was cancelled. MPWR staff must issue the refund through Pesapal before selecting **Confirm initiated** in order management; the MPWR status tracker does not move money itself.
+
+The supported progression is `pending → initiated → processing → refunded`, with `failed` and retry paths for exceptions. Refund actions are recorded in `payment_events`, and an order with an active refund cannot be reopened. The customer promise is initiation within one business day, arrival within 1–3 business days for Mobile Money, and 5–10 business days for cards (up to 15 where the issuing bank is delayed).
+
 ## Main endpoints
 
 - `GET /v1/health`
@@ -39,7 +45,7 @@ Enable the Google Geocoding API and Routes API. Restrict the server key to those
 - `POST /v1/payments/initialize/:orderId`, `GET /v1/payments/:orderId`
 - `POST /v1/payments/webhooks/pesapal`
 - `GET|POST|PATCH /v1/admin/products`
-- `GET /v1/orders/admin/all`, `PATCH /v1/orders/:id/status`
+- `GET /v1/orders/admin/all`, `PATCH /v1/orders/:id/status`, `PATCH /v1/orders/:id/refund`
 - `GET /v1/delivery/admin/rates`, `PATCH /v1/delivery/admin/rates/:id`
 
 Admin endpoints require a user whose database `role` is `admin`. Promote the first trusted account directly in PostgreSQL; do not expose role assignment through public registration.

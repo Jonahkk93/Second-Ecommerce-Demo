@@ -36,11 +36,21 @@ let selectedModalOptions = {};
 let selectedModalPrice = 0;
 let selectedModalRegularPrice = 0;
 let suggestions = [];
+let searchPageSettings = {};
 try {
     const configuredSuggestions = JSON.parse(document.querySelector("#search-suggestions-data")?.textContent || "[]");
     if (Array.isArray(configuredSuggestions)) suggestions = configuredSuggestions.map(String);
 } catch (_) {
     suggestions = [];
+}
+try {
+    const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const apiRoot = window.MPWR_API_URL || (localHost ? "http://127.0.0.1:3000/v1" : "/api/v1");
+    const response = await fetch(`${apiRoot}/storefront/search`, { credentials:"include", cache:"no-store" });
+    if (response.ok) searchPageSettings = await response.json();
+    if (Array.isArray(searchPageSettings.suggestions)) suggestions = searchPageSettings.suggestions.map(String).filter(Boolean);
+} catch (error) {
+    console.warn("Using default search page settings", error);
 }
 
 function openResultsPage(query) {
@@ -388,7 +398,10 @@ function renderResults(query = "") {
     let matches = normalized
         ? products.filter(product => searchableText(product).includes(normalized))
         : products;
-    if (window.MPWRDiscovery) {
+    if (!normalized && searchPageSettings.popularMode === "manual" && Array.isArray(searchPageSettings.popularProducts)) {
+        const preferredIds = searchPageSettings.popularProducts.map(item => String(item.id || item));
+        matches = preferredIds.map(id => products.find(product => String(product.id) === id)).filter(Boolean).slice(0, 12);
+    } else if (window.MPWRDiscovery) {
         matches = window.MPWRDiscovery.rank(matches, {
             context: normalized ? `search-preview-${normalized}` : "search-popular-picks",
             limit: normalized ? matches.length : 12,
@@ -401,7 +414,7 @@ function renderResults(query = "") {
     searchResults.replaceChildren(...matches.map(productCard));
     searchEmpty.hidden = matches.length > 0;
     searchResults.hidden = matches.length === 0;
-    resultTitle.textContent = normalized ? `Results for “${query.trim()}”` : "Popular picks";
+    resultTitle.textContent = normalized ? `Results for “${query.trim()}”` : (searchPageSettings.popularHeading || "Popular picks");
     resultCount.textContent = `${matches.length} product${matches.length === 1 ? "" : "s"}`;
 }
 
@@ -465,6 +478,9 @@ backButton.addEventListener("click",() => {
     else window.location.href = "index.html";
 });
 
+document.querySelector(".suggested-searches-section h2").textContent = searchPageSettings.suggestionsHeading || "Suggested searches";
+document.querySelector(".suggested-searches-section").hidden = searchPageSettings.suggestionsEnabled === false;
+document.querySelector(".search-results-section").hidden = searchPageSettings.popularEnabled === false;
 suggestedContainer.replaceChildren(...suggestions.map(chip));
 renderRecentSearches();
 const initialQuery = new URLSearchParams(location.search).get("q") || "";

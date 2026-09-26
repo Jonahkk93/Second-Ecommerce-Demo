@@ -43,6 +43,15 @@ const sortResults = document.querySelector("#sort-results");
 const colorFilter = document.querySelector("#color-filter");
 const sizeFilter = document.querySelector("#size-filter");
 const resultsToolbar = document.querySelector(".results-toolbar");
+try {
+    const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const apiRoot = window.MPWR_API_URL || (localHost ? "http://127.0.0.1:3000/v1" : "/api/v1");
+    const response = await fetch(`${apiRoot}/storefront/search`, { credentials:"include", cache:"no-store" });
+    const setting = response.ok ? await response.json() : {};
+    if (["relevance", "popular", "newest", "low", "high"].includes(setting.defaultSort)) sortResults.value = setting.defaultSort;
+} catch (error) {
+    console.warn("Using the default result sorting", error);
+}
 const query = new URLSearchParams(location.search).get("q")?.trim() || "";
 const productModalOverlay = document.querySelector(".product-modal-overlay");
 const productModalImage = document.querySelector(".product-modal-image");
@@ -368,7 +377,10 @@ function renderCartDrawer() {
     const cart = getCart();
     const count = cart.length;
     const titleCount = cartDrawer?.querySelector(".cart-title-count");
-    if (titleCount) titleCount.textContent = `(${count})`;
+    if (titleCount) {
+        titleCount.textContent = count > 0 ? `(${count})` : "";
+        titleCount.hidden = count === 0;
+    }
     cartDrawer?.classList.toggle("is-empty", cart.length === 0);
     drawerItems.replaceChildren();
     cart.forEach((item,index) => {
@@ -769,6 +781,7 @@ function render() {
     });
     if (sortResults.value === "low") matches.sort((a,b) => Number(a.price) - Number(b.price));
     if (sortResults.value === "high") matches.sort((a,b) => Number(b.price) - Number(a.price));
+    if (sortResults.value === "newest") matches.sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     if (sortResults.value === "popular" && window.MPWRDiscovery) {
         matches = window.MPWRDiscovery.rank(matches, {
             context: `search-popular-${query.toLowerCase()}`,
@@ -832,6 +845,8 @@ function updateModalFavoriteButton(isFavorite = getFavorites().some(item => Stri
 async function updateModalReviews(product) {
     if (!productModalReviews || !productModalReviewStars || !productModalReviewSummary) return;
 
+    const modal = productModalReviews.closest(".product-modal");
+    modal?.classList.add("has-no-reviews");
     productModalReviews.hidden = true;
     productModalReviewStars.textContent = "☆☆☆☆☆";
     productModalReviewSummary.textContent = "Loading reviews…";
@@ -852,6 +867,7 @@ async function updateModalReviews(product) {
 
         if (!count) return;
 
+        modal?.classList.remove("has-no-reviews");
         productModalReviewStars.textContent =
             "★".repeat(Math.round(average)) + "☆".repeat(5 - Math.round(average));
         productModalReviewSummary.textContent =

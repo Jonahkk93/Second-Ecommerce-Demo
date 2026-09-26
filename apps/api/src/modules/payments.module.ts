@@ -28,6 +28,16 @@ type PesapalNotification = {
   orderNotificationType?: string;
 };
 
+function addBusinessDays(value: Date, days: number) {
+  const date = new Date(value);
+  let remaining = days;
+  while (remaining > 0) {
+    date.setUTCDate(date.getUTCDate() + 1);
+    if (date.getUTCDay() !== 0 && date.getUTCDay() !== 6) remaining--;
+  }
+  return date;
+}
+
 class InitializePaymentDto {
   @IsIn(["card", "mtn_momo", "airtel_money"])
   method!: PaymentMethod;
@@ -115,19 +125,53 @@ class PesapalGateway {
 
 @Injectable()
 class PaymentsService {
-  constructor(@Inject(DB) private db: Database, private gateway: PesapalGateway) {}
+  constructor(@Inject(DB) private db: Database, private gateway: PesapalGateway, private config: ConfigService) {}
+
+  private developmentCheckout(reference: string) {
+    const production = this.config.get("NODE_ENV") === "production";
+    const configured = Boolean(
+      this.config.get("PESAPAL_CONSUMER_KEY") &&
+      this.config.get("PESAPAL_CONSUMER_SECRET") &&
+      this.config.get("PESAPAL_IPN_ID")
+    );
+    if (production || configured) return null;
+    const callback = new URL(this.config.get("PESAPAL_CALLBACK_URL", "http://127.0.0.1:5501/payment-complete.html"));
+    callback.searchParams.set("OrderMerchantReference", reference);
+    callback.searchParams.set("developmentPayment", "true");
+    return callback.toString();
+  }
 
   async initialize(user: AuthUser, orderId: string, method: PaymentMethod) {
     const [order] = await this.db.select().from(orders).where(and(eq(orders.id, orderId), eq(orders.userId, user.sub))).limit(1);
     if (!order) throw new BadRequestException("Order not found");
     if (order.status === "cancelled") throw new BadRequestException("A cancelled order cannot be paid");
     const [existing] = await this.db.select().from(payments).where(eq(payments.orderId, order.id)).limit(1);
-    if (existing?.status === "successful") throw new BadRequestException("Order is already paid");
-    if (existing?.provider === "pesapal" && existing.status === "pending" && existing.checkoutUrl) return { paymentId: existing.id, checkoutUrl: existing.checkoutUrl };
-
     const previousMetadata = (existing?.metadata || {}) as Record<string, unknown>;
     const attempt = Math.max(1, Number(previousMetadata.attempt || 0) + 1);
     const reference = `MPWR-${order.id}-${attempt}`;
+    const developmentCheckoutUrl = this.developmentCheckout(reference);
+
+    if (developmentCheckoutUrl) {
+      const [payment] = await this.db.insert(payments).values({
+        orderId: order.id,
+        provider: "development",
+        providerReference: reference,
+        transactionId: `development-${order.id}-${attempt}`,
+        status: "successful",
+        amount: order.total,
+        currency: order.currency,
+        checkoutUrl: developmentCheckoutUrl,
+        metadata: { preferredMethod: method, attempt, simulated: true }
+      }).onConflictDoUpdate({
+        target: payments.orderId,
+        set: { provider: "development", providerReference: reference, transactionId: `development-${order.id}-${attempt}`, status: "successful", checkoutUrl: developmentCheckoutUrl, metadata: { preferredMethod: method, attempt, simulated: true }, updatedAt: new Date() }
+      }).returning();
+      return { paymentId: payment.id, checkoutUrl: developmentCheckoutUrl };
+    }
+
+    if (existing?.status === "successful") throw new BadRequestException("Order is already paid");
+    if (existing?.provider === "pesapal" && existing.status === "pending" && existing.checkoutUrl) return { paymentId: existing.id, checkoutUrl: existing.checkoutUrl };
+
     const result = await this.gateway.submitOrder({
       reference,
       amount: order.total,
@@ -169,10 +213,38 @@ class PaymentsService {
 
     if (valid && payment.status !== "successful") {
       await this.db.transaction(async tx => {
-        await tx.update(payments).set({ status: "successful", metadata: status, updatedAt: new Date() }).where(eq(payments.id, payment.id));
-        await tx.update(orders).set({ status: "processing", updatedAt: new Date() }).where(and(eq(orders.id, payment.orderId), eq(orders.status, "pending")));
+        const now = new Date();
+        const mergedMetadata = { ...((payment.metadata || {}) as Record<string, unknown>), ...status };
+        await tx.update(payments).set({ status: "successful", metadata: mergedMetadata, updatedAt: now }).where(eq(payments.id, payment.id));
+        const [cancelledOrder] = await tx.select().from(orders).where(and(eq(orders.id, payment.orderId), eq(orders.status, "cancelled"))).limit(1);
+        if (cancelledOrder) {
+          const delivery = { ...((cancelledOrder.delivery || {}) as Record<string, any>) };
+          if (!delivery.refund) {
+            const recordedPayment = (delivery.payment || {}) as Record<string, any>;
+            const methodValue = String(mergedMetadata.preferredMethod || mergedMetadata.payment_method || recordedPayment.method || "card").toLowerCase();
+            const mobile = methodValue.includes("momo") || methodValue.includes("mobile") || methodValue.includes("airtel");
+            const phone = String(recordedPayment.number || (cancelledOrder.customer as Record<string, any>)?.phone || "").replace(/\D/g, "");
+            delivery.refund = {
+              status: "pending",
+              amount: payment.amount,
+              currency: payment.currency,
+              method: mobile ? (methodValue.includes("airtel") ? "airtel_money" : "mtn_momo") : "card",
+              destination: mobile && phone ? `•••• ${phone.slice(-4)}` : "Original card",
+              reason: delivery.cancellationSource === "customer" ? "Order cancelled by customer" : "Order cancelled by MPWR",
+              requestedAt: now.toISOString(),
+              initiationDueAt: addBusinessDays(now, 1).toISOString(),
+              expectedBy: null,
+              completedAt: null,
+              paymentId: payment.id,
+              reference: payment.providerReference || null
+            };
+            await tx.update(orders).set({ delivery, updatedAt: now }).where(eq(orders.id, payment.orderId));
+          }
+        } else {
+          await tx.update(orders).set({ status: "processing", updatedAt: now }).where(and(eq(orders.id, payment.orderId), eq(orders.status, "pending")));
+        }
       });
-      return { ...payment, status: "successful" as const, metadata: status };
+      return { ...payment, status: "successful" as const, metadata: { ...((payment.metadata || {}) as Record<string, unknown>), ...status } };
     }
     if (failed && payment.status === "pending") {
       await this.db.update(payments).set({ status: "failed", metadata: status, updatedAt: new Date() }).where(eq(payments.id, payment.id));

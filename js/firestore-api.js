@@ -47,6 +47,14 @@ export function getPaymentStatus(orderId) {
     return request(`/payments/${encodeURIComponent(orderId)}`, { db: window.db });
 }
 
+export function markCustomerCancellationSeen(orderId, seen, db = window.db) {
+    return request(`/orders/${encodeURIComponent(orderId)}/cancellation-seen`, { method: "PATCH", body: { seen }, db });
+}
+
+export function updateOrderRefund(orderId, status, db = window.db, details = {}) {
+    return request(`/orders/${encodeURIComponent(orderId)}/refund`, { method: "PATCH", body: { status, ...details }, db });
+}
+
 export function collection(db, name) { return { kind: "collection", db, name, constraints: [] }; }
 export function doc(first, second, third) {
     if (first?.kind === "collection") return { kind: "document", db: first.db, name: first.name, id: second || crypto.randomUUID() };
@@ -135,7 +143,19 @@ export async function addDoc(reference, data) {
 }
 
 export async function updateDoc(reference, data) {
-    if (reference.name === "orders") return request(`/orders/${encodeURIComponent(reference.id)}/status`, { method: "PATCH", body: { status: String(data.status || "pending").toLowerCase() }, db: reference.db });
+    if (reference.name === "orders") {
+        const customerCancellation =
+            String(data.status || "").toLowerCase() === "cancelled" &&
+            data.cancelledBy === "customer";
+        const path = customerCancellation
+            ? `/orders/${encodeURIComponent(reference.id)}/cancel`
+            : `/orders/${encodeURIComponent(reference.id)}/status`;
+        return request(path, {
+            method: "PATCH",
+            body: customerCancellation ? {} : { status: String(data.status || "pending").toLowerCase() },
+            db: reference.db
+        });
+    }
     if (reference.name === "users") return setDoc(reference, data);
     if (reference.name === "products") return request(`/admin/products/${encodeURIComponent(reference.id)}`, { method: "PATCH", body: normalizeProductUpdate(data), db: reference.db });
     if (reference.name === "deletedProducts") return request(`/admin/products/${encodeURIComponent(reference.id)}/restore`, { method: "POST", body: {}, db: reference.db });

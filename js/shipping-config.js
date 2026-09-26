@@ -73,7 +73,7 @@ export function deliveryQuoteFor(district, items = []) {
         zoneId: zone.id,
         zoneName: zone.name,
         method: "standard-door",
-        methodLabel: "Standard door delivery",
+        methodLabel: "Delivery",
         shippingClass,
         baseFee,
         surcharge: fee - baseFee,

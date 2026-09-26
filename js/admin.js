@@ -12,6 +12,8 @@ import {
     query,
     orderBy,
     getManagementBootstrap,
+    markCustomerCancellationSeen,
+    updateOrderRefund,
     updateDoc,
     setDoc,
     serverTimestamp
@@ -33,6 +35,8 @@ const portalAccountEmail = ordersPortal ? document.getElementById("admin-account
 const portalAccountInitials = ordersPortal ? document.getElementById("admin-account-initials") : null;
 const portalSignout = ordersPortal ? document.getElementById("admin-signout") : null;
 const statusConfirm = document.getElementById("admin-status-confirm");
+const statusConfirmTitle = document.getElementById("admin-status-confirm-title");
+const statusConfirmMessage = statusConfirm.querySelector(".admin-status-confirm-box > p");
 const statusConfirmName = document.getElementById("admin-status-confirm-name");
 const statusConfirmCancel = statusConfirm.querySelector(".admin-status-cancel");
 const dashboardNavLink = document.querySelector('.admin-side-nav a[href="admin.html"]');
@@ -91,14 +95,85 @@ let resolveStatusConfirmation = null;
 
 function confirmStatusChange(status) {
     const statusClass = status.toLowerCase();
+    statusConfirmTitle.textContent = "Update Order Status?";
+    statusConfirmMessage.replaceChildren(
+        "Are you sure you want to update this order to ",
+        statusConfirmName,
+        status === "Cancelled" ? "? If it has been paid, a full refund case will open automatically." : "?"
+    );
     statusConfirmName.textContent = status;
     statusConfirmName.className = statusClass;
     statusConfirmApprove.className = `admin-status-approve ${statusClass}`;
+    statusConfirmApprove.textContent = "Update Status";
     statusConfirm.hidden = false;
 
     return new Promise(resolve => {
         resolveStatusConfirmation = resolve;
     });
+}
+
+function confirmCustomerCancellationSeen(nextSeen) {
+    const nextState = nextSeen ? "seen" : "unseen";
+    statusConfirmTitle.textContent = nextSeen ? "Mark as Seen?" : "Mark as Unseen?";
+    statusConfirmMessage.replaceChildren(
+        "Are you sure you want to mark this customer cancellation as ",
+        statusConfirmName,
+        "?"
+    );
+    statusConfirmName.textContent = nextState;
+    statusConfirmName.className = "cancelled";
+    statusConfirmApprove.className = "admin-status-approve";
+    statusConfirmApprove.textContent = nextSeen ? "Mark as Seen" : "Mark as Unseen";
+    statusConfirm.hidden = false;
+
+    return new Promise(resolve => {
+        resolveStatusConfirmation = resolve;
+    });
+}
+
+function refundAction(status) {
+    const labels = {
+        pending: ["Retry Refund?", "Return this refund to the pending queue?", "Retry Refund"],
+        initiated: ["Initiate Refund?", "Confirm that the full refund has been submitted through Pesapal. The customer will see the estimated arrival date.", "Refund Initiated"],
+        processing: ["Mark Refund Processing?", "Confirm that Pesapal is processing this refund.", "Mark Processing"],
+        refunded: ["Complete Refund?", "Only confirm this after the full amount has been returned to the customer.", "Confirm Refunded"],
+        failed: ["Mark Refund Failed?", "Mark this attempt as failed so it can be investigated or retried.", "Mark Failed"]
+    };
+    const [title, message, button] = labels[status];
+    statusConfirmTitle.textContent = title;
+    statusConfirmMessage.textContent = message;
+    statusConfirmName.textContent = "";
+    statusConfirmApprove.className = `admin-status-approve refund-${status}`;
+    statusConfirmApprove.textContent = button;
+    statusConfirm.hidden = false;
+    return new Promise(resolve => { resolveStatusConfirmation = resolve; });
+}
+
+function refundDate(value) {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime())
+        ? date.toLocaleDateString("en-UG", { day:"numeric", month:"short", year:"numeric" })
+        : "—";
+}
+
+function refundPanel(refund) {
+    if (!refund) return "";
+    const status = String(refund.status || "pending").toLowerCase();
+    const labels = { pending:"Pending initiation", initiated:"Initiated", processing:"Processing", refunded:"Refunded", failed:"Action required" };
+    const actions = {
+        pending:[["initiated", "Confirm initiated"], ["failed", "Mark failed"]],
+        initiated:[["processing", "Mark processing"], ["refunded", "Confirm refunded"], ["failed", "Mark failed"]],
+        processing:[["refunded", "Confirm refunded"], ["failed", "Mark failed"]],
+        failed:[["pending", "Retry refund"]],
+        refunded:[]
+    };
+    const dueLabel = status === "pending" ? "Initiate by" : status === "refunded" ? "Completed" : "Expected by";
+    const dueValue = status === "pending" ? refund.initiationDueAt : status === "refunded" ? refund.completedAt : refund.expectedBy;
+    return `<section class="admin-refund-panel" data-refund-status="${dashboardEscape(status)}">
+        <div><p class="admin-refund-kicker">Full refund</p><h4>UGX ${Number(refund.amount || 0).toLocaleString()}</h4><span class="refund-status refund-${dashboardEscape(status)}">${dashboardEscape(labels[status] || status)}</span></div>
+        <dl><div><dt>Return to</dt><dd>${dashboardEscape(refund.destination || "Original payment method")}</dd></div><div><dt>${dueLabel}</dt><dd>${refundDate(dueValue)}</dd></div>${refund.reference ? `<div><dt>Reference</dt><dd>${dashboardEscape(refund.reference)}</dd></div>` : ""}</dl>
+        <div class="admin-refund-actions">${(actions[status] || []).map(([next, label]) => `<button type="button" data-refund-next="${next}">${label}</button>`).join("")}</div>
+    </section>`;
 }
 
 function closeStatusConfirmation(confirmed) {
@@ -267,10 +342,13 @@ onAuthStateChanged(auth, async (user) => {
     if (dashboardLoaded) return;
     dashboardLoaded = true;
 
-document.getElementById("total-orders").textContent = "...";
-document.getElementById("pending-orders").textContent = "...";
-document.getElementById("total-revenue").textContent = "Loading...";
-document.getElementById("total-customers").textContent = "...";
+document.getElementById("total-orders")?.replaceChildren("...");
+document.getElementById("pending-orders")?.replaceChildren("...");
+document.getElementById("processing-orders")?.replaceChildren("...");
+document.getElementById("shipped-orders")?.replaceChildren("...");
+document.getElementById("cancelled-orders")?.replaceChildren("...");
+document.getElementById("total-revenue")?.replaceChildren("Loading...");
+document.getElementById("total-customers")?.replaceChildren("...");
 
     await loadOrdersWithFeedback();
 });
@@ -316,6 +394,11 @@ ordersList.innerHTML = `
     const dashboardOrders = snapshot.docs.map(orderDoc => ({ id: orderDoc.id, ...orderDoc.data() }));
     let totalOrders = 0;
     let pendingOrders = 0;
+    const portalStatusCounts = {
+        Processing: 0,
+        Shipped: 0,
+        Cancelled: 0
+    };
     let totalRevenue = 0;
     const customers = new Set();
 
@@ -329,6 +412,13 @@ for (const orderDoc of snapshot.docs) {
         const orderDate = createdAt ? createdAt.toLocaleString("en-UG") : "Unknown";
         const itemCount = items.reduce((total, item) => total + Math.max(1, Number(item.quantity) || 1), 0);
         order.status = status;
+        const cancelledByCustomer = status === "Cancelled" && (
+            order.cancelledBy === "customer" ||
+            order.cancellationSource === "customer" ||
+            order.delivery?.cancellationSource === "customer"
+        );
+        const customerCancellationSeen = Boolean(order.delivery?.cancellationSeenAt);
+        const refund = order.delivery?.refund || null;
         const itemsHTML = items.length ? items.map(item => {
             const selections = item.selectedOptions && typeof item.selectedOptions === "object"
                 ? Object.values(item.selectedOptions).filter(value => typeof value !== "object" && String(value).trim()).join(" • ")
@@ -365,6 +455,12 @@ if (status === "Pending") {
     pendingOrders++;
 }
 
+if (status === "Cancelled") {
+    if (cancelledByCustomer && !customerCancellationSeen) portalStatusCounts.Cancelled++;
+} else if (Object.hasOwn(portalStatusCounts, status)) {
+    portalStatusCounts[status]++;
+}
+
 totalRevenue += Number(order.total) || 0;
 
 const deliveryFee = Number(order.deliveryFee ?? order.delivery?.fee ?? 0);
@@ -377,8 +473,8 @@ if (order.userId) {
 
         const orderCard = document.createElement("div");
         const statusBadge = `
-    <span class="status-badge ${status.toLowerCase()}">
-        ${status}
+    <span class="status-badge ${status.toLowerCase()}${cancelledByCustomer ? " customer-cancelled" : ""}">
+        ${cancelledByCustomer ? "Cancelled by customer" : status}
     </span>
 `;
         orderCard.className = "order-card";
@@ -408,28 +504,31 @@ orderCard.innerHTML = `
 
     ${statusBadge}
 
-    <div class="status-picker">
-        <button class="status-picker-trigger" type="button" data-status="${status}" aria-expanded="false">
+    <div class="status-picker${cancelledByCustomer ? " is-customer-cancelled" : ""}">
+        <button class="status-picker-trigger" type="button" data-status="${status}" aria-expanded="false"${cancelledByCustomer ? ' aria-label="Customer-cancelled order status options are locked"' : ""}>
             ${status}<span aria-hidden="true">⌄</span>
         </button>
         <div class="status-picker-menu" hidden>
             ${ORDER_STATUSES.map(optionStatus => `
-                <button type="button" data-status="${optionStatus}" class="${status === optionStatus ? "selected" : ""}">
+                <button type="button" data-status="${optionStatus}" class="${status === optionStatus ? "selected" : ""}"${cancelledByCustomer ? " disabled aria-disabled=\"true\"" : ""}>
                     ${optionStatus}
                 </button>
             `).join("")}
         </div>
     </div>
+    ${cancelledByCustomer ? `<button class="customer-cancellation-seen" type="button" data-seen="${customerCancellationSeen}" aria-label="${customerCancellationSeen ? "Mark as unseen" : "Mark as seen"}"><span>${customerCancellationSeen ? "Mark as unseen" : "Mark as seen"}</span><img src="images/Icon Folder/${customerCancellationSeen ? "Password Hidden Icon_333.PNG" : "Password Visible Icon_333 .PNG"}" alt=""></button>` : ""}
 
             </div>
 
-        <button class="toggle-items-btn">
-            View Items
-        </button>
-
     </div>
 
+    <button class="toggle-items-btn">
+        View Items
+    </button>
+
 </div>
+
+${refundPanel(refund)}
 
 <div class="admin-order-items">
 
@@ -465,6 +564,49 @@ orderCard.innerHTML = `
         const statusPicker = orderCard.querySelector(".status-picker");
         const statusTrigger = statusPicker.querySelector(".status-picker-trigger");
         const statusMenu = statusPicker.querySelector(".status-picker-menu");
+        const cancellationSeenButton = orderCard.querySelector(".customer-cancellation-seen");
+        orderCard.querySelectorAll("[data-refund-next]").forEach(button => {
+            button.addEventListener("click", async () => {
+                const nextStatus = button.dataset.refundNext;
+                if (!await refundAction(nextStatus)) return;
+                orderCard.querySelectorAll("[data-refund-next]").forEach(item => { item.disabled = true; });
+                try {
+                    await updateOrderRefund(apiOrderId, nextStatus, db);
+                    showAdminToast(nextStatus === "refunded" ? "Refund marked as completed" : "Refund status updated");
+                    await loadOrdersWithFeedback();
+                } catch (error) {
+                    console.error("Unable to update refund:", error);
+                    showAdminToast(error.message || "Could not update the refund", "error");
+                    orderCard.querySelectorAll("[data-refund-next]").forEach(item => { item.disabled = false; });
+                }
+            });
+        });
+
+if (cancellationSeenButton) {
+    cancellationSeenButton.addEventListener("click", async () => {
+        const wasSeen = cancellationSeenButton.dataset.seen === "true";
+        const nextSeen = !wasSeen;
+        if (!await confirmCustomerCancellationSeen(nextSeen)) return;
+        cancellationSeenButton.disabled = true;
+        try {
+            await markCustomerCancellationSeen(apiOrderId, nextSeen, db);
+            cancellationSeenButton.dataset.seen = String(nextSeen);
+            const nextLabel = nextSeen ? "Mark as unseen" : "Mark as seen";
+            cancellationSeenButton.setAttribute("aria-label", nextLabel);
+            cancellationSeenButton.querySelector("span").textContent = nextLabel;
+            cancellationSeenButton.querySelector("img").src = `images/Icon Folder/${nextSeen ? "Password Hidden Icon_333.PNG" : "Password Visible Icon_333 .PNG"}`;
+            const count = document.getElementById("cancelled-orders");
+            if (count) count.textContent = String(Math.max(0, (Number(count.textContent) || 0) + (nextSeen ? -1 : 1)));
+            showAdminToast(`Customer cancellation marked as ${nextSeen ? "seen" : "unseen"}`);
+        } catch (error) {
+            console.error("Unable to mark customer cancellation as seen:", error);
+            cancellationSeenButton.disabled = false;
+            showAdminToast(error.message || "Could not mark cancellation as seen", "error");
+        } finally {
+            cancellationSeenButton.disabled = false;
+        }
+    });
+}
 
 statusTrigger.addEventListener("click", event => {
     event.stopPropagation();
@@ -478,6 +620,7 @@ statusTrigger.addEventListener("click", event => {
 statusMenu.querySelectorAll("button").forEach(option => {
 option.addEventListener("click", async event => {
     event.stopPropagation();
+    if (cancelledByCustomer) return;
     const nextStatus = option.dataset.status;
     const previousStatus = order.status;
 
@@ -492,6 +635,11 @@ option.addEventListener("click", async event => {
     try {
         await updateDoc(doc(db, "orders", apiOrderId), { status: nextStatus });
         order.status = nextStatus;
+        if (nextStatus === "Cancelled") {
+            showAdminToast("Order cancelled. Any completed payment is now in the refund queue.");
+            await loadOrdersWithFeedback();
+            return;
+        }
         if (!ordersPortal) {
             const dashboardOrder = dashboardOrders.find(item => String(item.id) === apiOrderId);
             if (dashboardOrder) dashboardOrder.status = nextStatus;
@@ -528,25 +676,17 @@ option.addEventListener("click", async event => {
     badge.className =
         `status-badge ${nextStatus.toLowerCase()}`;
 
-const pendingOrdersElement = document.getElementById("pending-orders");
+const updateStatusPanel = (statusName, change) => {
+    // Customer cancellations are counted when orders reload from the API.
+    // Status changes made by staff must not affect this customer-only total.
+    if (statusName === "Cancelled") return;
+    const element = document.getElementById(`${statusName.toLowerCase()}-orders`);
+    if (!element) return;
+    element.textContent = String(Math.max(0, (Number(element.textContent) || 0) + change));
+};
 
-let pendingCount = Number(pendingOrdersElement.textContent);
-
-if (
-    previousStatus === "Pending" &&
-    nextStatus !== "Pending"
-) {
-    pendingCount--;
-}
-
-else if (
-    previousStatus !== "Pending" &&
-    nextStatus === "Pending"
-) {
-    pendingCount++;
-}
-
-pendingOrdersElement.textContent = pendingCount;
+updateStatusPanel(previousStatus, -1);
+updateStatusPanel(nextStatus, 1);
 order.status = nextStatus;
 filterOrders();
 showAdminToast("Order status updated successfully");
@@ -555,17 +695,17 @@ showAdminToast("Order status updated successfully");
 });
     }
 
-    document.getElementById("total-orders").textContent = totalOrders;
-
-document.getElementById("pending-orders").textContent = pendingOrders;
-
-document.getElementById("total-revenue").textContent =
-    `UGX ${totalRevenue.toLocaleString()}`;
-
-    document.getElementById("total-customers").textContent =
-    customers.size;
+    document.getElementById("total-orders")?.replaceChildren(String(totalOrders));
+    document.getElementById("pending-orders")?.replaceChildren(String(pendingOrders));
+    document.getElementById("processing-orders")?.replaceChildren(String(portalStatusCounts.Processing));
+    document.getElementById("shipped-orders")?.replaceChildren(String(portalStatusCounts.Shipped));
+    document.getElementById("cancelled-orders")?.replaceChildren(String(portalStatusCounts.Cancelled));
+    document.getElementById("total-revenue")?.replaceChildren(`UGX ${totalRevenue.toLocaleString()}`);
+    document.getElementById("total-customers")?.replaceChildren(String(customers.size));
 
     if (!ordersPortal) renderDashboard(dashboardOrders, management.products || []);
+
+    filterOrders();
 
     if (!snapshot.docs.length) {
         ordersList.innerHTML = '<div class="orders-empty-state"><strong>No orders yet</strong><span>New customer orders will appear here.</span></div>';

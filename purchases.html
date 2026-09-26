@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Purchases | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/account.css?v=20260915-5">
+    <link rel="stylesheet" href="css/account.css?v=20260925-30">
     <link rel="stylesheet" href="css/signout-confirm.css">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
-    <script src="js/loading-states.js?v=20260809-23" defer></script>
+    <script src="js/loading-states.js?v=20260925-1" defer></script>
     <script src="js/touch-interactions.js" defer></script>
     <script src="js/auto-grow-textareas.js?v=20260915-2" defer></script>
 </head>
@@ -28,13 +28,17 @@
             </div>
 
             <nav class="account-tabs" aria-label="Purchase categories">
-                <button class="account-tab active" type="button" data-section="shipped">
-                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Delivered Icon_333.PNG" data-icon-default="images/Icon Folder/Delivered Icon_Gray.PNG" data-icon-active="images/Icon Folder/Delivered Icon_333.PNG" alt="">Shipped</span>
+                <button class="account-tab active" type="button" data-section="pending">
+                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Pending Icon_333.PNG" data-icon-default="images/Icon Folder/Pending Icon_Gray.PNG" data-icon-active="images/Icon Folder/Pending Icon_333.PNG" alt="">Pending</span>
+                    <span data-count="pending">0</span>
+                </button>
+                <button class="account-tab" type="button" data-section="shipped">
+                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Truck Icon_Gray.PNG" data-icon-default="images/Icon Folder/Truck Icon_Gray.PNG" data-icon-active="images/Icon Folder/Truck Icon_333.PNG" alt="">Shipped</span>
                     <span data-count="shipped">0</span>
                 </button>
-                <button class="account-tab" type="button" data-section="pending">
-                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Pending Icon_Gray.PNG" data-icon-default="images/Icon Folder/Pending Icon_Gray.PNG" data-icon-active="images/Icon Folder/Pending Icon_333.PNG" alt="">Pending</span>
-                    <span data-count="pending">0</span>
+                <button class="account-tab" type="button" data-section="delivered">
+                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Delivered Icon_Gray.PNG" data-icon-default="images/Icon Folder/Delivered Icon_Gray.PNG" data-icon-active="images/Icon Folder/Delivered Icon_333.PNG" alt="">Delivered</span>
+                    <span data-count="delivered">0</span>
                 </button>
                 <button class="account-tab" type="button" data-section="returns">
                     <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Return Icon V2_Gray.PNG" data-icon-default="images/Icon Folder/Return Icon V2_Gray.PNG" data-icon-active="images/Icon Folder/Return Icon V2_333.PNG" alt="">Returns</span>
@@ -51,13 +55,17 @@
             </nav>
 
             <div class="account-sections">
-                <section class="account-order-section active" data-panel="shipped">
+                <section class="account-order-section active" data-panel="pending">
+                    <div class="section-heading"><h2>Pending items</h2><p>Orders being confirmed or prepared.</p></div>
+                    <div class="account-items" data-items="pending"></div>
+                </section>
+                <section class="account-order-section" data-panel="shipped">
                     <div class="section-heading"><h2>Shipped items</h2><p>Orders currently on their way to you.</p></div>
                     <div class="account-items" data-items="shipped"></div>
                 </section>
-                <section class="account-order-section" data-panel="pending">
-                    <div class="section-heading"><h2>Pending items</h2><p>Orders being confirmed or prepared.</p></div>
-                    <div class="account-items" data-items="pending"></div>
+                <section class="account-order-section" data-panel="delivered">
+                    <div class="section-heading"><h2>Delivered items</h2><p>Orders that have arrived.</p></div>
+                    <div class="account-items" data-items="delivered"></div>
                 </section>
                 <section class="account-order-section" data-panel="returns">
                     <div class="section-heading"><h2>Returns</h2><p>Cancelled or returned purchases.</p></div>
@@ -79,10 +87,15 @@
 
     <div class="account-review-overlay" aria-hidden="true">
         <div class="account-review-modal" role="dialog" aria-modal="true" aria-labelledby="account-review-title">
-            <button class="account-review-close" type="button" aria-label="Close review form">&times;</button>
             <p class="account-kicker">Verified purchase</p>
             <h2 id="account-review-title">Review item</h2>
-            <p class="account-review-product"></p>
+            <div class="account-review-product-context">
+                <img class="account-review-product-image" src="" alt="">
+                <div>
+                    <p class="account-review-product"></p>
+                    <span class="account-review-product-options"></span>
+                </div>
+            </div>
 
             <form id="account-review-form">
                 <fieldset>
@@ -97,10 +110,14 @@
                 </fieldset>
 
                 <label for="account-review-comment">Your review</label>
-                <textarea id="account-review-comment" maxlength="800" required placeholder="Share your experience with this product"></textarea>
-                <label class="account-review-file-button" for="account-review-file"><span class="account-review-file-icon" aria-hidden="true"><img class="account-review-file-icon-default" src="images/Icon Folder/Plus Icon_333.PNG" alt=""><img class="account-review-file-icon-gray" src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></span><span class="account-review-file-label">Add Photos</span><span class="account-review-upload-note">(optional, maximum 5 photos and 5 MB each)</span></label>
-                <input id="account-review-file" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
-                <div class="account-review-image-selection" hidden></div>
+                <textarea id="account-review-comment" rows="5" maxlength="800" required placeholder="Share your experience with this product"></textarea>
+                <span class="account-review-upload-heading">Photos <span>(optional, up to 5)</span></span>
+                <div class="account-review-media-row">
+                    <label class="account-review-file-button" for="account-review-file" aria-label="Add review photos"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></label>
+                    <input id="account-review-file" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
+                    <div class="account-review-image-selection" hidden></div>
+                </div>
+                <p class="account-review-image-limit">JPEG, PNG, WebP, or GIF · Maximum 5 photos · 5 MB per image</p>
                 <button class="account-review-submit" type="submit">Post review</button>
                 <p class="account-review-error" aria-live="polite"></p>
             </form>
@@ -109,7 +126,7 @@
 
     <script src="js/products.js"></script>
     <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/account.js?v=20260830-3"></script>
+    <script type="module" src="js/account.js?v=20260925-7"></script>
     <script src="js/signout-confirm.js"></script>
 </body>
 </html>

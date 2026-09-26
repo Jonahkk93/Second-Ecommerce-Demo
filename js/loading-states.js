@@ -32,6 +32,7 @@
     const contentExclusions = [
         "header", "nav", "aside", "footer",
         ".cart", ".wishlist", ".toast",
+        ".account-review-overlay",
         ".product-bottom-bar", ".product-options-loading", ".filter-loading",
         "[hidden]", "[aria-hidden='true']"
     ].join(",");

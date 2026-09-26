@@ -11,15 +11,13 @@ import {
 } from "./firestore-api.js";
 
 import {
-    onAuthStateChanged,
-    signOut
+    onAuthStateChanged
 } from "./auth-api.js";
 
 const auth = window.auth;
 const db = window.db;
 
 const ordersContent = document.querySelector(".orders-content");
-const ordersSignout = document.querySelector(".orders-signout");
 const cancelConfirmOverlay = document.getElementById("orders-cancel-confirm");
 const cancelConfirmDismiss = cancelConfirmOverlay.querySelector(".orders-confirm-dismiss");
 const cancelConfirmApprove = cancelConfirmOverlay.querySelector(".orders-confirm-approve");
@@ -27,6 +25,43 @@ const confirmTitle = document.getElementById("orders-confirm-title");
 const confirmMessage = document.getElementById("orders-confirm-message");
 const ordersToast = document.querySelector(".orders-toast");
 let resolveCancelConfirmation = null;
+
+function safeText(value) {
+    return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[character]);
+}
+
+function refundDate(value) {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime())
+        ? date.toLocaleDateString("en-UG", { day:"numeric", month:"long", year:"numeric" })
+        : "—";
+}
+
+function customerRefundPanel(refund) {
+    if (!refund) return "";
+    const status = String(refund.status || "pending").toLowerCase();
+    const labels = { pending:"Refund pending", initiated:"Refund initiated", processing:"Refund processing", refunded:"Refunded", failed:"Refund needs attention" };
+    const descriptions = {
+        pending:"MPWR will initiate your full refund within one business day.",
+        initiated:"Your refund has been sent to the payment provider.",
+        processing:"Your payment provider is processing the refund.",
+        refunded:"Your full refund has been completed.",
+        failed:"We could not complete this refund attempt. MPWR will investigate and retry it."
+    };
+    const steps = ["pending", "initiated", "processing", "refunded"];
+    const activeIndex = status === "failed" ? 0 : Math.max(0, steps.indexOf(status));
+    const arrival = status === "pending" ? `Initiation by ${refundDate(refund.initiationDueAt)}`
+        : status === "refunded" ? `Completed ${refundDate(refund.completedAt)}`
+        : `Expected by ${refundDate(refund.expectedBy)}`;
+    return `<section class="order-refund refund-${safeText(status)}">
+        <div class="order-refund-heading"><div><small>Buyer protection</small><h3>${safeText(labels[status] || status)}</h3></div><strong>UGX ${Number(refund.amount || 0).toLocaleString()}</strong></div>
+        <p>${safeText(descriptions[status] || "Your refund is being handled by MPWR.")}</p>
+        <div class="refund-progress" aria-label="Refund progress">${steps.map((step, index) => `<i class="${index <= activeIndex && status !== "failed" ? "complete" : ""}"></i>`).join("")}</div>
+        <div class="order-refund-meta"><span>${safeText(refund.destination || "Original payment method")}</span><span>${safeText(arrival)}</span></div>
+        ${refund.reference ? `<small class="order-refund-reference">Reference: ${safeText(refund.reference)}</small>` : ""}
+        <small class="order-refund-note">Mobile Money usually takes 1–3 business days. Card refunds usually take 5–10 business days and can take up to 15.</small>
+    </section>`;
+}
 
 function showOrdersToast(message) {
     clearTimeout(showOrdersToast.timeout);
@@ -70,15 +105,6 @@ document.addEventListener("keydown", event => {
     if (event.key === "Escape" && cancelConfirmOverlay.classList.contains("active")) {
         closeCancelConfirmation(false);
     }
-});
-
-ordersSignout.addEventListener("click", async () => {
-    localStorage.removeItem("cart");
-    localStorage.removeItem("favorites");
-    localStorage.removeItem("mpwrCartOwnerUid");
-    localStorage.removeItem("mpwrFavoritesOwnerUid");
-    await signOut(auth);
-    window.location.assign("index.html");
 });
 
 async function reorderItems(orderItems) {
@@ -154,7 +180,7 @@ async function loadOrders() {
 
             const order = orderDoc.data();
            const orderId = orderDoc.id;
-            const itemsHTML = order.items.map(item => `
+            const itemsHTML = order.items.map((item, itemIndex) => `
     <div class="order-item">
 
         <img
@@ -166,11 +192,17 @@ async function loadOrders() {
 
             <h3>${item.title}</h3>
 
-            <p>${item.color} • ${item.size}</p>
+            <p><strong>Color:</strong> ${item.color || "—"}</p>
 
-            <p>Qty: ${item.quantity}</p>
+            <p><strong>Length/Size:</strong> ${item.length || item.size || "—"}</p>
+
+            <p><strong>Quantity:</strong> ${item.quantity || 1}</p>
 
         </div>
+
+        <button class="item-reorder-btn" type="button" data-item-index="${itemIndex}">
+            Reorder
+        </button>
 
     </div>
 `).join("");
@@ -218,7 +250,7 @@ switch (order.status) {
 const deliveryFee = Number(order.deliveryFee ?? order.delivery?.fee ?? 0);
 const orderTotal = Number(order.total) || 0;
 const orderSubtotal = Number(order.subtotal ?? Math.max(0, orderTotal - deliveryFee));
-const deliveryLabel = order.delivery?.methodLabel || "Delivery";
+const deliveryLabel = "Delivery";
 const deliveryDestination = [order.delivery?.city, order.delivery?.district].filter(Boolean).join(", ");
 
 orderCard.innerHTML = `
@@ -240,25 +272,19 @@ orderCard.innerHTML = `
 
     </div>
 
-    <div class="order-items">
-    ${itemsHTML}
-</div>
-
     <div class="order-price-breakdown">
-        <p><span>Subtotal</span><strong>UGX ${orderSubtotal.toLocaleString()}</strong></p>
-        <p><span>${deliveryLabel}${deliveryDestination ? ` · ${deliveryDestination}` : ""}</span><strong>UGX ${deliveryFee.toLocaleString()}</strong></p>
+        <p class="order-subtotal-row"><span>Subtotal</span><strong>UGX ${orderSubtotal.toLocaleString()}</strong></p>
+        <p class="order-delivery-row"><span>${deliveryDestination || deliveryLabel}</span><strong>UGX ${deliveryFee.toLocaleString()}</strong></p>
         ${order.delivery?.etaLabel ? `<small>Estimated delivery: ${order.delivery.etaLabel}</small>` : ""}
         <p class="order-total"><span>Total</span><strong>UGX ${orderTotal.toLocaleString()}</strong></p>
     </div>
+
+    ${customerRefundPanel(order.delivery?.refund)}
 
 <div class="order-actions">
 
     <button class="toggle-order-btn">
         View Details
-    </button>
-
-    <button class="reorder-btn">
-        Reorder
     </button>
 
     ${
@@ -272,6 +298,15 @@ orderCard.innerHTML = `
     }
 
 </div>
+
+<div class="order-items">
+    ${itemsHTML}
+    ${order.items.length > 1 ? `
+        <div class="order-items-footer">
+            <button class="reorder-btn" type="button">Reorder All</button>
+        </div>
+    ` : ""}
+</div>
 `;
 
 const itemsContainer = orderCard.querySelector(".order-items");
@@ -281,9 +316,8 @@ itemsContainer.style.display = "none";
 const toggleButton = orderCard.querySelector(".toggle-order-btn");
 const reorderButton = orderCard.querySelector(".reorder-btn");
 const cancelButton = orderCard.querySelector(".cancel-order-btn");
-reorderButton.hidden = true;
 
-reorderButton.addEventListener("click", async () => {
+if (reorderButton) reorderButton.addEventListener("click", async () => {
 
     const confirmed = await showOrderConfirmation({
         title: "Reorder Items?",
@@ -298,13 +332,30 @@ reorderButton.addEventListener("click", async () => {
 
 });
 
+orderCard.querySelectorAll(".item-reorder-btn").forEach(button => {
+    button.addEventListener("click", async () => {
+        const item = order.items[Number(button.dataset.itemIndex)];
+        if (!item) return;
+
+        const confirmed = await showOrderConfirmation({
+            title: "Reorder Item?",
+            message: `Add ${item.title || "this item"} to your cart?`,
+            dismissLabel: "Not Now",
+            approveLabel: "Reorder"
+        });
+
+        if (!confirmed) return;
+        await reorderItems([item]);
+    });
+});
+
 if (cancelButton) {
 
     cancelButton.addEventListener("click", async () => {
 
         const confirmed = await showOrderConfirmation({
             title: "Cancel Order?",
-            message: "Are you sure you want to cancel this order?",
+            message: "Are you sure you want to cancel this order? If payment was completed, a full refund will be opened automatically.",
             dismissLabel: "Keep Order",
             approveLabel: "Cancel Order"
         });
@@ -314,9 +365,12 @@ if (cancelButton) {
         await updateDoc(
             doc(db, "orders", orderId),
             {
-                status: "Cancelled"
+                status: "Cancelled",
+                cancelledBy: "customer"
             }
         );
+
+        showOrdersToast("Order cancelled. Any completed payment is being refunded.");
 
         loadOrders();
 
@@ -329,7 +383,6 @@ toggleButton.addEventListener("click", () => {
     const isHidden = itemsContainer.style.display === "none";
 
     itemsContainer.style.display = isHidden ? "block" : "none";
-    reorderButton.hidden = !isHidden;
     toggleButton.classList.toggle("details-open", isHidden);
 
     toggleButton.textContent = isHidden
@@ -352,8 +405,6 @@ toggleButton.addEventListener("click", () => {
 
 
 onAuthStateChanged(auth, user => {
-
-    ordersSignout.hidden = !user;
 
     if (user) {
 

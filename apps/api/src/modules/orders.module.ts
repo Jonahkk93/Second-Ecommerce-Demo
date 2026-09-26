@@ -1,12 +1,14 @@
 import { BadRequestException, Body, Controller, Get, Inject, Injectable, Logger, Module, NotFoundException, Param, Patch, Post, UseGuards } from "@nestjs/common";
-import { IsArray, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Min } from "class-validator";
+import { IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Min } from "class-validator";
 import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { AuthGuard, AuthUser, CurrentUser, OrdersGuard } from "../common/auth";
 import { DB, Database } from "../database/database.module";
-import { deliveryQuotes, orderItems, orders, products, storefrontSettings, users } from "../database/schema";
+import { deliveryQuotes, orderItems, orders, paymentEvents, payments, products, storefrontSettings, users } from "../database/schema";
 
 class CreateOrderDto { @IsUUID() quoteId!: string; @IsString() firstName!: string; @IsString() lastName!: string; @IsEmail() email!: string; @IsString() phone!: string; @IsOptional() @IsString() notes?: string; }
 class UpdateStatusDto { @IsIn(["pending", "processing", "shipped", "delivered", "cancelled"]) status!: "pending" | "processing" | "shipped" | "delivered" | "cancelled"; }
+class UpdateCancellationSeenDto { @IsBoolean() seen!: boolean; }
+class UpdateRefundDto { @IsIn(["pending", "initiated", "processing", "refunded", "failed"]) status!: "pending" | "initiated" | "processing" | "refunded" | "failed"; @IsOptional() @IsString() reference?: string; @IsOptional() @IsString() note?: string; }
 class LegacyOrderDto { @IsArray() items!: unknown[]; @IsObject() customer!: Record<string, unknown>; @IsObject() delivery!: Record<string, unknown>; @IsOptional() @IsObject() payment?: Record<string, unknown>; @IsInt() @Min(0) deliveryFee!: number; }
 type QuotedOrderItem = { productId: string; variantId?: string; title: string; sku?: string; quantity: number; unitPrice: number; options?: Record<string, unknown> };
 
@@ -14,6 +16,43 @@ type QuotedOrderItem = { productId: string; variantId?: string; title: string; s
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
   constructor(@Inject(DB) private db: Database) {}
+
+  private addBusinessDays(value: Date, days: number) {
+    const date = new Date(value);
+    let remaining = days;
+    while (remaining > 0) {
+      date.setUTCDate(date.getUTCDate() + 1);
+      if (date.getUTCDay() !== 0 && date.getUTCDay() !== 6) remaining--;
+    }
+    return date;
+  }
+
+  private async refundForCancellation(existing: typeof orders.$inferSelect, source: "customer" | "staff") {
+    const delivery = { ...((existing.delivery || {}) as Record<string, any>) };
+    if (delivery.refund) return delivery.refund;
+    const [payment] = await this.db.select().from(payments).where(eq(payments.orderId, existing.id)).limit(1);
+    if (!payment || payment.status !== "successful") return null;
+    const metadata = (payment.metadata || {}) as Record<string, any>;
+    const recordedPayment = (delivery.payment || {}) as Record<string, any>;
+    const method = String(metadata.preferredMethod || metadata.payment_method || recordedPayment.method || "card").toLowerCase();
+    const mobile = method.includes("momo") || method.includes("mobile") || method.includes("airtel");
+    const phone = String(recordedPayment.number || (existing.customer as Record<string, any>)?.phone || "").replace(/\D/g, "");
+    const now = new Date();
+    return {
+      status: "pending",
+      amount: payment.amount,
+      currency: payment.currency,
+      method: mobile ? (method.includes("airtel") ? "airtel_money" : "mtn_momo") : "card",
+      destination: mobile && phone ? `•••• ${phone.slice(-4)}` : "Original card",
+      reason: source === "staff" ? "Order cancelled by MPWR" : "Order cancelled by customer",
+      requestedAt: now.toISOString(),
+      initiationDueAt: this.addBusinessDays(now, 1).toISOString(),
+      expectedBy: null,
+      completedAt: null,
+      paymentId: payment.id,
+      reference: payment.providerReference || null
+    };
+  }
 
   async refreshBestsellers() {
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -36,7 +75,24 @@ export class OrdersService {
   }
 
   async updateStatus(id: string, status: UpdateStatusDto["status"]) {
-    const [order] = await this.db.update(orders).set({ status, updatedAt: new Date() }).where(eq(orders.id, id)).returning();
+    const [existing] = await this.db.select().from(orders).where(eq(orders.id, id)).limit(1);
+    if (!existing) throw new NotFoundException("Order not found");
+    const delivery = { ...((existing.delivery || {}) as Record<string, unknown>) };
+    if (existing.status === "cancelled" && delivery.cancellationSource === "customer") {
+      throw new BadRequestException("Customer-cancelled orders have a locked status");
+    }
+    if (existing.status === "cancelled" && delivery.refund && status !== "cancelled") {
+      throw new BadRequestException("Orders with an active refund cannot be reopened");
+    }
+    if (status === "cancelled") {
+      delivery.cancellationSource = "staff";
+      delivery.cancelledAt = new Date().toISOString();
+      delivery.refund = await this.refundForCancellation(existing, "staff");
+    } else {
+      delete delivery.cancellationSource;
+      delete delivery.cancelledAt;
+    }
+    const [order] = await this.db.update(orders).set({ status, delivery, updatedAt: new Date() }).where(eq(orders.id, id)).returning();
     if (!order) throw new NotFoundException("Order not found");
     try {
       await this.refreshBestsellers();
@@ -44,6 +100,75 @@ export class OrdersService {
       this.logger.error("Could not refresh bestseller rankings", error instanceof Error ? error.stack : String(error));
     }
     return order;
+  }
+  async cancelByCustomer(userId: string, id: string) {
+    const [existing] = await this.db.select().from(orders).where(and(eq(orders.id, id), eq(orders.userId, userId))).limit(1);
+    if (!existing) throw new NotFoundException("Order not found");
+    if (existing.status !== "pending") throw new BadRequestException("Only pending orders can be cancelled");
+    const delivery = {
+      ...((existing.delivery || {}) as Record<string, unknown>),
+      cancellationSource: "customer",
+      cancelledAt: new Date().toISOString(),
+      refund: await this.refundForCancellation(existing, "customer")
+    };
+    const [order] = await this.db.update(orders).set({ status: "cancelled", delivery, updatedAt: new Date() }).where(and(eq(orders.id, id), eq(orders.userId, userId), eq(orders.status, "pending"))).returning();
+    if (!order) throw new BadRequestException("This order can no longer be cancelled");
+    return order;
+  }
+  async markCustomerCancellationSeen(id: string, seen: boolean) {
+    const [existing] = await this.db.select().from(orders).where(eq(orders.id, id)).limit(1);
+    if (!existing) throw new NotFoundException("Order not found");
+    const delivery = { ...((existing.delivery || {}) as Record<string, unknown>) };
+    if (existing.status !== "cancelled" || delivery.cancellationSource !== "customer") {
+      throw new BadRequestException("Only customer-cancelled orders can be marked as seen");
+    }
+    if (seen) delivery.cancellationSeenAt = new Date().toISOString();
+    else delete delivery.cancellationSeenAt;
+    const [order] = await this.db.update(orders).set({ delivery, updatedAt: new Date() }).where(eq(orders.id, id)).returning();
+    return order;
+  }
+  async updateRefund(id: string, dto: UpdateRefundDto) {
+    const [existing] = await this.db.select().from(orders).where(eq(orders.id, id)).limit(1);
+    if (!existing) throw new NotFoundException("Order not found");
+    const delivery = { ...((existing.delivery || {}) as Record<string, any>) };
+    const current = delivery.refund as Record<string, any> | undefined;
+    if (existing.status !== "cancelled" || !current) throw new BadRequestException("This order does not have a refund case");
+    if (current.status === "refunded") throw new BadRequestException("This refund is already complete");
+    const transitions: Record<string, string[]> = {
+      pending: ["initiated", "failed"],
+      initiated: ["processing", "refunded", "failed"],
+      processing: ["refunded", "failed"],
+      failed: ["pending", "initiated"]
+    };
+    if (!transitions[String(current.status)]?.includes(dto.status)) throw new BadRequestException("Invalid refund status change");
+    const now = new Date();
+    const next: Record<string, any> = { ...current, status: dto.status, updatedAt: now.toISOString() };
+    if (dto.reference?.trim()) next.reference = dto.reference.trim();
+    if (dto.note?.trim()) next.note = dto.note.trim();
+    if (dto.status === "pending") {
+      next.initiationDueAt = this.addBusinessDays(now, 1).toISOString();
+      next.expectedBy = null;
+      next.completedAt = null;
+    }
+    if (dto.status === "initiated") {
+      next.initiatedAt = now.toISOString();
+      next.expectedBy = this.addBusinessDays(now, next.method === "card" ? 10 : 3).toISOString();
+    }
+    if (dto.status === "processing" && !next.initiatedAt) next.initiatedAt = now.toISOString();
+    if (dto.status === "refunded") next.completedAt = now.toISOString();
+    if (dto.status === "failed") next.failedAt = now.toISOString();
+    delivery.refund = next;
+    return this.db.transaction(async tx => {
+      const [order] = await tx.update(orders).set({ delivery, updatedAt: now }).where(eq(orders.id, id)).returning();
+      if (dto.status === "refunded") await tx.update(payments).set({ status: "refunded", updatedAt: now }).where(eq(payments.orderId, id));
+      if (current.paymentId) await tx.insert(paymentEvents).values({
+        providerEventId: `refund:${current.paymentId}:${dto.status}:${now.getTime()}`,
+        paymentId: current.paymentId,
+        eventType: `refund_${dto.status}`,
+        payload: { orderId: id, status: dto.status, reference: next.reference || null, note: next.note || null }
+      });
+      return order;
+    });
   }
   async create(userId: string, dto: CreateOrderDto) {
     return this.db.transaction(async tx => {
@@ -87,6 +212,9 @@ class OrdersController {
   @UseGuards(AuthGuard) @Get() list(@CurrentUser() user: AuthUser) { return this.service.list(user.sub); }
   @UseGuards(OrdersGuard) @Get("admin/all") adminList() { return this.service.adminList(); }
   @UseGuards(AuthGuard) @Get(":id") one(@CurrentUser() user: AuthUser, @Param("id") id: string) { return this.service.one(user.sub, id); }
+  @UseGuards(AuthGuard) @Patch(":id/cancel") cancel(@CurrentUser() user: AuthUser, @Param("id") id: string) { return this.service.cancelByCustomer(user.sub, id); }
+  @UseGuards(OrdersGuard) @Patch(":id/cancellation-seen") cancellationSeen(@Param("id") id: string, @Body() dto: UpdateCancellationSeenDto) { return this.service.markCustomerCancellationSeen(id, dto.seen); }
+  @UseGuards(OrdersGuard) @Patch(":id/refund") refund(@Param("id") id: string, @Body() dto: UpdateRefundDto) { return this.service.updateRefund(id, dto); }
   @UseGuards(OrdersGuard) @Patch(":id/status") status(@Param("id") id: string, @Body() dto: UpdateStatusDto) { return this.service.updateStatus(id, dto.status); }
 }
 @Module({ controllers: [OrdersController], providers: [OrdersService], exports: [OrdersService] })

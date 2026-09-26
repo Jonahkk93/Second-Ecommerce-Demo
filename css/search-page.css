@@ -67,7 +67,8 @@ html.site-loading-enabled:not(.site-page-ready) .search-chip{overflow:hidden;col
     .live-search-suggestions{top:65px;max-height:calc(100dvh - 65px);padding:5px 22px 24px}
     .live-suggestion{gap:16px;padding:17px 0;font-size:18px}
     .search-page-main{padding:22px 16px 56px}
-    .search-section-heading h1,.suggested-searches-section h2,.results-heading h2{font-size:21px}
+    .search-section-heading h1,.suggested-searches-section h2{font-size:18px}
+    .results-heading h2{font-size:21px}
     .search-chip{padding:9px 12px;font-size:13px;line-height:16px}
     .recent-searches{max-height:78px}
     .suggested-searches-section{margin-top:30px}

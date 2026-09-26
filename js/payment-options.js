@@ -50,7 +50,12 @@ function normalizeMethod(method, index = 0) {
         isDefault: Boolean(method.isDefault),
         ...(type !== "card" ? {
             phone: String(method.phone || "").trim()
-        } : {})
+        } : {
+            cardholderName: String(method.cardholderName || "").trim(),
+            brand: ["Visa", "Mastercard"].includes(method.brand) ? method.brand : "Visa",
+            last4: String(method.last4 || "").replace(/\D/g, "").slice(-4),
+            expiry: String(method.expiry || "").trim()
+        })
     };
 }
 
@@ -159,6 +164,10 @@ function openEditor(method = null) {
     const defaultPhone = profile.phone || profile.phoneNumber || "";
     form.elements.mtnNumber.value = method?.type === "mtn_momo" ? method.phone : defaultPhone;
     form.elements.airtelNumber.value = method?.type === "airtel_money" ? method.phone : defaultPhone;
+    form.elements.cardholderName.value = method?.type === "card" ? method.cardholderName || "" : "";
+    form.elements.cardLast4.value = method?.type === "card" ? method.last4 || "" : "";
+    form.elements.cardExpiry.value = method?.type === "card" ? method.expiry || "" : "";
+    form.elements.cardBrand.value = method?.type === "card" ? method.brand || "Visa" : "Visa";
     form.elements.isDefault.checked = Boolean(method?.isDefault || methods.length === 0);
     updateFields();
     editorOverlay.classList.add("active");
@@ -193,8 +202,8 @@ function methodCopy(method) {
         iconAlt:method.type === "airtel_money" ? "Airtel Money" : "MTN MoMo"
     };
     return {
-        title:"Credit / debit card",
-        detail:"Enter securely when paying",
+        title:method.brand ? `${method.brand} card` : "Credit / debit card",
+        detail:method.last4 ? `•••• ${method.last4}${method.expiry ? `  ·  Expires ${method.expiry}` : ""}` : "Enter securely when paying",
         icon:"Card",
         iconImage:"images/Icon Folder/Visa_Mastercard Icon 2.PNG",
         iconAlt:"Visa and Mastercard"
@@ -279,13 +288,34 @@ function paymentFromForm() {
     const data = new FormData(form);
     const type = data.get("type");
     const base = { id:editingId || createId(), type, isDefault:data.get("isDefault") === "on" || methods.length === 0 };
-    if (type === "card") return normalizeMethod(base);
+    if (type === "card") {
+        const nameField = form.elements.cardholderName;
+        const last4Field = form.elements.cardLast4;
+        const expiryField = form.elements.cardExpiry;
+        const cardholderName = String(nameField.value || "").trim();
+        const last4 = String(last4Field.value || "").replace(/\D/g, "");
+        const expiry = String(expiryField.value || "").trim();
+        const expiryMatch = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(expiry);
+        const now = new Date();
+        const expiryValid = Boolean(expiryMatch) && Number(expiryMatch[2]) * 12 + Number(expiryMatch[1]) - 1 >= (now.getFullYear() % 100) * 12 + now.getMonth();
+        const invalid = fieldInvalid(nameField, cardholderName.length < 2)
+            | fieldInvalid(last4Field, last4.length !== 4)
+            | fieldInvalid(expiryField, !expiryValid);
+        return invalid ? null : normalizeMethod({ ...base, cardholderName, last4, expiry, brand:data.get("cardBrand") });
+    }
     const field = type === "airtel_money" ? form.elements.airtelNumber : form.elements.mtnNumber;
     const phone = String(field.value || "").trim();
     const invalid = fieldInvalid(field, phone.replace(/\D/g, "").length < 9);
     return invalid ? null : normalizeMethod({ ...base, phone });
 }
 
+form.elements.cardLast4.addEventListener("input", event => {
+    event.target.value = event.target.value.replace(/\D/g, "").slice(0, 4);
+});
+form.elements.cardExpiry.addEventListener("input", event => {
+    const digits = event.target.value.replace(/\D/g, "").slice(0, 4);
+    event.target.value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+});
 form.addEventListener("input", event => event.target.classList?.remove("is-invalid"));
 form.addEventListener("submit", async event => {
     event.preventDefault();

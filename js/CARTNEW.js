@@ -593,13 +593,15 @@ function updateCartCount() {
     cartItemCount = cartItems.length;
 
     if (titleCount) {
-        titleCount.textContent = `(${cartItemCount})`;
+        titleCount.textContent = cartItemCount > 0 ? `(${cartItemCount})` : "";
+        titleCount.hidden = cartItemCount === 0;
     }
 
     if (!badge) return;
 
     if (cartItemCount > 0) {
 
+        badge.style.display = "flex";
         badge.style.visibility = "visible";
 
         badge.textContent = cartItemCount;
@@ -612,6 +614,7 @@ function updateCartCount() {
 
     } else {
 
+        badge.style.display = "none";
         badge.style.visibility = "hidden";
 
         badge.textContent = "";
@@ -1462,10 +1465,12 @@ function openCheckoutSigninModal() {
 
     registerView?.classList.remove("active");
     signinView?.classList.remove("hide");
+    sessionStorage.setItem("mpwrReturnAfterSignin", "checkout.html");
     cart.classList.remove("active");
     syncSidePanelScrollLock();
     accountOverlay?.classList.add("active");
-    document.body.style.overflow = "hidden";
+    accountOverlay?.setAttribute("aria-hidden", "false");
+    window.setMPWRAccountScrollLock?.(true);
     accountOverlay?.querySelector(".account-modal")?.scrollTo(0, 0);
     requestAnimationFrame(() => {
         document.getElementById("signin-email")?.focus({ preventScroll: true });
@@ -1836,6 +1841,8 @@ function updateProductModalFavorite() {
 async function updateProductModalReviews(product) {
     if (!productModalReviews || !productModalReviewStars || !productModalReviewSummary) return;
 
+    const modal = productModalReviews.closest(".product-modal");
+    modal?.classList.add("has-no-reviews");
     productModalReviews.hidden = true;
     productModalReviewStars.textContent = "☆☆☆☆☆";
     productModalReviewSummary.textContent = "Loading reviews…";
@@ -1855,6 +1862,7 @@ async function updateProductModalReviews(product) {
 
         if (!count) return;
 
+        modal?.classList.remove("has-no-reviews");
         productModalReviewStars.textContent =
             "★".repeat(Math.round(average)) + "☆".repeat(5 - Math.round(average));
         productModalReviewSummary.textContent =
@@ -1960,11 +1968,56 @@ function createWishlistItem(item) {
     event.preventDefault();
     event.stopPropagation();
 
-    const productBox = document.querySelector(
-    `.product-box[data-id="${item.id}"]`
+    const product = products.find(candidate =>
+        String(candidate.id) === String(item.id)
     );
 
-    if (!productBox) return;
+    if (!product) {
+        showToast("This product is no longer available", "warning");
+        return;
+    }
+
+    const escapedId = window.CSS?.escape
+        ? window.CSS.escape(String(item.id))
+        : String(item.id).replace(/["\\]/g, "\\$&");
+    let productBox = document.querySelector(
+        `.product-box[data-id="${escapedId}"]`
+    );
+
+    // Homepage balancing can remove a product card from the current view.
+    // Build a detached card adapter so wishlist items still use the complete
+    // product modal (including options and variants) when no card is visible.
+    if (!productBox) {
+        productBox = document.createElement("div");
+        productBox.className = "product-box";
+        productBox.dataset.id = String(product.id);
+        if (product.discountPercent) {
+            productBox.dataset.discountPercent = String(product.discountPercent);
+        }
+
+        const imageBox = document.createElement("div");
+        imageBox.className = "img-box";
+        const image = document.createElement("img");
+        image.src = window.normalizeMPWRImagePath?.(product.image, product.id) || product.image;
+        imageBox.appendChild(image);
+
+        const wishlistButton = document.createElement("button");
+        wishlistButton.className = "wishlist-btn";
+        const wishlistIcon = document.createElement("img");
+        wishlistIcon.src = "images/Heart7.PNG";
+        wishlistButton.appendChild(wishlistIcon);
+        imageBox.appendChild(wishlistButton);
+
+        const title = document.createElement("h2");
+        title.className = "product-title";
+        title.textContent = product.title;
+
+        const price = document.createElement("span");
+        price.className = "price";
+        price.textContent = String(product.price);
+
+        productBox.append(imageBox, title, price);
+    }
 
     openProductModal(productBox);
 });
@@ -2628,6 +2681,15 @@ onAuthStateChanged(auth, async (user) => {
         await loadFavoritesFromFirestore();
 
         await loadOrdersFromFirestore();
+
+        if (
+            sessionStorage.getItem("mpwrReturnAfterSignin") === "checkout.html" &&
+            cartItems.length > 0
+        ) {
+            sessionStorage.removeItem("mpwrReturnAfterSignin");
+            window.location.assign("checkout.html");
+            return;
+        }
 
     } else {
 

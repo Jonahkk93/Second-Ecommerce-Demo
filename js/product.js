@@ -692,6 +692,8 @@ function updateRelatedModalFavorite() {
 async function updateRelatedModalReviews(item) {
     if (!productModalReviews || !productModalReviewStars || !productModalReviewSummary) return;
 
+    const modal = productModalReviews.closest(".product-modal");
+    modal?.classList.add("has-no-reviews");
     productModalReviews.hidden = true;
 
     try {
@@ -704,6 +706,7 @@ async function updateRelatedModalReviews(item) {
         const ratings = snapshot.docs.map(review => Number(review.data().rating || 0));
         if (!ratings.length) return;
 
+        modal?.classList.remove("has-no-reviews");
         const average = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
         productModalReviewStars.textContent =
             "★".repeat(Math.round(average)) + "☆".repeat(5 - Math.round(average));
@@ -1590,7 +1593,8 @@ function updateCartBadge() {
     const totalItems = cartItems.length;
 
     if (titleCount) {
-        titleCount.textContent = `(${totalItems})`;
+        titleCount.textContent = totalItems > 0 ? `(${totalItems})` : "";
+        titleCount.hidden = totalItems === 0;
     }
 
     cartBadge.textContent = totalItems > 0 ? String(totalItems) : "";
@@ -2422,14 +2426,20 @@ function createWishlistItem(item) {
 
     });
 
-   addTocartIcon.addEventListener("click", () => {
+   addTocartIcon.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+
     const targetProduct = products.find(
         p => p.id.toString() === item.id.toString()
     );
 
-    if (!targetProduct) return;
+    if (!targetProduct) {
+        showToast("This product is no longer available", "warning");
+        return;
+    }
 
-    window.location.href = `product.html?id=${targetProduct.id}`;
+    openRelatedProductModal(targetProduct);
 });
 
     return wishlistBox;
@@ -2771,12 +2781,13 @@ function openCheckoutSigninModal() {
     const registerView = document.querySelector(".register-view");
 
     cart.classList.remove("active");
+    sessionStorage.setItem("mpwrReturnAfterSignin", "checkout.html");
     registerView?.classList.remove("active");
     signinView?.classList.remove("hide");
     accountOverlay?.classList.add("active");
     accountOverlay?.setAttribute("aria-hidden", "false");
     syncSidePanelScrollLock();
-    document.body.style.overflow = "hidden";
+    window.setMPWRAccountScrollLock?.(true);
     accountOverlay?.querySelector(".account-modal")?.scrollTo(0, 0);
 
     requestAnimationFrame(() => {
@@ -2790,7 +2801,7 @@ function closeCheckoutSigninModal() {
     accountOverlay?.setAttribute("aria-hidden", "true");
     document.querySelector(".register-view")?.classList.remove("active");
     document.querySelector(".signin-view")?.classList.remove("hide");
-    document.body.style.overflow = "";
+    window.setMPWRAccountScrollLock?.(false);
 }
 
 document.querySelector(".account-close")?.addEventListener("click", closeCheckoutSigninModal);
@@ -2866,6 +2877,14 @@ loadProductReviews();
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         await loadCartFromFirestore();
+        if (
+            sessionStorage.getItem("mpwrReturnAfterSignin") === "checkout.html" &&
+            (window.MPWRCartStorage?.current() || []).length > 0
+        ) {
+            sessionStorage.removeItem("mpwrReturnAfterSignin");
+            window.location.assign("checkout.html");
+            return;
+        }
     } else {
         window.MPWRCartStorage?.activateGuest();
     }

@@ -252,7 +252,7 @@
                     "Christmas Offers": "images/Icon Folder/Christmas Icon_Red.PNG",
                     "Black Friday": "images/Icon Folder/Black Friday.png"
                 };
-                icon.src = campaignIcons[campaignLabel] || "images/Icon Folder/Discount Icon_E5A484.PNG";
+                icon.src = campaignIcons[campaignLabel] || "images/Icon Folder/Discount Icon_333.PNG";
             }
             item.hidden = !isCampaignActive;
         });

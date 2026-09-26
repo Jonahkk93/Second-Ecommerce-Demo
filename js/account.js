@@ -21,12 +21,13 @@ const profileOverview = document.querySelector(".account-profile-overview");
 const loading = document.querySelector(".account-loading");
 const signoutButton = document.querySelector(".account-signout");
 const reviewOverlay = document.querySelector(".account-review-overlay");
-const reviewModalClose = document.querySelector(".account-review-close");
 const reviewForm = document.querySelector("#account-review-form");
 const reviewComment = document.querySelector("#account-review-comment");
 const reviewFile = document.querySelector("#account-review-file");
 const reviewImageSelection = document.querySelector(".account-review-image-selection");
 const reviewProductName = document.querySelector(".account-review-product");
+const reviewProductImage = document.querySelector(".account-review-product-image");
+const reviewProductOptions = document.querySelector(".account-review-product-options");
 const reviewError = document.querySelector(".account-review-error");
 const reviewSubmit = document.querySelector(".account-review-submit");
 const reviewStars = [...document.querySelectorAll(".account-review-stars button")];
@@ -34,6 +35,7 @@ const reviewStars = [...document.querySelectorAll(".account-review-stars button"
 let currentReviewItem = null;
 let currentReviewRating = 0;
 let accountReviewPreviewUrls = [];
+let accountReviewSelectedFiles = [];
 const REVIEW_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 function initialsPicture(firstName, lastName, email = "") {
@@ -140,10 +142,21 @@ function openReviewModal(item) {
     currentReviewItem = item;
     setAccountReviewRating(0);
     reviewComment.value = "";
-    reviewFile.value = "";
-    setAccountReviewImagePreview();
+    syncAccountReviewFiles([]);
     reviewError.textContent = "";
     reviewProductName.textContent = item.title || "Purchased product";
+    reviewProductImage.src = window.normalizeMPWRImagePath?.(item.image, item.id) || item.image || "images/MPWR Logo.PNG";
+    reviewProductImage.alt = item.title || "Purchased product";
+    reviewProductOptions.replaceChildren();
+    [
+        item.color ? `Color: ${item.color}` : "",
+        item.size ? `Length/Size: ${item.size}` : "",
+        `Quantity: ${item.quantity || 1}`
+    ].filter(Boolean).forEach(value => {
+        const detail = document.createElement("span");
+        detail.textContent = value;
+        reviewProductOptions.appendChild(detail);
+    });
     reviewOverlay.classList.add("active");
     reviewOverlay.setAttribute("aria-hidden", "false");
     document.body.classList.add("review-modal-open");
@@ -174,8 +187,6 @@ function setAccountReviewImagePreview(files = []) {
         accountReviewPreviewUrls.push(imageUrl);
         image.src = imageUrl;
         image.alt = `Review photo ${index + 1}`;
-        const name = document.createElement("span");
-        name.textContent = file.name;
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "account-review-image-remove";
@@ -185,46 +196,56 @@ function setAccountReviewImagePreview(files = []) {
         removeIcon.alt = "";
         remove.appendChild(removeIcon);
         remove.addEventListener("click", () => {
-            const transfer = new DataTransfer();
-            files.forEach((selectedFile, fileIndex) => {
-                if (fileIndex !== index) transfer.items.add(selectedFile);
-            });
-            reviewFile.files = transfer.files;
-            setAccountReviewImagePreview([...reviewFile.files]);
+            syncAccountReviewFiles(files.filter((_selectedFile, fileIndex) => fileIndex !== index));
         });
-        item.append(image, remove, name);
+        item.append(image, remove);
         reviewImageSelection.appendChild(item);
     });
     reviewImageSelection.hidden = !files.length;
 }
 
+function syncAccountReviewFiles(files) {
+    accountReviewSelectedFiles = [...files];
+    const transfer = new DataTransfer();
+    accountReviewSelectedFiles.forEach(file => transfer.items.add(file));
+    reviewFile.files = transfer.files;
+    const addButton = document.querySelector(".account-review-file-button");
+    const limitReached = accountReviewSelectedFiles.length >= 5;
+    reviewFile.disabled = limitReached;
+    addButton?.classList.toggle("is-disabled", limitReached);
+    addButton?.setAttribute("aria-disabled", String(limitReached));
+    setAccountReviewImagePreview(accountReviewSelectedFiles);
+}
+
 reviewFile.addEventListener("change", () => {
-    const files = [...reviewFile.files];
+    const additions = [...reviewFile.files];
+    const selectedById = new Map(accountReviewSelectedFiles.map(file => [`${file.name}:${file.size}:${file.lastModified}`, file]));
+    additions.forEach(file => selectedById.set(`${file.name}:${file.size}:${file.lastModified}`, file));
+    const files = [...selectedById.values()];
     if (files.length > 5) {
-        reviewFile.value = "";
-        setAccountReviewImagePreview();
+        syncAccountReviewFiles(accountReviewSelectedFiles);
         reviewError.textContent = "You can add up to 5 review photos.";
         return;
     }
-    if (files.some(file => !REVIEW_IMAGE_TYPES.has(file.type))) {
-        reviewFile.value = "";
-        setAccountReviewImagePreview();
+    if (additions.some(file => !REVIEW_IMAGE_TYPES.has(file.type))) {
+        syncAccountReviewFiles(accountReviewSelectedFiles);
         reviewError.textContent = "Use JPEG, PNG, WebP, or GIF images.";
         return;
     }
-    if (files.some(file => file.size > 5 * 1024 * 1024)) {
-        reviewFile.value = "";
-        setAccountReviewImagePreview();
+    if (additions.some(file => file.size > 5 * 1024 * 1024)) {
+        syncAccountReviewFiles(accountReviewSelectedFiles);
         reviewError.textContent = "Each review photo must be smaller than 5 MB.";
         return;
     }
     reviewError.textContent = "";
-    setAccountReviewImagePreview(files);
+    syncAccountReviewFiles(files);
 });
 
-reviewModalClose.addEventListener("click", closeReviewModal);
 reviewOverlay.addEventListener("click", event => {
     if (event.target === reviewOverlay) closeReviewModal();
+});
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && reviewOverlay.classList.contains("active")) closeReviewModal();
 });
 
 reviewForm.addEventListener("submit", async event => {
@@ -363,6 +384,7 @@ async function loadAccount(user) {
             (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)
         );
     const shipped = [];
+    const delivered = [];
     const pending = [];
     const returns = [];
     const review = [];
@@ -374,6 +396,7 @@ async function loadAccount(user) {
         (order.items || []).forEach(item => {
             const entry = { item, order };
             if (order.status === "Shipped") shipped.push(entry);
+            if (order.status === "Delivered") delivered.push(entry);
             if (["Pending", "Processing"].includes(order.status)) pending.push(entry);
             if (["Cancelled", "Returned", "Refunded"].includes(order.status)) returns.push(entry);
 
@@ -397,6 +420,7 @@ async function loadAccount(user) {
     });
 
     renderCategory("shipped", shipped, "You have no shipped items.");
+    renderCategory("delivered", delivered, "You have no delivered items.");
     renderCategory("pending", pending, "You have no pending items.");
     renderCategory("returns", returns, "You have no returns.");
     renderCategory("review", review, "You have reviewed all eligible purchases.");

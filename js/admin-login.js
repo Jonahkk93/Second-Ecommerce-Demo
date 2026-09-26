@@ -1,6 +1,5 @@
 import {
     onAuthStateChanged,
-    sendPasswordResetEmail,
     signInWithEmailAndPassword,
     signOut
 } from "./auth-api.js";
@@ -11,20 +10,7 @@ const auth = adminAuth;
 const loginForm = document.getElementById("admin-login-form");
 const loginButton = document.getElementById("admin-login-button");
 const loginError = document.getElementById("admin-login-error");
-const resetPassword = document.getElementById("admin-reset-password");
 let isSubmitting = false;
-
-resetPassword.addEventListener("click", async () => {
-    const email = document.getElementById("admin-email").value.trim();
-    if (!email) { loginError.textContent = "Enter your admin email address first."; return; }
-    resetPassword.disabled = true;
-    try {
-        const result = await sendPasswordResetEmail(auth, email);
-        if (result.previewUrl) { window.location.href = result.previewUrl; return; }
-        loginError.textContent = result.message;
-    } catch (error) { loginError.textContent = friendlyLoginError(error); }
-    finally { resetPassword.disabled = false; }
-});
 
 const loginErrorCode = new URLSearchParams(window.location.search).get("error");
 if (loginErrorCode === "unauthorized") {

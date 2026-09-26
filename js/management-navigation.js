@@ -10,14 +10,30 @@
     const activeKey = onDashboard
         ? (hash === "#orders" ? "orders" : "dashboard")
         : onProducts
-            ? (hash === "#homepage" ? "homepage" : hash === "#deleted-products" ? "deleted" : "products")
+            ? (hash === "#homepage" ? "homepage" : hash === "#search-page" ? "search" : hash === "#deleted-products" ? "deleted" : "products")
             : page === "admin-reviews.html"
                 ? "reviews"
                 : page === "admin-analytics.html"
                     ? "analytics"
+                    : page === "admin-customers.html"
+                        ? "customers"
                     : "";
 
     const icon = (file) => `<span><img src="images/Icon Folder/${file}" alt=""></span>`;
+    [
+        "Dashboard Icon_E5A484.PNG",
+        "Order status_E5A484.PNG",
+        "Products 2 Icon_E5A484.PNG",
+        "Home Icon_E5A484.PNG",
+        "Search Icon_E5A484.PNG",
+        "Delete Icon_E5A484.PNG",
+        "Customers Icon_E5A484.PNG",
+        "Reviews Icon_E5A484.PNG",
+        "Analytics Icon_E5A484.PNG"
+    ].forEach(file => {
+        const image = new Image();
+        image.src = `images/Icon Folder/${file}`;
+    });
     const link = (key, href, label, iconMarkup, extra = "") =>
         `<a class="management-nav-item${activeKey === key ? " active" : ""}" href="${href}"${extra}>${iconMarkup}${label}</a>`;
     const comingSoon = (label, iconMarkup) =>
@@ -25,6 +41,7 @@
 
     const productExtra = onProducts ? ' data-panel="catalogue"' : "";
     const homepageExtra = onProducts ? ' data-panel="homepage"' : "";
+    const searchExtra = onProducts ? ' data-panel="search"' : "";
     const deletedExtra = onProducts ? ' data-panel="deleted"' : "";
     const dashboardHref = onDashboard ? "admin.html" : "admin.html";
     const ordersHref = onDashboard ? "#orders" : "admin.html#orders";
@@ -38,12 +55,12 @@
             ${link("orders", ordersHref, "Orders", icon("Order status_Light Gray.PNG"))}
             ${link("products", "admin-products.html#products", "Products", icon("Products 2 Icon_Light Gray.PNG"), productExtra)}
             ${link("homepage", "admin-products.html#homepage", "Homepage", icon("Home Icon_Light Gray.PNG"), homepageExtra)}
+            ${link("search", "admin-products.html#search-page", "Search Page", icon("Search Icon_Light Gray.PNG"), searchExtra)}
             ${link("deleted", "admin-products.html#deleted-products", '<span class="management-nav-label">Deleted Products <em id="deleted-nav-count">0</em></span>', icon("Delete Icon_Light Gray.PNG"), deletedExtra)}
-            ${comingSoon("Customers", icon("Customers Icon_Light Gray.PNG"))}
+            ${link("customers", "admin-customers.html", "Customers", icon("Customers Icon_Light Gray.PNG"))}
             ${link("reviews", "admin-reviews.html", '<span class="management-nav-label">Reviews <em id="reviews-nav-count">0</em></span>', icon("Reviews Icon_Light Gray.PNG"))}
             ${link("analytics", "admin-analytics.html", "Analytics", icon("Analytics Icon_Light Gray.PNG"))}
             ${comingSoon("Marketing", icon("Marketing Icon_Light Gray.PNG"))}
-            ${comingSoon("Coupons", "<span>◇</span>")}
             ${comingSoon("Settings", icon("Settings Icon_Light Gray.PNG"))}
             ${link("website", "index.html", "View website", "<span>↗</span>", ' target="_blank"')}
         </nav>

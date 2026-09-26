@@ -4,6 +4,7 @@ import { doc, getPaymentStatus, setDoc } from "./firestore-api.js";
 const panel = document.querySelector(".payment-result");
 const title = document.getElementById("payment-result-title");
 const message = document.getElementById("payment-result-message");
+const kicker = document.getElementById("payment-result-kicker");
 const referenceLine = document.getElementById("payment-result-reference");
 const actions = document.getElementById("payment-result-actions");
 const params = new URLSearchParams(location.search);
@@ -13,6 +14,9 @@ const orderId = reference.match(/^MPWR-([0-9a-f-]{36})(?:-\d+)?$/i)?.[1] || sess
 function showResult(state, heading, copy) {
     panel.classList.remove("is-success", "is-failed");
     if (state) panel.classList.add(`is-${state}`);
+    kicker.textContent = state === "success"
+        ? "Order received"
+        : state === "failed" ? "Payment incomplete" : "Secure checkout";
     panel.setAttribute("aria-busy", "false");
     title.textContent = heading;
     message.textContent = copy;
@@ -38,7 +42,7 @@ async function verify(user) {
             const payment = await getPaymentStatus(orderId);
             if (payment.status === "successful") {
                 await clearPaidCart(user);
-                showResult("success", "Payment confirmed", "Your order is confirmed and is now being prepared for delivery.");
+                showResult("success", "Thank you for shopping with MPWR.", "Your order has been placed. We’ll contact you to confirm delivery and payment.");
                 return;
             }
             if (payment.status === "failed") {
