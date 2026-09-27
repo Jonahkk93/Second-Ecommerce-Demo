@@ -1,4 +1,4 @@
-import { createAuth } from "./auth-api.js";
+import { createAuth } from "./auth-api.js?v=20260927-1";
 
 const auth = createAuth();
 

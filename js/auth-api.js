@@ -1,5 +1,6 @@
-const localHost = /^(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname);
-const API_ROOT = window.MPWR_API_URL || (localHost ? `http://${window.location.hostname}:3000/v1` : "/api/v1");
+const localHost = /^(?:localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname);
+const LOCAL_API_ROOT = localHost ? `http://${window.location.hostname === "0.0.0.0" ? "127.0.0.1" : window.location.hostname}:3000/v1` : "";
+const API_ROOT = window.MPWR_API_URL || LOCAL_API_ROOT || "/api/v1";
 
 async function request(path, options = {}) {
     let response;
@@ -10,6 +11,14 @@ async function request(path, options = {}) {
             headers: options.body ? { "Content-Type": "application/json" } : undefined,
             body: options.body ? JSON.stringify(options.body) : undefined
         });
+        if (response.status === 404 && LOCAL_API_ROOT && API_ROOT !== LOCAL_API_ROOT) {
+            response = await fetch(`${LOCAL_API_ROOT}${path}`, {
+                method: options.method || "GET",
+                credentials: "include",
+                headers: options.body ? { "Content-Type": "application/json" } : undefined,
+                body: options.body ? JSON.stringify(options.body) : undefined
+            });
+        }
     } catch (cause) {
         const error = new Error(localHost
             ? "The sign-in service is not running. Start the MPWR API and try again."
