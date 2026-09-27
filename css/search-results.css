@@ -240,7 +240,7 @@ button,select{
     width:100vw;
     max-width:1500px;
     margin:0 auto;
-    padding:151px 9% 70px
+    padding:151px 5% 70px
 }
 
 .results-toolbar{
@@ -518,7 +518,7 @@ button,select{
     }
     
     .results-main{
-        padding:124px 9% 45px
+        padding:124px 16px 45px
     }
     
     .results-toolbar{

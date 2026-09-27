@@ -1,5 +1,5 @@
-const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-const API_ROOT = window.MPWR_API_URL || (localHost ? "http://127.0.0.1:3000/v1" : "/api/v1");
+const localHost = /^(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname);
+const API_ROOT = window.MPWR_API_URL || (localHost ? `http://${window.location.hostname}:3000/v1` : "/api/v1");
 let sessionUid = null;
 
 class ApiTimestamp {

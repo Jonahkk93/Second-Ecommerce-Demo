@@ -5535,6 +5535,11 @@ header{
     font-size: 1em;
 }
 
+@media screen and (max-width:600px){
+    .wishlist-details .wishlist-price .is-drawer-price .mpwr-sale-price{font-size:13px}
+    .wishlist-details .wishlist-price .is-drawer-price .mpwr-original-price{font-size:11px}
+}
+
 body:has(#discounts) .product-modal-price {
     font-size: 16px;
     line-height: 1.25;

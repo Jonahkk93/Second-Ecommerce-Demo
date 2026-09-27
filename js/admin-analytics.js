@@ -2,8 +2,8 @@ import { onAuthStateChanged, signOut } from "./auth-api.js";
 import { doc, getDoc } from "./firestore-api.js";
 import { adminAuth, adminDb } from "./admin-firebase.js";
 
-const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-const API_ROOT = window.MPWR_API_URL || (localHost ? "http://127.0.0.1:3000/v1" : "/api/v1");
+const localHost = /^(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname);
+const API_ROOT = window.MPWR_API_URL || (localHost ? `http://${window.location.hostname}:3000/v1` : "/api/v1");
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const statusColours = { pending: "#f2ad4b", processing: "#578ee9", shipped: "#8c65df", delivered: "#31ad76", cancelled: "#d95c5c" };
