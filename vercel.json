@@ -1,5 +1,10 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "cleanUrls": false
+  "cleanUrls": false,
+  "functions": {
+    "api/[...path].js": {
+      "maxDuration": 30
+    }
+  }
 }
