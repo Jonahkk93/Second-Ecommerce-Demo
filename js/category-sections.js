@@ -31,6 +31,45 @@
     const cards = Array.from(
         document.querySelectorAll("#products > .product-content > .product-box")
     );
+    const categoryOrder = (() => {
+        if (Array.isArray(window.MPWRCategoryOrder)) return window.MPWRCategoryOrder;
+        try {
+            return JSON.parse(localStorage.getItem("mpwrCategories") || "[]");
+        } catch (_) {
+            return [];
+        }
+    })();
+    const sectionWrap = document.querySelector(".home-category-sections");
+    const existingSections = new Map(
+        [...document.querySelectorAll("[data-home-category]")]
+            .map(section => [section.dataset.homeCategory, section])
+    );
+    const categoryLinks = {
+        "press-ons": "Nails.html",
+        wigs: "Wigs.html",
+        lashes: "Lashes.html",
+        products: "ProductsPage.html"
+    };
+    categoryOrder.forEach(category => {
+        if (!category?.slug || !sectionWrap) return;
+        let section = existingSections.get(category.slug);
+        if (!section) {
+            section = document.createElement("section");
+            section.className = "home-category-section";
+            section.dataset.homeCategory = category.slug;
+            section.innerHTML = `<div class="home-category-heading"><h2></h2><a hidden>View All</a></div><div class="product-content"></div>`;
+            existingSections.set(category.slug, section);
+        }
+        const heading = section.querySelector(".home-category-heading h2");
+        if (heading) heading.textContent = category.label || category.slug;
+        const link = section.querySelector(".home-category-heading a");
+        if (link) {
+            const href = categoryLinks[category.slug];
+            link.hidden = !href;
+            if (href) link.href = href;
+        }
+        sectionWrap.appendChild(section);
+    });
 
     // Establish the session's catalogue order before commerce handlers attach.
     const rankedCards = window.MPWRDiscovery

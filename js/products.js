@@ -734,6 +734,221 @@ function syncCatalogueCards() {
     });
 }
 
+const DEFAULT_HOMEPAGE_HERO = {
+    enabled: true,
+    eyebrow: "MPWR Beauty",
+    heading: "Beauty finds, made easy",
+    body: "Shop press-ons, wigs, lashes and self-care favourites curated for effortless everyday glam.",
+    buttonLabel: "Shop now",
+    buttonLink: "#products",
+    image: "images/PressOn Nails_Pink.JPG"
+};
+const DEFAULT_ANNOUNCEMENT_BAR = {
+    enabled: true,
+    message: "Free delivery on selected orders this week.",
+    linkLabel: "Shop now",
+    link: "#products"
+};
+const DEFAULT_CAMPAIGN_BANNER = {
+    enabled: true,
+    eyebrow: "Limited Offers",
+    heading: "15% off selected favourites",
+    body: "Bring your next beauty refresh home for less with limited-time campaign deals.",
+    buttonLabel: "Shop offers",
+    buttonLink: "#discounts",
+    image: "images/Icon Folder/Discount Icon_E5A484.PNG"
+};
+const DEFAULT_CATALOGUE_CATEGORIES = [
+    { slug: "press-ons", label: "Press-ons" },
+    { slug: "wigs", label: "Wigs" },
+    { slug: "products", label: "Products" },
+    { slug: "lashes", label: "Lashes" }
+];
+
+function normalizeHomepageHero(value = {}) {
+    const text = (input, fallback, maxLength) => {
+        const cleaned = String(input || "").trim().replace(/\s+/g, " ");
+        return (cleaned || fallback).slice(0, maxLength);
+    };
+    return {
+        enabled: value.enabled !== false,
+        eyebrow: text(value.eyebrow, DEFAULT_HOMEPAGE_HERO.eyebrow, 40),
+        heading: text(value.heading, DEFAULT_HOMEPAGE_HERO.heading, 80),
+        body: text(value.body, DEFAULT_HOMEPAGE_HERO.body, 180),
+        buttonLabel: text(value.buttonLabel, DEFAULT_HOMEPAGE_HERO.buttonLabel, 32),
+        buttonLink: text(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140),
+        image: text(value.image, DEFAULT_HOMEPAGE_HERO.image, 220)
+    };
+}
+
+function applyHomepageHero(value) {
+    const isHomepage = /(?:^\/$|\/index\.html$)/i.test(window.location.pathname);
+    if (!isHomepage) return;
+    const hero = normalizeHomepageHero(value);
+    const productsSection = document.querySelector("#products");
+    if (!productsSection) return;
+    let section = document.querySelector(".homepage-hero");
+    if (!hero.enabled) {
+        section?.remove();
+        return;
+    }
+    if (!section) {
+        section = document.createElement("section");
+        section.className = "homepage-hero";
+        section.innerHTML = `
+            <div class="homepage-hero-copy">
+                <p class="homepage-hero-eyebrow"></p>
+                <h1></h1>
+                <p class="homepage-hero-body"></p>
+                <a class="homepage-hero-button"></a>
+            </div>
+            <div class="homepage-hero-media"><img alt=""></div>
+        `;
+        productsSection.parentNode.insertBefore(section, productsSection);
+    }
+    section.querySelector(".homepage-hero-eyebrow").textContent = hero.eyebrow;
+    section.querySelector("h1").textContent = hero.heading;
+    section.querySelector(".homepage-hero-body").textContent = hero.body;
+    const button = section.querySelector(".homepage-hero-button");
+    button.textContent = hero.buttonLabel;
+    button.href = hero.buttonLink || "#products";
+    const image = section.querySelector("img");
+    image.src = hero.image;
+    image.alt = hero.heading;
+}
+
+function normalizeAnnouncementBar(value = {}) {
+    const text = (input, fallback, maxLength) => {
+        const cleaned = String(input || "").trim().replace(/\s+/g, " ");
+        return (cleaned || fallback).slice(0, maxLength);
+    };
+    return {
+        enabled: value.enabled !== false,
+        message: text(value.message, DEFAULT_ANNOUNCEMENT_BAR.message, 120),
+        linkLabel: text(value.linkLabel, DEFAULT_ANNOUNCEMENT_BAR.linkLabel, 32),
+        link: text(value.link, DEFAULT_ANNOUNCEMENT_BAR.link, 140)
+    };
+}
+
+function applyAnnouncementBar(value) {
+    const isHomepage = /(?:^\/$|\/index\.html$)/i.test(window.location.pathname);
+    if (!isHomepage) return;
+    const announcement = normalizeAnnouncementBar(value);
+    let bar = document.querySelector(".mpwr-announcement-bar");
+    document.body.classList.toggle("has-announcement-bar", announcement.enabled);
+    if (!announcement.enabled) {
+        bar?.remove();
+        return;
+    }
+    if (!bar) {
+        bar = document.createElement("div");
+        bar.className = "mpwr-announcement-bar";
+        bar.innerHTML = `<span></span><a></a>`;
+        document.body.insertBefore(bar, document.body.firstChild);
+    }
+    bar.querySelector("span").textContent = announcement.message;
+    const link = bar.querySelector("a");
+    link.textContent = announcement.linkLabel;
+    link.href = announcement.link || "#products";
+}
+
+function normalizeCampaignBanner(value = {}) {
+    const text = (input, fallback, maxLength) => {
+        const cleaned = String(input || "").trim().replace(/\s+/g, " ");
+        return (cleaned || fallback).slice(0, maxLength);
+    };
+    return {
+        enabled: value.enabled !== false,
+        eyebrow: text(value.eyebrow, DEFAULT_CAMPAIGN_BANNER.eyebrow, 40),
+        heading: text(value.heading, DEFAULT_CAMPAIGN_BANNER.heading, 80),
+        body: text(value.body, DEFAULT_CAMPAIGN_BANNER.body, 180),
+        buttonLabel: text(value.buttonLabel, DEFAULT_CAMPAIGN_BANNER.buttonLabel, 32),
+        buttonLink: text(value.buttonLink, DEFAULT_CAMPAIGN_BANNER.buttonLink, 140),
+        image: text(value.image, DEFAULT_CAMPAIGN_BANNER.image, 220)
+    };
+}
+
+function applyCampaignBanner(value) {
+    const isHomepage = /(?:^\/$|\/index\.html$)/i.test(window.location.pathname);
+    if (!isHomepage) return;
+    const banner = normalizeCampaignBanner(value);
+    const productsSection = document.querySelector("#products");
+    if (!productsSection) return;
+    let section = document.querySelector(".homepage-campaign-banner");
+    if (!banner.enabled) {
+        section?.remove();
+        return;
+    }
+    if (!section) {
+        section = document.createElement("section");
+        section.className = "homepage-campaign-banner";
+        section.innerHTML = `
+            <img class="homepage-campaign-image" alt="">
+            <div class="homepage-campaign-copy">
+                <p class="homepage-campaign-eyebrow"></p>
+                <h2></h2>
+                <p class="homepage-campaign-body"></p>
+            </div>
+            <a class="homepage-campaign-button"></a>
+        `;
+    }
+    const hero = document.querySelector(".homepage-hero");
+    if (hero?.parentNode === productsSection.parentNode) hero.after(section);
+    else productsSection.parentNode.insertBefore(section, productsSection);
+    section.querySelector(".homepage-campaign-eyebrow").textContent = banner.eyebrow;
+    section.querySelector("h2").textContent = banner.heading;
+    section.querySelector(".homepage-campaign-body").textContent = banner.body;
+    const button = section.querySelector(".homepage-campaign-button");
+    button.textContent = banner.buttonLabel;
+    button.href = banner.buttonLink || "#discounts";
+    const image = section.querySelector(".homepage-campaign-image");
+    image.src = banner.image;
+    image.alt = banner.heading;
+}
+
+function normalizeCatalogueCategories(items) {
+    const defaults = new Map(DEFAULT_CATALOGUE_CATEGORIES.map(category => [category.slug, category]));
+    const normalized = [];
+    const known = new Set();
+    (Array.isArray(items) ? items : []).forEach(item => {
+        const slug = String(item?.slug || "").trim().toLowerCase();
+        const label = String(item?.label || defaults.get(slug)?.label || "").trim();
+        if (!slug || !label || known.has(slug)) return;
+        known.add(slug);
+        normalized.push({ slug, label });
+    });
+    DEFAULT_CATALOGUE_CATEGORIES.forEach(category => {
+        if (!known.has(category.slug)) {
+            known.add(category.slug);
+            normalized.push({ ...category });
+        }
+    });
+    return normalized;
+}
+
+function applyCategoryOrder(items) {
+    const categories = normalizeCatalogueCategories(items);
+    window.MPWRCategoryOrder = categories;
+    const filterBar = document.querySelector(".filter-bar");
+    if (!filterBar) return;
+    const activeFilter = filterBar.querySelector(".filter-btn.active")?.dataset.filter || "all";
+    const allButton = filterBar.querySelector('.filter-btn[data-filter="all"]') || document.createElement("button");
+    allButton.type = "button";
+    allButton.className = "filter-btn";
+    allButton.dataset.filter = "all";
+    allButton.textContent = "All";
+    filterBar.replaceChildren(allButton, ...categories.map(category => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "filter-btn";
+        button.dataset.filter = category.slug;
+        button.textContent = category.label;
+        return button;
+    }));
+    const activeButton = filterBar.querySelector(`.filter-btn[data-filter="${CSS.escape(activeFilter)}"]`) || allButton;
+    activeButton.classList.add("active");
+}
+
 const catalogueLocalHost = /^(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname);
 const catalogueHost = catalogueLocalHost
     ? `http://${window.location.hostname}:3000/v1`
@@ -768,6 +983,36 @@ window.MPWRCatalogueReady = fetch(`${catalogueHost}/products`, { credentials: "i
         return products;
     })
     .then(async catalogue => {
+        let cachedAnnouncement = null;
+        try {
+            cachedAnnouncement = JSON.parse(localStorage.getItem("mpwrAnnouncementBar") || "null");
+        } catch (_) {
+            cachedAnnouncement = null;
+        }
+        applyAnnouncementBar(cachedAnnouncement || DEFAULT_ANNOUNCEMENT_BAR);
+
+        let cachedHero = null;
+        try {
+            cachedHero = JSON.parse(localStorage.getItem("mpwrHomepageHero") || "null");
+        } catch (_) {
+            cachedHero = null;
+        }
+        applyHomepageHero(cachedHero || DEFAULT_HOMEPAGE_HERO);
+        let cachedCampaign = null;
+        try {
+            cachedCampaign = JSON.parse(localStorage.getItem("mpwrCampaignBanner") || "null");
+        } catch (_) {
+            cachedCampaign = null;
+        }
+        applyCampaignBanner(cachedCampaign || DEFAULT_CAMPAIGN_BANNER);
+        let cachedCategories = null;
+        try {
+            cachedCategories = JSON.parse(localStorage.getItem("mpwrCategories") || "null");
+        } catch (_) {
+            cachedCategories = null;
+        }
+        applyCategoryOrder(cachedCategories || DEFAULT_CATALOGUE_CATEGORIES);
+
         let discounts = null;
         try {
             discounts = JSON.parse(localStorage.getItem("mpwrDiscountProducts") || "null");
@@ -782,6 +1027,31 @@ window.MPWRCatalogueReady = fetch(`${catalogueHost}/products`, { credentials: "i
                 import("./firestore-api.js")
             ]);
             if (window.db) {
+                const announcementSnapshot = await getDoc(doc(window.db, "storefront", "announcementBar"));
+                const remoteAnnouncement = announcementSnapshot.data();
+                if (remoteAnnouncement) {
+                    applyAnnouncementBar(remoteAnnouncement);
+                    localStorage.setItem("mpwrAnnouncementBar", JSON.stringify(normalizeAnnouncementBar(remoteAnnouncement)));
+                }
+                const heroSnapshot = await getDoc(doc(window.db, "storefront", "homepageHero"));
+                const remoteHero = heroSnapshot.data();
+                if (remoteHero) {
+                    applyHomepageHero(remoteHero);
+                    localStorage.setItem("mpwrHomepageHero", JSON.stringify(normalizeHomepageHero(remoteHero)));
+                }
+                const campaignSnapshot = await getDoc(doc(window.db, "storefront", "campaignBanner"));
+                const remoteCampaign = campaignSnapshot.data();
+                if (remoteCampaign) {
+                    applyCampaignBanner(remoteCampaign);
+                    localStorage.setItem("mpwrCampaignBanner", JSON.stringify(normalizeCampaignBanner(remoteCampaign)));
+                }
+                const categorySnapshot = await getDoc(doc(window.db, "storefront", "categories"));
+                const remoteCategories = categorySnapshot.data()?.items;
+                if (Array.isArray(remoteCategories)) {
+                    const normalizedCategories = normalizeCatalogueCategories(remoteCategories);
+                    applyCategoryOrder(normalizedCategories);
+                    localStorage.setItem("mpwrCategories", JSON.stringify(normalizedCategories));
+                }
                 const snapshot = await getDoc(doc(window.db, "storefront", "discounts"));
                 const remoteDiscounts = snapshot.data()?.products;
                 if (Array.isArray(remoteDiscounts)) {

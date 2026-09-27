@@ -21,6 +21,30 @@ const HOMEPAGE_DISCOUNT_PRODUCT_LIMIT = 10;
 const SEARCH_POPULAR_PRODUCT_LIMIT = 12;
 const DEFAULT_SEARCH_SUGGESTIONS = ["Press-ons", "Wigs", "Lashes", "Nail polish", "Moisturizer", "Pink", "Black", "Shoulder"];
 const DEFAULT_DISCOUNTS = ["12", "15", "1", "4", "11"].map(id => ({ id, percent: 15 }));
+const DEFAULT_ANNOUNCEMENT_BAR = {
+    enabled: true,
+    message: "Free delivery on selected orders this week.",
+    linkLabel: "Shop now",
+    link: "#products"
+};
+const DEFAULT_HOMEPAGE_HERO = {
+    enabled: true,
+    eyebrow: "MPWR Beauty",
+    heading: "Beauty finds, made easy",
+    body: "Shop press-ons, wigs, lashes and self-care favourites curated for effortless everyday glam.",
+    buttonLabel: "Shop now",
+    buttonLink: "#products",
+    image: "images/PressOn Nails_Pink.JPG"
+};
+const DEFAULT_CAMPAIGN_BANNER = {
+    enabled: true,
+    eyebrow: "Limited Offers",
+    heading: "15% off selected favourites",
+    body: "Bring your next beauty refresh home for less with limited-time campaign deals.",
+    buttonLabel: "Shop offers",
+    buttonLink: "#discounts",
+    image: "images/Icon Folder/Discount Icon_E5A484.PNG"
+};
 const DISCOUNT_CAMPAIGN_LABELS = ["Limited Offers", "Valentines Offers", "Christmas Offers", "Black Friday"];
 const LEGACY_DISCOUNT_CAMPAIGN_LABELS = { Valentines: "Valentines Offers", Christmas: "Christmas Offers" };
 const DISCOUNT_CAMPAIGN_ICONS = {
@@ -52,6 +76,9 @@ let discountCampaignLabel = DISCOUNT_CAMPAIGN_LABELS[0];
 let popularMode = "manual";
 let discountMode = "manual";
 let discountSectionEnabled = true;
+let announcementBar = { ...DEFAULT_ANNOUNCEMENT_BAR };
+let homepageHero = { ...DEFAULT_HOMEPAGE_HERO };
+let campaignBanner = { ...DEFAULT_CAMPAIGN_BANNER };
 let searchSettings = { suggestions: [...DEFAULT_SEARCH_SUGGESTIONS], popularProducts: [], popularMode: "automatic", suggestionsEnabled: true, popularEnabled: true, suggestionsHeading: "Suggested searches", popularHeading: "Popular picks", defaultSort: "relevance" };
 let editingProduct = null;
 let pendingMediaPreviewUrls = [];
@@ -81,6 +108,149 @@ function notifyStorefrontChange() {
     const revision = String(Date.now());
     localStorage.setItem("mpwrCatalogueRevision", revision);
     catalogueChannel?.postMessage({ type: "catalogue-changed", revision });
+}
+
+function cleanHeroText(value, fallback, maxLength) {
+    const text = String(value || "").trim().replace(/\s+/g, " ");
+    return (text || fallback).slice(0, maxLength);
+}
+
+function normalizeAnnouncementBar(value = {}) {
+    return {
+        enabled: value.enabled !== false,
+        message: cleanHeroText(value.message, DEFAULT_ANNOUNCEMENT_BAR.message, 120),
+        linkLabel: cleanHeroText(value.linkLabel, DEFAULT_ANNOUNCEMENT_BAR.linkLabel, 32),
+        link: cleanHeroText(value.link, DEFAULT_ANNOUNCEMENT_BAR.link, 140)
+    };
+}
+
+function readAnnouncementBarForm() {
+    announcementBar = normalizeAnnouncementBar({
+        enabled: $("#homepage-announcement-enabled").checked,
+        message: $("#homepage-announcement-message").value,
+        linkLabel: $("#homepage-announcement-link-label").value,
+        link: $("#homepage-announcement-link").value
+    });
+    return announcementBar;
+}
+
+function renderAnnouncementBarPreview() {
+    const announcement = readAnnouncementBarForm();
+    const preview = $("#homepage-announcement-preview");
+    preview.classList.toggle("is-hidden", !announcement.enabled);
+    $(".homepage-announcement-toggle-label").textContent = announcement.enabled ? "Shown" : "Hidden";
+    preview.querySelector("span").textContent = announcement.message;
+    const link = preview.querySelector("a");
+    link.textContent = announcement.linkLabel;
+    link.href = announcement.link || "#products";
+}
+
+function syncAnnouncementBarForm() {
+    $("#homepage-announcement-enabled").checked = announcementBar.enabled !== false;
+    $("#homepage-announcement-message").value = announcementBar.message;
+    $("#homepage-announcement-link-label").value = announcementBar.linkLabel;
+    $("#homepage-announcement-link").value = announcementBar.link;
+    renderAnnouncementBarPreview();
+}
+
+function normalizeHomepageHero(value = {}) {
+    return {
+        enabled: value.enabled !== false,
+        eyebrow: cleanHeroText(value.eyebrow, DEFAULT_HOMEPAGE_HERO.eyebrow, 40),
+        heading: cleanHeroText(value.heading, DEFAULT_HOMEPAGE_HERO.heading, 80),
+        body: cleanHeroText(value.body, DEFAULT_HOMEPAGE_HERO.body, 180),
+        buttonLabel: cleanHeroText(value.buttonLabel, DEFAULT_HOMEPAGE_HERO.buttonLabel, 32),
+        buttonLink: cleanHeroText(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140),
+        image: cleanHeroText(value.image, DEFAULT_HOMEPAGE_HERO.image, 220)
+    };
+}
+
+function readHomepageHeroForm() {
+    homepageHero = normalizeHomepageHero({
+        enabled: $("#homepage-hero-enabled").checked,
+        eyebrow: $("#homepage-hero-eyebrow").value,
+        heading: $("#homepage-hero-heading").value,
+        body: $("#homepage-hero-body").value,
+        buttonLabel: $("#homepage-hero-button-label").value,
+        buttonLink: $("#homepage-hero-button-link").value,
+        image: $("#homepage-hero-image").value
+    });
+    return homepageHero;
+}
+
+function renderHomepageHeroPreview() {
+    const hero = readHomepageHeroForm();
+    const preview = $("#homepage-hero-preview");
+    preview.classList.toggle("is-hidden", !hero.enabled);
+    $(".homepage-hero-toggle-label").textContent = hero.enabled ? "Shown" : "Hidden";
+    preview.querySelector(".hero-preview-eyebrow").textContent = hero.eyebrow;
+    preview.querySelector("h3").textContent = hero.heading;
+    preview.querySelector(".hero-preview-body").textContent = hero.body;
+    preview.querySelector(".hero-preview-button").textContent = hero.buttonLabel;
+    const image = preview.querySelector("img");
+    image.src = hero.image;
+    image.alt = hero.heading;
+}
+
+function syncHomepageHeroForm() {
+    $("#homepage-hero-enabled").checked = homepageHero.enabled !== false;
+    $("#homepage-hero-eyebrow").value = homepageHero.eyebrow;
+    $("#homepage-hero-heading").value = homepageHero.heading;
+    $("#homepage-hero-body").value = homepageHero.body;
+    $("#homepage-hero-button-label").value = homepageHero.buttonLabel;
+    $("#homepage-hero-button-link").value = homepageHero.buttonLink;
+    $("#homepage-hero-image").value = homepageHero.image;
+    renderHomepageHeroPreview();
+}
+
+function normalizeCampaignBanner(value = {}) {
+    return {
+        enabled: value.enabled !== false,
+        eyebrow: cleanHeroText(value.eyebrow, DEFAULT_CAMPAIGN_BANNER.eyebrow, 40),
+        heading: cleanHeroText(value.heading, DEFAULT_CAMPAIGN_BANNER.heading, 80),
+        body: cleanHeroText(value.body, DEFAULT_CAMPAIGN_BANNER.body, 180),
+        buttonLabel: cleanHeroText(value.buttonLabel, DEFAULT_CAMPAIGN_BANNER.buttonLabel, 32),
+        buttonLink: cleanHeroText(value.buttonLink, DEFAULT_CAMPAIGN_BANNER.buttonLink, 140),
+        image: cleanHeroText(value.image, DEFAULT_CAMPAIGN_BANNER.image, 220)
+    };
+}
+
+function readCampaignBannerForm() {
+    campaignBanner = normalizeCampaignBanner({
+        enabled: $("#homepage-campaign-enabled").checked,
+        eyebrow: $("#homepage-campaign-eyebrow").value,
+        heading: $("#homepage-campaign-heading").value,
+        body: $("#homepage-campaign-body").value,
+        buttonLabel: $("#homepage-campaign-button-label").value,
+        buttonLink: $("#homepage-campaign-button-link").value,
+        image: $("#homepage-campaign-image").value
+    });
+    return campaignBanner;
+}
+
+function renderCampaignBannerPreview() {
+    const banner = readCampaignBannerForm();
+    const preview = $("#homepage-campaign-preview");
+    preview.classList.toggle("is-hidden", !banner.enabled);
+    $(".homepage-campaign-toggle-label").textContent = banner.enabled ? "Shown" : "Hidden";
+    preview.querySelector(".hero-preview-eyebrow").textContent = banner.eyebrow;
+    preview.querySelector("h3").textContent = banner.heading;
+    preview.querySelector(".hero-preview-body").textContent = banner.body;
+    preview.querySelector(".hero-preview-button").textContent = banner.buttonLabel;
+    const image = preview.querySelector("img");
+    image.src = banner.image;
+    image.alt = banner.heading;
+}
+
+function syncCampaignBannerForm() {
+    $("#homepage-campaign-enabled").checked = campaignBanner.enabled !== false;
+    $("#homepage-campaign-eyebrow").value = campaignBanner.eyebrow;
+    $("#homepage-campaign-heading").value = campaignBanner.heading;
+    $("#homepage-campaign-body").value = campaignBanner.body;
+    $("#homepage-campaign-button-label").value = campaignBanner.buttonLabel;
+    $("#homepage-campaign-button-link").value = campaignBanner.buttonLink;
+    $("#homepage-campaign-image").value = campaignBanner.image;
+    renderCampaignBannerPreview();
 }
 
 function showToast(message, type = "success") {
@@ -303,11 +473,12 @@ function categorySlug(value) {
 }
 
 function normalizeCategories(items) {
-    const normalized = DEFAULT_CATEGORIES.map(category => ({ ...category }));
-    const known = new Set(normalized.map(category => category.slug));
+    const defaults = new Map(DEFAULT_CATEGORIES.map(category => [category.slug, category]));
+    const normalized = [];
+    const known = new Set();
     (Array.isArray(items) ? items : []).forEach(item => {
         const slug = categorySlug(item?.slug || item?.label);
-        const label = String(item?.label || "").trim().slice(0, 60);
+        const label = String(item?.label || defaults.get(slug)?.label || "").trim().slice(0, 60);
         if (!slug || !label || known.has(slug)) return;
         known.add(slug);
         normalized.push({
@@ -315,6 +486,12 @@ function normalizeCategories(items) {
             label,
             productIds: Array.isArray(item?.productIds) ? item.productIds.map(String).filter(Boolean) : []
         });
+    });
+    DEFAULT_CATEGORIES.forEach(category => {
+        if (!known.has(category.slug)) {
+            known.add(category.slug);
+            normalized.push({ ...category });
+        }
     });
     return normalized;
 }
@@ -342,6 +519,44 @@ function syncCategoryControls(preferredProductCategory = "") {
     productSelect.value = productValue === UNCATEGORIZED_CATEGORY || categories.some(category => category.slug === productValue) ? productValue : "products";
     productDropdownSync.get(filter)?.refresh?.();
     productDropdownSync.get(productSelect)?.refresh?.();
+    renderCategoryOrder();
+}
+
+function renderCategoryOrder() {
+    const list = $("#category-order-list");
+    if (!list) return;
+    list.innerHTML = categories.map((category, index) => `
+        <article class="category-order-item" draggable="true" data-slug="${escapeHtml(category.slug)}">
+            <span class="category-order-drag" aria-hidden="true">☰</span>
+            <div><strong>${escapeHtml(category.label)}</strong><small>${escapeHtml(category.slug)}</small></div>
+            <div class="category-order-actions">
+                <button type="button" data-category-move="up" ${index === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(category.label)} up">↑</button>
+                <button type="button" data-category-move="down" ${index === categories.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(category.label)} down">↓</button>
+            </div>
+        </article>
+    `).join("");
+}
+
+function moveCategory(slug, direction) {
+    const index = categories.findIndex(category => category.slug === slug);
+    if (index < 0) return;
+    const nextIndex = direction === "up" ? index - 1 : index + 1;
+    if (nextIndex < 0 || nextIndex >= categories.length) return;
+    const nextCategories = [...categories];
+    [nextCategories[index], nextCategories[nextIndex]] = [nextCategories[nextIndex], nextCategories[index]];
+    categories = nextCategories;
+    syncCategoryControls();
+}
+
+function reorderCategoryBefore(dragSlug, targetSlug) {
+    if (!dragSlug || !targetSlug || dragSlug === targetSlug) return;
+    const dragged = categories.find(category => category.slug === dragSlug);
+    if (!dragged) return;
+    const withoutDragged = categories.filter(category => category.slug !== dragSlug);
+    const targetIndex = withoutDragged.findIndex(category => category.slug === targetSlug);
+    if (targetIndex < 0) return;
+    categories = [...withoutDragged.slice(0, targetIndex), dragged, ...withoutDragged.slice(targetIndex)];
+    syncCategoryControls();
 }
 
 function syncCategoryProductSelection() {
@@ -499,6 +714,9 @@ async function loadData() {
     const popularSetting = bootstrap.settings.popular || {};
     const bestsellerSetting = bootstrap.settings.bestsellers || {};
     const discountSetting = bootstrap.settings.discounts || {};
+    const announcementSetting = bootstrap.settings.announcementBar || {};
+    const heroSetting = bootstrap.settings.homepageHero || {};
+    const campaignSetting = bootstrap.settings.campaignBanner || {};
     const storedSearch = bootstrap.settings.search || {};
     products = bootstrap.products;
     deletedProducts = bootstrap.deletedProducts;
@@ -520,6 +738,9 @@ async function loadData() {
     discountCampaignLabel = normalizeDiscountCampaignLabel(discountSetting.label);
     discountMode = discountSetting.mode === "automatic" ? "automatic" : "manual";
     discountSectionEnabled = discountSetting.enabled !== false;
+    announcementBar = normalizeAnnouncementBar(announcementSetting);
+    homepageHero = normalizeHomepageHero(heroSetting);
+    campaignBanner = normalizeCampaignBanner(campaignSetting);
     searchSettings = {
         suggestions: Array.isArray(storedSearch.suggestions) ? storedSearch.suggestions.map(String).filter(Boolean).slice(0, 20) : [...DEFAULT_SEARCH_SUGGESTIONS],
         popularProducts: Array.isArray(storedSearch.popularProducts) ? storedSearch.popularProducts.map(item => String(item.id || item)).slice(0, SEARCH_POPULAR_PRODUCT_LIMIT) : [],
@@ -533,6 +754,9 @@ async function loadData() {
     $("#popular-mode-automatic").checked = popularMode === "automatic";
     $("#discount-mode-automatic").checked = discountMode === "automatic";
     $("#offer-section-enabled").checked = discountSectionEnabled;
+    syncAnnouncementBarForm();
+    syncHomepageHeroForm();
+    syncCampaignBannerForm();
     syncHomepageSectionStates();
     $("#discount-campaign-label").value = discountCampaignLabel;
     productDropdownSync.get($("#discount-campaign-label"))?.();
@@ -1131,7 +1355,30 @@ function syncHomepageSectionStates() {
 }
 
 async function saveHomepageSettings() {
-    await Promise.all([savePopularSetting(), saveDiscountSetting()]);
+    await Promise.all([savePopularSetting(), saveDiscountSetting(), saveAnnouncementBar(), saveHomepageHero(), saveCampaignBanner(), saveCategorySetting()]);
+}
+
+async function saveAnnouncementBar() {
+    const announcement = readAnnouncementBarForm();
+    await setDoc(doc(db, "storefront", "announcementBar"), announcement);
+    localStorage.setItem("mpwrAnnouncementBar", JSON.stringify(announcement));
+}
+
+async function saveHomepageHero() {
+    const hero = readHomepageHeroForm();
+    await setDoc(doc(db, "storefront", "homepageHero"), hero);
+    localStorage.setItem("mpwrHomepageHero", JSON.stringify(hero));
+}
+
+async function saveCampaignBanner() {
+    const banner = readCampaignBannerForm();
+    await setDoc(doc(db, "storefront", "campaignBanner"), banner);
+    localStorage.setItem("mpwrCampaignBanner", JSON.stringify(banner));
+}
+
+async function saveCategorySetting() {
+    await setDoc(doc(db, "storefront", "categories"), { items: categories });
+    localStorage.setItem("mpwrCategories", JSON.stringify(categories));
 }
 
 async function verifyHomepageAddition(section, productId) {
@@ -1667,6 +1914,46 @@ function bindEvents() {
     });
     $("#homepage-search").addEventListener("input", renderHomepageProducts);
     $("#discount-search").addEventListener("input", renderDiscountProducts);
+    $("#category-order-list").addEventListener("click", event => {
+        const button = event.target.closest("[data-category-move]");
+        const item = event.target.closest(".category-order-item");
+        if (!button || !item) return;
+        moveCategory(item.dataset.slug, button.dataset.categoryMove);
+    });
+    $("#category-order-list").addEventListener("dragstart", event => {
+        const item = event.target.closest(".category-order-item");
+        if (!item) return;
+        item.classList.add("dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", item.dataset.slug);
+    });
+    $("#category-order-list").addEventListener("dragend", event => {
+        event.target.closest(".category-order-item")?.classList.remove("dragging");
+    });
+    $("#category-order-list").addEventListener("dragover", event => {
+        const item = event.target.closest(".category-order-item");
+        if (!item) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+    });
+    $("#category-order-list").addEventListener("drop", event => {
+        const item = event.target.closest(".category-order-item");
+        if (!item) return;
+        event.preventDefault();
+        reorderCategoryBefore(event.dataTransfer.getData("text/plain"), item.dataset.slug);
+    });
+    ["#homepage-announcement-enabled", "#homepage-announcement-message", "#homepage-announcement-link-label", "#homepage-announcement-link"].forEach(selector => {
+        const field = $(selector);
+        field.addEventListener(field.type === "checkbox" ? "change" : "input", renderAnnouncementBarPreview);
+    });
+    ["#homepage-hero-enabled", "#homepage-hero-eyebrow", "#homepage-hero-heading", "#homepage-hero-body", "#homepage-hero-button-label", "#homepage-hero-button-link", "#homepage-hero-image"].forEach(selector => {
+        const field = $(selector);
+        field.addEventListener(field.type === "checkbox" ? "change" : "input", renderHomepageHeroPreview);
+    });
+    ["#homepage-campaign-enabled", "#homepage-campaign-eyebrow", "#homepage-campaign-heading", "#homepage-campaign-body", "#homepage-campaign-button-label", "#homepage-campaign-button-link", "#homepage-campaign-image"].forEach(selector => {
+        const field = $(selector);
+        field.addEventListener(field.type === "checkbox" ? "change" : "input", renderCampaignBannerPreview);
+    });
     const closeHomepageSaveConfirmation = () => {
         $("#homepage-save-modal").classList.add("hidden");
         $("#save-homepage").focus();
