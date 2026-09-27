@@ -31,6 +31,9 @@ const reviewProductOptions = document.querySelector(".account-review-product-opt
 const reviewError = document.querySelector(".account-review-error");
 const reviewSubmit = document.querySelector(".account-review-submit");
 const reviewStars = [...document.querySelectorAll(".account-review-stars button")];
+const accountTabs = [...document.querySelectorAll(".account-tab")];
+const accountPanels = [...document.querySelectorAll(".account-order-section")];
+const PURCHASES_SECTION_STORAGE_KEY = "mpwrPurchasesSection";
 
 let currentReviewItem = null;
 let currentReviewRating = 0;
@@ -144,6 +147,7 @@ function openReviewModal(item) {
     reviewComment.value = "";
     syncAccountReviewFiles([]);
     reviewError.textContent = "";
+    reviewComment.classList.remove("is-invalid");
     reviewProductName.textContent = item.title || "Purchased product";
     reviewProductImage.src = window.normalizeMPWRImagePath?.(item.image, item.id) || item.image || "images/MPWR Logo.PNG";
     reviewProductImage.alt = item.title || "Purchased product";
@@ -241,6 +245,13 @@ reviewFile.addEventListener("change", () => {
     syncAccountReviewFiles(files);
 });
 
+reviewComment.addEventListener("input", () => {
+    reviewComment.classList.remove("is-invalid");
+    if (reviewError.textContent === "Add a quick note about your item before posting.") {
+        reviewError.textContent = "";
+    }
+});
+
 reviewOverlay.addEventListener("click", event => {
     if (event.target === reviewOverlay) closeReviewModal();
 });
@@ -255,8 +266,19 @@ reviewForm.addEventListener("submit", async event => {
     const files = [...reviewFile.files];
 
     reviewError.textContent = "";
-    if (!user || !currentReviewItem || !currentReviewRating || !comment) {
-        reviewError.textContent = "Choose a star rating and write your review.";
+    reviewComment.classList.remove("is-invalid");
+    if (!user || !currentReviewItem) {
+        reviewError.textContent = "We could not find this purchase. Please reopen the review form.";
+        return;
+    }
+    if (!currentReviewRating) {
+        reviewError.textContent = "Tap a star to rate your item.";
+        return;
+    }
+    if (!comment) {
+        reviewComment.classList.add("is-invalid");
+        reviewError.textContent = "Add a quick note about your item before posting.";
+        reviewComment.focus();
         return;
     }
     if (files.length > 5) {
@@ -358,6 +380,28 @@ function renderCategory(name, items, emptyMessage) {
     document.querySelector(`[data-count="${name}"]`).textContent = items.length;
 }
 
+function setPurchasesSection(section, save = true) {
+    const activeTab = accountTabs.find(tab => tab.dataset.section === section) || accountTabs[0];
+    if (!activeTab) return;
+
+    const activeSection = activeTab.dataset.section;
+    accountTabs.forEach(tab =>
+        tab.classList.toggle("active", tab === activeTab)
+    );
+    accountTabs.forEach(tab => {
+        const icon = tab.querySelector(".account-tab-icon");
+        if (!icon) return;
+        icon.src = tab.classList.contains("active")
+            ? icon.dataset.iconActive
+            : icon.dataset.iconDefault;
+    });
+    accountPanels.forEach(panel =>
+        panel.classList.toggle("active", panel.dataset.panel === activeSection)
+    );
+
+    if (save) sessionStorage.setItem(PURCHASES_SECTION_STORAGE_KEY, activeSection);
+}
+
 async function loadAccount(user) {
     const ordersSnapshot = await getDocs(
         query(collection(db, "orders"), where("userId", "==", user.uid))
@@ -427,21 +471,13 @@ async function loadAccount(user) {
     renderCategory("reviewed", reviewed, "You have not reviewed any purchases yet.");
 }
 
-document.querySelectorAll(".account-tab").forEach(tab => {
+accountTabs.forEach(tab => {
     tab.addEventListener("click", () => {
-        document.querySelectorAll(".account-tab").forEach(item =>
-            item.classList.toggle("active", item === tab)
-        );
-        document.querySelectorAll(".account-tab-icon").forEach(icon => {
-            icon.src = icon.closest(".account-tab").classList.contains("active")
-                ? icon.dataset.iconActive
-                : icon.dataset.iconDefault;
-        });
-        document.querySelectorAll(".account-order-section").forEach(panel =>
-            panel.classList.toggle("active", panel.dataset.panel === tab.dataset.section)
-        );
+        setPurchasesSection(tab.dataset.section);
     });
 });
+
+setPurchasesSection(sessionStorage.getItem(PURCHASES_SECTION_STORAGE_KEY), false);
 
 signoutButton?.addEventListener("click", async () => {
     const savedUrl = sessionStorage.getItem("accountReturnUrl");

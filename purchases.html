@@ -21,7 +21,7 @@
     <main class="account-page">
         <section class="account-dashboard" hidden>
             <div class="account-section-title account-purchases-title">
-                <p class="account-kicker"><span class="account-purchases-kicker-content"><img src="images/Icon Folder/Purchased Icon_E5A484.PNG" alt=""><span>My Purchases</span></span></p>
+                <p class="account-kicker"><span class="account-purchases-kicker-content"><span>My Purchases</span></span></p>
                 <h1></h1>
             </div>
 
@@ -93,11 +93,12 @@
                     <p class="account-review-product"></p>
                     <span class="account-review-product-options"></span>
                 </div>
+                <span class="account-review-purchased"><img src="images/Icon Folder/Verified Icon_E5A484.PNG" alt=""> <span>Purchased</span></span>
             </div>
 
             <form id="account-review-form">
                 <fieldset>
-                    <legend>Your rating</legend>
+                    <legend>Tap to rate</legend>
                     <div class="account-review-stars">
                         <button type="button" data-rating="1" aria-label="1 star">★</button>
                         <button type="button" data-rating="2" aria-label="2 stars">★</button>
@@ -108,7 +109,7 @@
                 </fieldset>
 
                 <label for="account-review-comment">Your review</label>
-                <textarea id="account-review-comment" rows="5" maxlength="800" required placeholder="Share your experience with this product"></textarea>
+                <textarea id="account-review-comment" rows="5" maxlength="800" placeholder="Share your experience with this product"></textarea>
                 <span class="account-review-upload-heading">Photos <span>(optional, up to 5)</span></span>
                 <div class="account-review-media-row">
                     <label class="account-review-file-button" for="account-review-file" aria-label="Add review photos"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></label>

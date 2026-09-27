@@ -50,8 +50,9 @@ html.account-modal-open,body.account-modal-open{overflow:hidden;overscroll-behav
 #account-panel[hidden]{display:none}
 
 @media screen and (max-width:600px){
-    .account-overlay{padding:16px}
-    .account-modal{width:100%;max-width:360px;max-height:calc(100dvh - 32px);padding:24px;border-radius:18px}
+    .account-overlay{align-items:flex-end;padding:max(16px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom))}
+    .account-modal{width:min(100%,390px);max-width:none;max-height:calc(100dvh - max(28px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));padding:24px 24px max(24px, env(safe-area-inset-bottom));border-radius:22px 22px 18px 18px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+    .account-close{position:sticky;top:0;z-index:2;display:grid;width:34px;height:34px;margin:-12px -12px 4px auto;padding:0;border:0;border-radius:50%;background:#f5f2f0;color:#3a302b;font-size:24px;line-height:1;place-items:center}
     .account-modal-icon{width:44px;height:44px;margin-bottom:12px}
     .account-header{margin-bottom:20px}
     .account-header h2{margin-bottom:6px;font-size:26px}
@@ -5640,6 +5641,11 @@ html.site-loading-enabled :is(
 }
 
 @media screen and (max-width:600px){
+    .wishlist-details .wishlist-price .is-drawer-price .mpwr-sale-price{font-size:13px}
+    .wishlist-details .wishlist-price .is-drawer-price .mpwr-original-price{font-size:11px}
+}
+
+@media screen and (min-width:601px) and (max-width:1200px){
     .wishlist-details .wishlist-price .is-drawer-price .mpwr-sale-price{font-size:13px}
     .wishlist-details .wishlist-price .is-drawer-price .mpwr-original-price{font-size:11px}
 }

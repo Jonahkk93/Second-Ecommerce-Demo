@@ -199,7 +199,7 @@ forgotPassword?.addEventListener("click", async event => {
     }
 });
 
-registerForm.addEventListener("submit", async (e) => {
+registerForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const firstName =
@@ -250,7 +250,7 @@ registerForm.reset();
     }
 });
 
-signinForm.addEventListener("submit", async (e) => {
+signinForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const email = document.getElementById("signin-email").value.trim();
@@ -326,7 +326,7 @@ homeSignout?.addEventListener("click", async event => {
     showAuthToast("Signed out successfully!", "success");
 });
 
-logoutButton.addEventListener("click", async () => {
+logoutButton?.addEventListener("click", async () => {
 
     try {
 
