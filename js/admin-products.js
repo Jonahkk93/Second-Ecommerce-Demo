@@ -868,10 +868,11 @@ function renderSearchSettings() {
     $("#search-suggestions-heading").value = searchSettings.suggestionsHeading;
     $("#search-popular-heading").value = searchSettings.popularHeading;
     $("#search-default-sort").value = searchSettings.defaultSort;
+    $("#search-default-sort").managementPickerSync?.();
     $("#search-suggestions-enabled").closest(".toggle-row").querySelector(".search-toggle-label").textContent = searchSettings.suggestionsEnabled ? "Shown" : "Hidden";
     $("#search-popular-enabled").closest(".toggle-row").querySelector(".search-toggle-label").textContent = searchSettings.popularEnabled ? "Shown" : "Hidden";
     $(".search-mode-label").textContent = searchSettings.popularMode === "automatic" ? "Automatic" : "Manual";
-    $("#search-suggestion-list").innerHTML = searchSettings.suggestions.map((label, index) => `<div class="search-suggestion-row" data-index="${index}"><button class="search-suggestion-drag" type="button" aria-label="Drag ${escapeHtml(label)} to reorder"><img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt=""></button><span>${escapeHtml(label)}</span><button type="button" data-remove aria-label="Remove ${escapeHtml(label)}">×</button></div>`).join("") || '<p class="search-setting-empty">No suggested searches added.</p>';
+    $("#search-suggestion-list").innerHTML = searchSettings.suggestions.map((label, index) => `<div class="search-suggestion-row" data-index="${index}"><button class="search-suggestion-drag" type="button" aria-label="Drag ${escapeHtml(label)} to reorder"><img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt=""></button><span>${escapeHtml(label)}</span><button type="button" data-remove aria-label="Remove ${escapeHtml(label)}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`).join("") || '<p class="search-setting-empty">No suggested searches added.</p>';
     const query = $("#search-popular-product-search").value.trim().toLowerCase();
     const manual = searchSettings.popularMode === "manual";
     const selected = new Set(searchSettings.popularProducts);
@@ -1287,7 +1288,77 @@ async function handleProductSubmit(event) {
     }
 }
 
+function enhanceManagementSelect(select) {
+    const picker = document.createElement("div");
+    picker.className = "management-select-picker";
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "management-select-trigger";
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.innerHTML = '<span></span><i aria-hidden="true"></i>';
+    const menu = document.createElement("div");
+    menu.className = "management-select-menu";
+    menu.setAttribute("role", "listbox");
+    menu.hidden = true;
+
+    const close = () => {
+        menu.hidden = true;
+        trigger.setAttribute("aria-expanded", "false");
+    };
+    const sync = () => {
+        const selected = select.options[select.selectedIndex];
+        trigger.querySelector("span").textContent = selected?.textContent || "Select";
+        menu.querySelectorAll("button").forEach(button => {
+            const active = button.dataset.value === select.value;
+            button.classList.toggle("selected", active);
+            button.setAttribute("aria-selected", String(active));
+        });
+    };
+
+    [...select.options].forEach(option => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.setAttribute("role", "option");
+        button.dataset.value = option.value;
+        button.textContent = option.textContent;
+        button.addEventListener("click", () => {
+            select.value = option.value;
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            sync();
+            close();
+            trigger.focus();
+        });
+        menu.appendChild(button);
+    });
+
+    trigger.addEventListener("click", event => {
+        event.stopPropagation();
+        const opening = menu.hidden;
+        document.querySelectorAll(".management-select-menu").forEach(item => { item.hidden = true; });
+        document.querySelectorAll(".management-select-trigger").forEach(item => item.setAttribute("aria-expanded", "false"));
+        menu.hidden = !opening;
+        trigger.setAttribute("aria-expanded", String(opening));
+        if (opening) menu.querySelector(".selected")?.focus();
+    });
+    picker.addEventListener("keydown", event => {
+        if (event.key !== "Escape") return;
+        close();
+        trigger.focus();
+    });
+    document.addEventListener("click", event => {
+        if (!picker.contains(event.target)) close();
+    });
+
+    picker.append(trigger, menu);
+    select.insertAdjacentElement("afterend", picker);
+    select.classList.add("management-native-select");
+    select.managementPickerSync = sync;
+    sync();
+}
+
 function bindEvents() {
+    enhanceManagementSelect($("#search-default-sort"));
     $("#search-suggestion-form").addEventListener("submit", event => {
         event.preventDefault();
         const input = $("#search-suggestion-input");

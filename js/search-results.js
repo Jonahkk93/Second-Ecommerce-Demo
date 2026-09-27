@@ -647,7 +647,7 @@ function enhanceFilterSelect(select) {
     trigger.className = "filter-picker-trigger";
     trigger.setAttribute("aria-haspopup","listbox");
     trigger.setAttribute("aria-expanded","false");
-    trigger.innerHTML = '<span class="filter-picker-label"></span><span class="filter-picker-arrow" aria-hidden="true"></span>';
+    trigger.innerHTML = '<span class="filter-picker-label"></span><img class="filter-picker-arrow" src="images/Icon Folder/Back Icon Down_Gray.PNG" alt="">';
     const menu = document.createElement("div");
     menu.className = "filter-picker-menu";
     menu.setAttribute("role","listbox");
@@ -670,7 +670,7 @@ function enhanceFilterSelect(select) {
         });
     };
 
-    [...select.options].forEach((option,index,options) => {
+    [...select.options].forEach(option => {
         const button = document.createElement("button");
         button.type = "button";
         button.setAttribute("role","option");
@@ -685,12 +685,6 @@ function enhanceFilterSelect(select) {
             trigger.focus();
         });
         menu.appendChild(button);
-        if (index < options.length - 1) {
-            const divider = document.createElement("div");
-            divider.className = "filter-option-divider";
-            divider.setAttribute("aria-hidden","true");
-            menu.appendChild(divider);
-        }
     });
 
     trigger.addEventListener("click",event => {

@@ -240,7 +240,7 @@ button,select{
     width:100vw;
     max-width:1500px;
     margin:0 auto;
-    padding:151px 5% 70px
+    padding:151px 9% 70px
 }
 
 .results-toolbar{
@@ -348,19 +348,16 @@ button,select{
 }
 
 .filter-picker-arrow{
-    width:8px;
-    height:8px;
-    flex:0 0 8px;
-    margin:0 3px 4px 0;
-    border-right:2px solid #8f8580;
-    border-bottom:2px solid #8f8580;
-    transform:rotate(45deg);
+    display:block;
+    width:13px;
+    height:13px;
+    flex:0 0 13px;
+    object-fit:contain;
     transition:transform .18s ease
 }
 
 .filter-picker-trigger[aria-expanded="true"] .filter-picker-arrow{
-    margin-bottom:-3px;
-    transform:rotate(225deg)
+    transform:rotate(180deg)
 }
 
 .filter-picker-menu{
@@ -404,13 +401,6 @@ button,select{
     border-radius:8px;
     background:#E5A484;
     color:#fff
-}
-
-.filter-option-divider{
-    width:calc(100% - 16px);
-    height:1px;
-    margin:3px 8px;
-    background:linear-gradient(to right,#E4E4E4 12%,#E4E4E4 88%,transparent)
 }
 
 .filter-picker[data-select-id="sort-results"]{
@@ -528,7 +518,7 @@ button,select{
     }
     
     .results-main{
-        padding:124px 16px 45px
+        padding:124px 9% 45px
     }
     
     .results-toolbar{

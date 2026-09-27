@@ -443,7 +443,7 @@ document.querySelectorAll(".account-tab").forEach(tab => {
     });
 });
 
-signoutButton.addEventListener("click", async () => {
+signoutButton?.addEventListener("click", async () => {
     const savedUrl = sessionStorage.getItem("accountReturnUrl");
     sessionStorage.removeItem("accountReturnUrl");
 
@@ -475,7 +475,7 @@ onAuthStateChanged(auth, async user => {
     loading.hidden = true;
     dashboard.hidden = !user;
     if (profileOverview) profileOverview.hidden = !user;
-    signoutButton.hidden = !user;
+    if (signoutButton) signoutButton.hidden = !user;
 
     if (!user) {
         sessionStorage.setItem("openAccountSignIn", "true");

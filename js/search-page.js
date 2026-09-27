@@ -108,7 +108,7 @@ function renderLiveSuggestions(query) {
         button.className = "live-suggestion";
         button.setAttribute("role","option");
         const icon = document.createElement("img");
-        icon.src = "images/Search icon black .png";
+        icon.src = "images/Icon Folder/Search Icon_Gray.PNG";
         icon.alt = "";
         const text = document.createElement("span");
         text.appendChild(highlightedLabel(label,query.trim()));
