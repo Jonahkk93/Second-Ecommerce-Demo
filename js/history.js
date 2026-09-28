@@ -158,7 +158,7 @@ function updateCartBadge(cart = getCart()) {
     }
     const titleCount = cartDrawer?.querySelector(".cart-title-count");
     if (titleCount) {
-        titleCount.textContent = count > 0 ? `(${count})` : "";
+        titleCount.textContent = count > 0 ? String(count) : "";
         titleCount.hidden = count === 0;
     }
 }

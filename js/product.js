@@ -1593,7 +1593,7 @@ function updateCartBadge() {
     const totalItems = cartItems.length;
 
     if (titleCount) {
-        titleCount.textContent = totalItems > 0 ? `(${totalItems})` : "";
+        titleCount.textContent = totalItems > 0 ? String(totalItems) : "";
         titleCount.hidden = totalItems === 0;
     }
 
@@ -2678,7 +2678,8 @@ productShareButton?.addEventListener("click", async () => {
    
 
 cartIcon.addEventListener("click", () => {
-
+    renderSavedCart();
+    updateCartBadge();
     cart.classList.add("active");
     syncSidePanelScrollLock();
 

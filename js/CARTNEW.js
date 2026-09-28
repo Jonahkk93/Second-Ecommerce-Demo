@@ -593,7 +593,7 @@ function updateCartCount() {
     cartItemCount = cartItems.length;
 
     if (titleCount) {
-        titleCount.textContent = cartItemCount > 0 ? `(${cartItemCount})` : "";
+        titleCount.textContent = cartItemCount > 0 ? String(cartItemCount) : "";
         titleCount.hidden = cartItemCount === 0;
     }
 
@@ -1244,9 +1244,9 @@ function addToCart(productBox, selections = {}, overrides = {}) {
        Create cart element
     --------------------------------------------------------- */
 
-    const cartBox = createCartBox(cartItem);
-
-    cartContent.appendChild(cartBox);
+    // Rebuild from the normalized saved cart so storage and the visible
+    // drawer cannot drift apart after authentication or cross-tab updates.
+    renderSavedCart();
 
 
     /* --------------------------------------------------------
@@ -1365,7 +1365,7 @@ addCartButtons.forEach(button => {
 ============================================================ */
 
 cartIcon.addEventListener("click", () => {
-
+    renderSavedCart();
     cart.classList.add("active");
     syncSidePanelScrollLock();
 

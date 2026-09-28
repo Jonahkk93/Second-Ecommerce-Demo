@@ -378,7 +378,7 @@ function renderCartDrawer() {
     const count = cart.length;
     const titleCount = cartDrawer?.querySelector(".cart-title-count");
     if (titleCount) {
-        titleCount.textContent = count > 0 ? `(${count})` : "";
+        titleCount.textContent = count > 0 ? String(count) : "";
         titleCount.hidden = count === 0;
     }
     cartDrawer?.classList.toggle("is-empty", cart.length === 0);
