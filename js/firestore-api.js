@@ -55,6 +55,14 @@ export function updateOrderRefund(orderId, status, db = window.db, details = {})
     return request(`/orders/${encodeURIComponent(orderId)}/refund`, { method: "PATCH", body: { status, ...details }, db });
 }
 
+export function updateOrderTracking(orderId, tracking, db = window.db) {
+    return request(`/orders/${encodeURIComponent(orderId)}/tracking`, { method: "PATCH", body: tracking, db });
+}
+
+export function updateUserBlock(userId, blocked, reason = "", db = window.adminDb) {
+    return request(`/admin/users/${encodeURIComponent(userId)}/block`, { method: "PATCH", body: { blocked, reason }, db });
+}
+
 export function collection(db, name) { return { kind: "collection", db, name, constraints: [] }; }
 export function doc(first, second, third) {
     if (first?.kind === "collection") return { kind: "document", db: first.db, name: first.name, id: second || crypto.randomUUID() };
@@ -102,6 +110,7 @@ export async function getDocs(reference) {
     if (reference.name === "reviews") { const product = constraint(reference, "productId"); const user = constraint(reference, "userId"); rows = product ? await request(`/reviews?productId=${encodeURIComponent(product.value)}`, { auth: false }) : user ? await request("/reviews/mine", { db: reference.db }) : []; }
     if (reference.name === "orders") rows = reference.db?.kind === "admin" ? await request("/orders/admin/all", { db: reference.db }) : await request("/orders", { db: reference.db });
     if (reference.name === "products") rows = reference.db?.kind === "admin" ? await request("/admin/products", { db: reference.db }) : await request("/products", { auth: false });
+    if (reference.name === "users") rows = reference.db?.kind === "admin" ? await request("/admin/users", { db: reference.db }) : [];
     if (reference.name === "deletedProducts") rows = await request("/admin/products/deleted", { db: reference.db });
     const docs = rows.map(row => { const normalized = normalizeRow(reference.name, row); return snapshot(normalized.legacyId || normalized.id, normalized); });
     return { docs, empty: docs.length === 0, size: docs.length, forEach(callback) { docs.forEach(callback); } };
@@ -119,7 +128,8 @@ export async function setDoc(reference, data) {
 function normalizeProduct(data, legacyId) {
     const title = String(data.title || "Product");
     const id = String(legacyId || data.id || Date.now());
-    return { legacyId: id, title, slug: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${id}`, description: data.description || "", price: Number(data.price) || 0, imageUrl: data.image || data.imageUrl || "", shippingClass: data.shippingClass || "small", weightGrams: Number(data.weightGrams) || undefined, active: data.active !== false, metadata: { colors: data.colors || [], sizes: data.sizes || [], category: data.category || "products", gallery: data.gallery || [], videos: data.videos || [], sku: data.sku || "", stock: Math.max(0, Number(data.stock) || 0), compareAtPrice: Math.max(0, Number(data.compareAtPrice) || 0), featured: Boolean(data.featured) } };
+    const visibility = ["active", "hidden", "draft"].includes(data.visibility) ? data.visibility : (data.active === false ? "draft" : "active");
+    return { legacyId: id, title, slug: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${id}`, description: data.description || "", price: Number(data.price) || 0, imageUrl: data.image || data.imageUrl || "", shippingClass: data.shippingClass || "small", weightGrams: Number(data.weightGrams) || undefined, visibility, active: visibility === "active", metadata: { colors: data.colors || [], sizes: data.sizes || [], category: data.category || "products", gallery: data.gallery || [], videos: data.videos || [], sku: data.sku || "", stock: Math.max(0, Number(data.stock) || 0), compareAtPrice: Math.max(0, Number(data.compareAtPrice) || 0), featured: Boolean(data.featured) } };
 }
 
 function normalizeProductUpdate(data) {
@@ -132,6 +142,7 @@ function normalizeProductUpdate(data) {
     if (data.shippingClass !== undefined) body.shippingClass = data.shippingClass;
     if (data.weightGrams !== undefined) body.weightGrams = Math.max(0, Number(data.weightGrams) || 0);
     if (data.active !== undefined) body.active = Boolean(data.active);
+    if (data.visibility !== undefined && ["active", "hidden", "draft"].includes(data.visibility)) body.visibility = data.visibility;
     if (data.metadata !== undefined) body.metadata = data.metadata;
     return body;
 }

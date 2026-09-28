@@ -812,6 +812,11 @@ a[x-apple-data-detectors]{
     margin-bottom:24px;
 }
 
+.admin-tracking-panel{margin:18px 0;padding:17px;border:1px solid #e5ded9;border-radius:14px;background:#fbfaf9}.admin-tracking-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:13px}.admin-tracking-heading small{color:#b46f4d;font-size:9px;font-weight:750;letter-spacing:.12em;text-transform:uppercase}.admin-tracking-heading h4{margin-top:3px;color:#302a27}.admin-tracking-heading span{color:#7b726e;font-size:11px}.admin-tracking-fields{display:grid;grid-template-columns:1fr 1fr minmax(220px,1.4fr) auto;gap:10px;align-items:end}.admin-tracking-fields label{display:grid;gap:5px;color:#6f6763;font-size:10px;font-weight:700;text-transform:uppercase}.admin-tracking-fields input{min-width:0;height:40px;padding:0 11px;border:1px solid #dcd5d1;border-radius:9px;background:#fff;color:#333;font:inherit;font-size:12px;text-transform:none}.admin-tracking-fields input:focus{border-color:#c98261;outline:2px solid rgba(201,130,97,.15)}.admin-tracking-fields button{height:40px;padding:0 15px;border:0;border-radius:9px;background:#333;color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer}.admin-tracking-fields button:disabled{cursor:wait;opacity:.55}
+
+@media(max-width:900px){.admin-tracking-fields{grid-template-columns:1fr 1fr}.admin-tracking-fields label:nth-child(3){grid-column:1/-1}}
+@media(max-width:560px){.admin-tracking-fields{grid-template-columns:1fr}.admin-tracking-fields label:nth-child(3){grid-column:auto}.admin-tracking-heading{align-items:flex-start;flex-direction:column}}
+
 .status-section{
     display:flex;
     flex-direction:column;

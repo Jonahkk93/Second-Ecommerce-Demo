@@ -23,6 +23,30 @@ const homeAccountName = document.getElementById("home-account-name");
 const homeAccountEmail = document.getElementById("home-account-email");
 const homeSignout = document.getElementById("home-signout");
 const defaultAccountImage = "images/Account Logo 3.PNG";
+const signinHeading = document.getElementById("signin-heading");
+const signinSubheading = document.getElementById("signin-subheading");
+const blockedLogoutModal = document.getElementById("blocked-logout-modal");
+let blockedLogoutReason = "This account has been blocked.";
+
+function resetSigninMessage() {
+    if (!signinHeading || !signinSubheading) return;
+    signinHeading.textContent = "Welcome";
+    signinHeading.classList.remove("signin-error-message");
+    signinSubheading.textContent = "Sign in to continue shopping.";
+    signinSubheading.hidden = false;
+}
+
+function showSigninError(message) {
+    if (!signinHeading || !signinSubheading) return;
+    signinHeading.replaceChildren(document.createTextNode(`${message} `));
+    const contactLink = document.createElement("a");
+    contactLink.href = `account-appeal.html?email=${encodeURIComponent(document.getElementById("signin-email")?.value.trim() || "")}`;
+    contactLink.className = "signin-error-contact";
+    contactLink.textContent = "Contact Us";
+    signinHeading.append(contactLink);
+    signinHeading.classList.add("signin-error-message");
+    signinSubheading.hidden = true;
+}
 
 function setAccountScrollLock(locked) {
     document.documentElement.classList.toggle("account-modal-open", locked);
@@ -44,6 +68,7 @@ function initializeAccountControls() {
     const homeViewProfile = document.getElementById("home-view-profile");
 
     const showSignin = () => {
+        resetSigninMessage();
         registerView?.classList.remove("active");
         signinView?.classList.remove("hide");
         accountOverlay?.classList.add("active");
@@ -167,6 +192,34 @@ function showAuthToast(message, type = "success") {
     }, 2500);
 }
 
+function showBlockedLogoutPopup(message) {
+    if (!blockedLogoutModal) return;
+    blockedLogoutReason = message;
+    blockedLogoutModal.hidden = false;
+    blockedLogoutModal.setAttribute("aria-hidden", "false");
+    blockedLogoutModal.classList.add("active");
+    blockedLogoutModal.querySelector(".blocked-logout-see-why")?.focus();
+}
+
+window.addEventListener("mpwr:account-blocked", event => {
+    showBlockedLogoutPopup(event.detail?.message || "This account has been blocked.");
+});
+
+function closeBlockedLogoutModal() {
+    blockedLogoutModal?.classList.remove("active");
+    blockedLogoutModal?.setAttribute("aria-hidden", "true");
+    if (blockedLogoutModal) blockedLogoutModal.hidden = true;
+}
+
+blockedLogoutModal?.querySelector(".blocked-logout-see-why")?.addEventListener("click", () => {
+    closeBlockedLogoutModal();
+    accountIcon?.click();
+    showSigninError(blockedLogoutReason);
+});
+blockedLogoutModal?.addEventListener("click", event => {
+    if (event.target === blockedLogoutModal) closeBlockedLogoutModal();
+});
+
 function authErrorMessage(error) {
     return String(error?.message || "Something went wrong.")
         .replace(/^Firebase:\s*/i, "");
@@ -177,7 +230,7 @@ const registerForm = document.getElementById("register-form");
 
 // Sign in form
 const signinForm = document.getElementById("signin-form");
-const forgotPassword = signinForm?.querySelector(".account-options a");
+const forgotPassword = signinForm?.querySelector(".forgot-password-button");
 
 forgotPassword?.addEventListener("click", async event => {
     event.preventDefault();
@@ -258,11 +311,13 @@ signinForm?.addEventListener("submit", async (e) => {
     const submitButton = signinForm.querySelector('[type="submit"]');
 
     if (!email || !password) {
+        resetSigninMessage();
         showAuthToast("Enter your email and password.", "warning");
         return;
     }
 
     try {
+        resetSigninMessage();
         submitButton.disabled = true;
         submitButton.setAttribute("aria-busy", "true");
         await signInWithEmailAndPassword(auth, email, password);
@@ -272,11 +327,17 @@ signinForm?.addEventListener("submit", async (e) => {
         signinForm.reset();
 
     } catch (error) {
-        showAuthToast(authErrorMessage(error), "warning");
+        const message = authErrorMessage(error);
+        if (error?.code === "auth/account-blocked" || /account has been blocked/i.test(message)) showSigninError(message);
+        else showAuthToast(message, "warning");
     } finally {
         submitButton.disabled = false;
         submitButton.removeAttribute("aria-busy");
     }
+});
+
+signinForm?.addEventListener("input", () => {
+    if (signinHeading?.classList.contains("signin-error-message")) resetSigninMessage();
 });
 
 onAuthStateChanged(auth, async (user) => {

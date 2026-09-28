@@ -1,0 +1,24 @@
+.appeal-media-row {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.appeal-media-row::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+#appeal-explanation {
+    min-height: 46px;
+    max-height: 180px;
+    resize: none;
+    overflow-y: hidden;
+}
+
+.appeal-success > span img {
+    display: block;
+    width: 25px;
+    height: 25px;
+    object-fit: contain;
+}

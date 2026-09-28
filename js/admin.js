@@ -14,6 +14,7 @@ import {
     getManagementBootstrap,
     markCustomerCancellationSeen,
     updateOrderRefund,
+    updateOrderTracking,
     updateDoc,
     setDoc,
     serverTimestamp
@@ -466,6 +467,9 @@ totalRevenue += Number(order.total) || 0;
 const deliveryFee = Number(order.deliveryFee ?? order.delivery?.fee ?? 0);
 const orderTotal = Number(order.total) || 0;
 const orderSubtotal = Number(order.subtotal ?? Math.max(0, orderTotal - deliveryFee));
+const trackingNumber = String(order.trackingNumber || "");
+const shippingCarrier = String(order.shippingCarrier || "");
+const trackingUrl = String(order.trackingUrl || "");
 
 if (order.userId) {
     customers.add(order.userId);
@@ -528,6 +532,16 @@ orderCard.innerHTML = `
 
 </div>
 
+<form class="admin-tracking-panel" aria-label="Shipment tracking">
+    <div class="admin-tracking-heading"><div><small>Shipment tracking</small><h4>${trackingNumber ? "Tracking assigned" : "Add tracking details"}</h4></div>${order.shippedAt ? `<span>Shipped ${dashboardEscape(new Date(order.shippedAt.toDate?.() || order.shippedAt).toLocaleDateString("en-UG"))}</span>` : ""}</div>
+    <div class="admin-tracking-fields">
+        <label>Tracking number<input name="trackingNumber" maxlength="120" value="${dashboardEscape(trackingNumber)}" placeholder="e.g. MPWR-482910" required></label>
+        <label>Carrier / courier<input name="shippingCarrier" maxlength="120" value="${dashboardEscape(shippingCarrier)}" placeholder="e.g. SafeBoda"></label>
+        <label>Tracking link<input name="trackingUrl" type="url" maxlength="1000" value="${dashboardEscape(trackingUrl)}" placeholder="https://..."></label>
+        <button type="submit">${trackingNumber ? "Update tracking" : "Save tracking"}</button>
+    </div>
+</form>
+
 ${refundPanel(refund)}
 
 <div class="admin-order-items">
@@ -565,6 +579,26 @@ ${refundPanel(refund)}
         const statusTrigger = statusPicker.querySelector(".status-picker-trigger");
         const statusMenu = statusPicker.querySelector(".status-picker-menu");
         const cancellationSeenButton = orderCard.querySelector(".customer-cancellation-seen");
+        const trackingForm = orderCard.querySelector(".admin-tracking-panel");
+        trackingForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const submit = trackingForm.querySelector('button[type="submit"]');
+            const data = new FormData(trackingForm);
+            submit.disabled = true;
+            try {
+                await updateOrderTracking(apiOrderId, {
+                    trackingNumber: String(data.get("trackingNumber") || ""),
+                    shippingCarrier: String(data.get("shippingCarrier") || ""),
+                    trackingUrl: String(data.get("trackingUrl") || "")
+                }, db);
+                showAdminToast("Shipment tracking saved");
+                await loadOrdersWithFeedback();
+            } catch (error) {
+                console.error("Unable to save shipment tracking:", error);
+                showAdminToast(error?.message || "Shipment tracking could not be saved.", "error");
+                submit.disabled = false;
+            }
+        });
         orderCard.querySelectorAll("[data-refund-next]").forEach(button => {
             button.addEventListener("click", async () => {
                 const nextStatus = button.dataset.refundNext;

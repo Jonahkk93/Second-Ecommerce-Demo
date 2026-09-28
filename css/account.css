@@ -1018,8 +1018,31 @@ body.review-modal-open{
 }
 
 .account-review-product-options span:not(:last-child)::after{
-    margin:0 5px;
-    content:"•";
+    content:none;
+}
+
+/* Match the established portrait product tiles in the laptop review modal. */
+@media (min-width:761px) and (max-width:1799px){
+    .account-review-product-context{
+        grid-template-columns:92px minmax(0,1fr) auto;
+    }
+
+    .account-review-product-image{
+        width:92px;
+        height:100px;
+        border-radius:12px;
+        object-fit:cover;
+    }
+
+    .account-review-product-context > div{
+        max-height:100px;
+    }
+
+    .account-review-product-options{
+        display:grid;
+        gap:2px;
+        line-height:1.3;
+    }
 }
 
 .account-review-product-options span{

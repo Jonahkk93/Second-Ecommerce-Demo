@@ -18,10 +18,10 @@ const mediaTypes: Record<string, { extension: string; kind: "image" | "video"; s
 };
 
 class DeleteMediaDto { @IsString() key!: string; }
-type MultipartRequest = FastifyRequest & { file(options?: { limits?: { files?: number; fileSize?: number } }): Promise<MultipartFile | undefined> };
+export type MultipartRequest = FastifyRequest & { file(options?: { limits?: { files?: number; fileSize?: number } }): Promise<MultipartFile | undefined> };
 
 @Injectable()
-class MediaService {
+export class MediaService {
   private readonly accountId: string;
   private readonly accessKeyId: string;
   private readonly secretAccessKey: string;
@@ -44,7 +44,7 @@ class MediaService {
 
   async upload(user: AuthUser, purpose: string, request: MultipartRequest) {
     this.assertConfigured();
-    if (!["profile", "review", "product"].includes(purpose)) throw new UnsupportedMediaTypeException("Unsupported media purpose");
+    if (!["profile", "review", "product", "appeal"].includes(purpose)) throw new UnsupportedMediaTypeException("Unsupported media purpose");
     if (purpose === "product" && user.role !== "admin") throw new ForbiddenException("Admin access required for product images");
     const maxFileSize = purpose === "product" ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
     const file = await request.file({ limits: { files: 1, fileSize: maxFileSize } });
@@ -57,6 +57,8 @@ class MediaService {
     await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: buffer, ContentType: file.mimetype, CacheControl: "public, max-age=31536000, immutable", Metadata: { originalName: encodeURIComponent(file.filename).slice(0, 900) } }));
     return { key, url: `${this.publicBaseUrl}/${key}`, contentType: file.mimetype, size: buffer.length };
   }
+
+  uploadAppeal(userId: string, request: MultipartRequest) { return this.upload({ sub: userId, email: "", role: "customer" }, "appeal", request); }
 
   async remove(user: AuthUser, key: string) {
     this.assertConfigured();
@@ -74,5 +76,5 @@ class MediaController {
   @Delete() remove(@CurrentUser() user: AuthUser, @Body() dto: DeleteMediaDto) { return this.media.remove(user, dto.key); }
 }
 
-@Module({ controllers: [MediaController], providers: [MediaService] })
+@Module({ controllers: [MediaController], providers: [MediaService], exports: [MediaService] })
 export class MediaModule {}

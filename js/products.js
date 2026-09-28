@@ -787,6 +787,7 @@ function applyHomepageHero(value) {
     const hero = normalizeHomepageHero(value);
     const productsSection = document.querySelector("#products");
     if (!productsSection) return;
+    document.body.classList.toggle("has-homepage-hero", hero.enabled);
     let section = document.querySelector(".homepage-hero");
     if (!hero.enabled) {
         section?.remove();

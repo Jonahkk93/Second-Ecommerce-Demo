@@ -1,5 +1,5 @@
 import { onAuthStateChanged } from "./auth-api.js";
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getManagementBootstrap, setDoc, updateDoc } from "./firestore-api.js";
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getManagementBootstrap, setDoc, updateDoc } from "./firestore-api.js?v=20260928-2";
 import { deleteImage, uploadImage } from "./media-api.js";
 import { openReviewLightbox } from "./review-lightbox.js?v=20260923-3";
 
@@ -103,6 +103,16 @@ let categoryReassignmentTarget = null;
 const catalogueChannel = "BroadcastChannel" in window ? new BroadcastChannel("mpwr-catalogue") : null;
 const panelHashes = { catalogue: "products", homepage: "homepage", search: "search-page", deleted: "deleted-products" };
 const hashPanels = Object.fromEntries(Object.entries(panelHashes).map(([panel, hash]) => [hash, panel]));
+
+function productVisibility(product) {
+    return ["active", "hidden", "draft"].includes(product?.visibility)
+        ? product.visibility
+        : (product?.active === false ? "draft" : "active");
+}
+
+function isStorefrontActive(product) {
+    return productVisibility(product) === "active";
+}
 
 function notifyStorefrontChange() {
     const revision = String(Date.now());
@@ -367,7 +377,7 @@ function updateHomepageSelection(product, action, sourceCard = null) {
         return false;
     }
     if (popularMode === "manual") {
-        popularIds = popularIds.filter(id => products.some(item => String(item.id) === id && item.active !== false)
+        popularIds = popularIds.filter(id => products.some(item => String(item.id) === id && isStorefrontActive(item))
             && (!discountSectionEnabled || !isHomepageDiscount(id)));
     }
     if (action === "add" && !popularIds.includes(String(product.id)) && popularIds.length >= POPULAR_PRODUCT_LIMIT) {
@@ -394,7 +404,7 @@ function discountSelection(id) {
 }
 
 function automaticDiscountSelections() {
-    const eligible = product => product.active !== false;
+    const eligible = isStorefrontActive;
     const rankedIds = automaticPopularIds.filter(id => products.some(product => String(product.id) === id && eligible(product)));
     const rankedSet = new Set(rankedIds);
     const fallbackIds = products.filter(product => eligible(product) && !rankedSet.has(String(product.id))).map(product => String(product.id));
@@ -766,11 +776,12 @@ async function loadData() {
 }
 
 function renderStats() {
-    const published = products.filter(product => product.active !== false);
+    const activeProducts = products.filter(isStorefrontActive);
     $("#stat-total").textContent = products.length;
-    $("#stat-active").textContent = published.length;
-    $("#stat-draft").textContent = products.length - published.length;
-    $("#stat-low-stock").textContent = published.filter(product => product.stock !== undefined && Number(product.stock) <= 5).length;
+    $("#stat-active").textContent = activeProducts.length;
+    $("#stat-hidden").textContent = products.filter(product => productVisibility(product) === "hidden").length;
+    $("#stat-draft").textContent = products.filter(product => productVisibility(product) === "draft").length;
+    $("#stat-low-stock").textContent = activeProducts.filter(product => product.stock !== undefined && Number(product.stock) <= 5).length;
     $("#deleted-nav-count").textContent = deletedProducts.length;
 }
 
@@ -781,7 +792,7 @@ function filteredProducts() {
     return products.filter(product => {
         const matchesQuery = !query || `${product.title || ""} ${product.sku || ""}`.toLowerCase().includes(query);
         const matchesCategory = category === "all" || productCategory(product) === category;
-        const matchesStatus = status === "all" || (status === "active" ? product.active !== false : product.active === false);
+        const matchesStatus = status === "all" || productVisibility(product) === status;
         return matchesQuery && matchesCategory && matchesStatus;
     });
 }
@@ -791,7 +802,8 @@ function renderProducts() {
     $("#product-count").textContent = `${visibleProducts.length} result${visibleProducts.length === 1 ? "" : "s"}`;
     $("#products-empty").classList.toggle("hidden", visibleProducts.length > 0);
     $(".products-list").innerHTML = visibleProducts.map(product => {
-        const status = product.active === false ? "draft" : "active";
+        const status = productVisibility(product);
+        const statusLabel = status === "active" ? "Active" : status === "hidden" ? "Hidden" : "Draft";
         const stockTracked = product.stock !== undefined && product.stock !== null;
         const stock = Math.max(0, Number(product.stock) || 0);
         return `<article class="product-card" data-id="${escapeHtml(product.id)}">
@@ -800,7 +812,7 @@ function renderProducts() {
             <span class="category-pill">${escapeHtml(categoryLabels[productCategory(product)] || "Products")}</span>
             <span class="product-price">${formatMoney(product.price)}</span>
             <span class="stock-value ${stockTracked && stock <= 5 ? "low" : ""}">${stockTracked ? `${stock} in stock` : "Not tracked"}</span>
-            <span class="status-pill ${status}">${status === "active" ? "Published" : "Draft"}</span>
+            <span class="status-pill ${status}">${statusLabel}</span>
             <div class="product-card-actions"><button class="edit-product" type="button" aria-label="Edit ${escapeHtml(product.title || "product")}" title="Edit"><img src="images/Icon Folder/Pencil Icon_333.PNG" alt=""></button><button class="archive-product" type="button" aria-label="Delete ${escapeHtml(product.title || "product")}" title="Delete"><img src="images/Icon Folder/Delete Icon_333.PNG" alt=""></button></div>
         </article>`;
     }).join("");
@@ -848,7 +860,7 @@ function renderPopularSelection() {
 
 function automaticPopularSelectionIds() {
     const discountedIds = discountSectionEnabled ? new Set(homepageDiscountSelections().map(item => item.id)) : new Set();
-    const eligible = product => product.active !== false && !discountedIds.has(String(product.id));
+    const eligible = product => isStorefrontActive(product) && !discountedIds.has(String(product.id));
     const rankedIds = automaticPopularIds.filter(id => products.some(product => String(product.id) === id && eligible(product)));
     const rankedSet = new Set(rankedIds);
     const fallbackIds = products.filter(product => eligible(product) && !rankedSet.has(String(product.id))).map(product => String(product.id));
@@ -868,7 +880,7 @@ function selectionPlaceholderMarkup(index) {
 
 function renderHomepageProducts() {
     const query = $("#homepage-search").value.trim().toLowerCase();
-    const candidates = products.filter(product => product.active !== false && (!query || `${product.title} ${product.sku || ""}`.toLowerCase().includes(query)));
+    const candidates = products.filter(product => isStorefrontActive(product) && (!query || `${product.title} ${product.sku || ""}`.toLowerCase().includes(query)));
     $("#homepage-products").innerHTML = candidates.map(product => {
         const selectedProduct = popularMode === "manual" && popularIds.includes(String(product.id)) && (!discountSectionEnabled || !isHomepageDiscount(product.id));
         const discountedProduct = discountSectionEnabled && isHomepageDiscount(product.id);
@@ -979,7 +991,7 @@ function renderDiscountSelection() {
 
 function renderDiscountProducts() {
     const query = $("#discount-search").value.trim().toLowerCase();
-    const candidates = products.filter(product => product.active !== false && (!query || `${product.title} ${product.sku || ""}`.toLowerCase().includes(query)));
+    const candidates = products.filter(product => isStorefrontActive(product) && (!query || `${product.title} ${product.sku || ""}`.toLowerCase().includes(query)));
     $("#discount-products").innerHTML = candidates.map(product => {
         const selectedProduct = discountMode === "manual" && isHomepageDiscount(product.id);
         const pickerDisabled = discountMode === "automatic";
@@ -1049,9 +1061,9 @@ function removeDiscountSelectionCard(id) {
 }
 
 function renderHomepage() {
-    discountSelections = discountSelections.filter(item => products.some(product => String(product.id) === item.id && product.active !== false));
+    discountSelections = discountSelections.filter(item => products.some(product => String(product.id) === item.id && isStorefrontActive(product)));
     const discountedIds = new Set(homepageDiscountSelections().map(item => item.id));
-    popularIds = popularIds.filter(id => (popularMode === "automatic" || !discountSectionEnabled || !discountedIds.has(id)) && products.some(product => String(product.id) === id && product.active !== false)).slice(0, POPULAR_PRODUCT_LIMIT);
+    popularIds = popularIds.filter(id => (popularMode === "automatic" || !discountSectionEnabled || !discountedIds.has(id)) && products.some(product => String(product.id) === id && isStorefrontActive(product))).slice(0, POPULAR_PRODUCT_LIMIT);
     renderPopularSelection();
     renderHomepageProducts();
     renderDiscountSelection();
@@ -1081,7 +1093,7 @@ function searchPopularSelection() {
     const ids = searchSettings.popularMode === "automatic"
         ? [...automaticPopularIds, ...products.map(product => String(product.id))]
         : searchSettings.popularProducts;
-    return [...new Set(ids)].map(id => products.find(product => String(product.id) === id && product.active !== false)).filter(Boolean).slice(0, SEARCH_POPULAR_PRODUCT_LIMIT);
+    return [...new Set(ids)].map(id => products.find(product => String(product.id) === id && isStorefrontActive(product))).filter(Boolean).slice(0, SEARCH_POPULAR_PRODUCT_LIMIT);
 }
 
 function renderSearchSettings() {
@@ -1100,7 +1112,7 @@ function renderSearchSettings() {
     const query = $("#search-popular-product-search").value.trim().toLowerCase();
     const manual = searchSettings.popularMode === "manual";
     const selected = new Set(searchSettings.popularProducts);
-    $("#search-popular-products").innerHTML = products.filter(product => product.active !== false && (!query || `${product.title} ${product.category || ""}`.toLowerCase().includes(query))).map(product => {
+    $("#search-popular-products").innerHTML = products.filter(product => isStorefrontActive(product) && (!query || `${product.title} ${product.category || ""}`.toLowerCase().includes(query))).map(product => {
         const id = String(product.id);
         const selectedIndex = searchSettings.popularProducts.indexOf(id);
         const controls = selected.has(id) && manual
@@ -1168,7 +1180,7 @@ function openEditor(product = null) {
     $("#product-id").value = product?.apiId || product?.id || "";
     $("#product-title").value = product?.title || "";
     $("#product-category").value = product ? productCategory(product) : "products";
-    $("#product-status").value = product?.active === false ? "draft" : "active";
+    $("#product-status").value = product ? productVisibility(product) : "active";
     $("#product-description").value = product?.description || "";
     $("#product-price").value = product?.price ?? "";
     $("#product-compare-price").value = Number(product?.compareAtPrice) || "";
@@ -1342,7 +1354,7 @@ function syncHomepageSectionStates() {
     $("#popular-preview-label").textContent = automatic ? "Automatic bestseller preview" : "Manual section preview";
     $("#popular-mode-description").textContent = automatic
         ? "Uses the most-purchased products from delivered orders and shuffles their storefront order for each shopping session."
-        : "Choose up to 10 published products and arrange the order shoppers should see.";
+        : "Choose up to 10 active products and arrange the order shoppers should see.";
     $("#popular-selection-help").textContent = automatic
         ? "Products without recent sales are used only when fewer than 10 bestsellers are available."
         : "Select products from the catalogue on the right.";
@@ -1475,7 +1487,7 @@ async function handleProductSubmit(event) {
     const discountPercent = Math.min(95, Math.max(1, Math.round(Number($("#product-discount-percent").value) || 15)));
     const existingDiscount = editingProduct ? discountSelection(editingProduct.id) : null;
     if (mediaError) return showToast(mediaError, "error");
-    if (putOnDiscount && $("#product-status").value !== "active") return showToast("Publish the product before putting it on discount.", "error");
+    if (putOnDiscount && $("#product-status").value !== "active") return showToast("Set the product to Active before putting it on discount.", "error");
     if (!editingProduct && !files.some(file => file.type.startsWith("image/"))) return showToast("Include at least one image to use as the product cover.", "error");
     if (editingProduct && !existingImages.length && !files.some(file => file.type.startsWith("image/"))) return showToast("Keep or add at least one product image.", "error");
     if (existingImages.length + existingVideos.length + files.length > 10) return showToast("A product can have up to 10 images and videos in total.", "error");
@@ -1490,14 +1502,15 @@ async function handleProductSubmit(event) {
         const uploadedImageUrls = new Map(newImages.map(item => [item.pendingId, item.url]));
         const gallery = imageOrder.map(item => item.existingUrl || uploadedImageUrls.get(item.pendingId)).filter(Boolean);
         const videos = [...existingVideos, ...newVideos];
-        const active = $("#product-status").value === "active";
+        const visibility = $("#product-status").value;
+        const active = visibility === "active";
         const data = {
             title: $("#product-title").value.trim(), category: $("#product-category").value,
             description: $("#product-description").value.trim(), price: Number($("#product-price").value),
             compareAtPrice: Number($("#product-compare-price").value) || 0, sku: $("#product-sku").value.trim(),
             stock: Number($("#product-stock").value) || 0, shippingClass: $("#product-shipping").value,
             weightGrams: Number($("#product-weight").value) || 0, colors: list($("#product-colors").value),
-            sizes: list($("#product-sizes").value), active, image: gallery[0] || "", gallery, videos
+            sizes: list($("#product-sizes").value), visibility, active, image: gallery[0] || "", gallery, videos
         };
         button.textContent = "Saving product…";
         let savedApiId = editingProduct?.apiId;

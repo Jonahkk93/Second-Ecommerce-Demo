@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Account Appeals · MPWR Management</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260928-15">
+    <link rel="stylesheet" href="css/admin-appeals.css?v=20260928-3">
+    <link rel="stylesheet" href="css/management-navigation.css?v=20260925-2">
+    <script src="js/management-navigation.js?v=20260928-1" defer></script>
+    <script type="module" src="js/management-account.js?v=20260909-3"></script>
+</head>
+<body>
+<div class="management-shell" id="appeals-app" hidden>
+    <aside class="management-sidebar" data-management-sidebar></aside>
+    <main class="management-main appeals-main">
+        <header class="management-topbar">
+            <div>
+                <p class="eyebrow">Customer centre</p>
+                <h1>Account appeals</h1>
+                <p>Review restriction disputes and supporting evidence.</p>
+            </div>
+        </header>
+
+        <section class="appeal-admin-metrics">
+            <article><span>Awaiting review</span><strong id="appeals-awaiting">0</strong></article>
+            <article><span>Total appeals</span><strong id="appeals-total">0</strong></article>
+        </section>
+
+        <div class="appeals-toolbar">
+            <label class="appeals-search">
+                <span><img src="images/Icon Folder/Search Icon_Gray.PNG" alt=""></span>
+                <input id="appeals-search" type="search" placeholder="Search reference, customer, reason or status" autocomplete="off">
+            </label>
+            <div class="appeal-admin-filters" role="tablist" aria-label="Appeal status">
+                <button class="active" data-filter="open" type="button">Open</button>
+                <button data-filter="all" type="button">All</button>
+            </div>
+        </div>
+        <p class="appeals-result-count" id="appeals-result-count"></p>
+
+        <section id="appeals-list" class="appeals-list"></section>
+        <div id="appeals-empty" class="appeals-empty" hidden>No account appeals found.</div>
+    </main>
+</div>
+
+<div class="appeal-confirm" id="appeal-confirm" hidden>
+    <div class="appeal-confirm-backdrop" data-close-confirm></div>
+    <div class="appeal-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="appeal-confirm-title" aria-describedby="appeal-confirm-message">
+        <button class="appeal-confirm-close" type="button" aria-label="Close confirmation" data-close-confirm>&times;</button>
+        <span class="appeal-confirm-icon" id="appeal-confirm-icon" aria-hidden="true"></span>
+        <h2 id="appeal-confirm-title"></h2>
+        <p id="appeal-confirm-message"></p>
+        <div class="appeal-confirm-actions">
+            <button class="appeal-confirm-cancel" type="button" data-close-confirm>Cancel</button>
+            <button class="appeal-confirm-submit" id="appeal-confirm-submit" type="button"></button>
+        </div>
+    </div>
+</div>
+
+<div class="management-page-loading" id="appeals-loading">
+    <div class="management-loading-spinner"></div>
+    <p>Loading account appeals…</p>
+</div>
+
+<script type="module" src="js/admin-appeals.js?v=20260928-3"></script>
+</body>
+</html>

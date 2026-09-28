@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account appeal · MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/account-appeal.css?v=20260928-2">
+    <link rel="stylesheet" href="css/account-appeal-upload.css?v=20260928-1">
+    <link rel="stylesheet" href="css/account-appeal-polish.css?v=20260928-3">
+</head>
+<body>
+    <header class="appeal-topbar"><a href="index.html">MPWR</a><span>Account support</span></header>
+    <main class="appeal-shell">
+        <section class="appeal-card">
+            <div class="appeal-progress" aria-label="Appeal progress"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span></div>
+            <div class="appeal-step active" id="appeal-email-step">
+                <p class="eyebrow">Account access</p><h1>Appeal an account restriction</h1>
+                <p>Verify the email connected to your MPWR account. We will never reveal account information from an email address alone.</p>
+                <form id="appeal-email-form"><label>Email address<input id="appeal-email" type="email" autocomplete="email" required></label><button type="submit">Send verification code</button></form>
+            </div>
+            <div class="appeal-step" id="appeal-code-step">
+                <p class="eyebrow">Email verification</p><h1>Enter your code</h1><p>We sent a six-digit code to <strong id="appeal-email-copy"></strong>. It expires in 15 minutes.</p>
+                <form id="appeal-code-form"><label>Verification code<input id="appeal-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label><button type="submit">Verify email</button></form>
+                <button class="text-button" id="appeal-back" type="button">Use another email</button><p class="preview-code" id="appeal-preview-code" hidden></p>
+            </div>
+            <div class="appeal-step" id="appeal-form-step">
+                <p class="eyebrow">Your appeal</p><h1>Tell us what happened</h1>
+                <div class="restriction-summary"><span>Reason for restriction</span><strong id="appeal-reason"></strong><small id="appeal-blocked-date"></small></div>
+                <form id="appeal-form"><label>Why do you believe this was a mistake?<textarea id="appeal-explanation" minlength="20" maxlength="3000" rows="1" placeholder="Tell us what happened…" required></textarea></label>
+                    <div class="evidence-picker"><strong>Supporting pictures</strong><small>Optional · up to 3 JPG, PNG, WebP, or GIF files · 5 MB each</small><div class="appeal-media-row"><label class="appeal-add-photo" for="appeal-evidence" aria-label="Add supporting pictures"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></label><input id="appeal-evidence" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><div id="appeal-files" class="appeal-files"></div></div></div>
+                    <p class="privacy-copy">Only submit information needed for this appeal. Evidence is stored privately and reviewed by authorized MPWR staff.</p><button type="submit">Submit appeal</button>
+                </form>
+            </div>
+            <div class="appeal-step appeal-success" id="appeal-success-step"><span><img src="images/Icon Folder/Tick Icon_Green.PNG" alt=""></span><h1>Appeal submitted</h1><p>Your reference is <strong id="appeal-reference"></strong>.</p><p>Our team will review your information and contact your verified email. Most reviews are completed within 1–3 business days.</p><a href="index.html">Return to MPWR</a></div>
+            <p class="appeal-message" id="appeal-message" role="alert"></p>
+        </section>
+    </main>
+    <script type="module" src="js/account-appeal.js?v=20260928-3"></script>
+</body>
+</html>

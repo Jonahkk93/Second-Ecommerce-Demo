@@ -13,8 +13,8 @@ const timestamps = {
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(), email: text("email").notNull(), passwordHash: text("password_hash").notNull(),
-  firebaseUid: text("firebase_uid"), localPasswordSet: boolean("local_password_set").default(true).notNull(), firstName: text("first_name").notNull(), lastName: text("last_name").notNull(), phone: text("phone"), profileImage: text("profile_image"), emailVerified: boolean("email_verified").default(false).notNull(), paymentMethods: jsonb("payment_methods").default([]).notNull(), legacyData: jsonb("legacy_data").default({}).notNull(), role: userRole("role").default("customer").notNull(), ...timestamps
-}, t => [uniqueIndex("users_email_unique").on(t.email), uniqueIndex("users_firebase_uid_unique").on(t.firebaseUid)]);
+  firebaseUid: text("firebase_uid"), localPasswordSet: boolean("local_password_set").default(true).notNull(), firstName: text("first_name").notNull(), lastName: text("last_name").notNull(), phone: text("phone"), profileImage: text("profile_image"), emailVerified: boolean("email_verified").default(false).notNull(), paymentMethods: jsonb("payment_methods").default([]).notNull(), legacyData: jsonb("legacy_data").default({}).notNull(), role: userRole("role").default("customer").notNull(), blockedAt: timestamp("blocked_at", { withTimezone: true }), blockedBy: uuid("blocked_by"), blockReason: text("block_reason"), ...timestamps
+}, t => [uniqueIndex("users_email_unique").on(t.email), uniqueIndex("users_firebase_uid_unique").on(t.firebaseUid), index("users_blocked_at_idx").on(t.blockedAt)]);
 
 export const authTokens = pgTable("auth_tokens", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -37,7 +37,7 @@ export const fulfillmentCenters = pgTable("fulfillment_centers", {
 });
 
 export const products = pgTable("products", {
-  id: uuid("id").defaultRandom().primaryKey(), legacyId: text("legacy_id"), title: text("title").notNull(), slug: text("slug").notNull(), description: text("description"), price: integer("price").notNull(), currency: text("currency").default("UGX").notNull(), imageUrl: text("image_url"), class: shippingClass("shipping_class").default("small").notNull(), weightGrams: integer("weight_grams"), active: boolean("active").default(true).notNull(), metadata: jsonb("metadata").default({}).notNull(), ...timestamps
+  id: uuid("id").defaultRandom().primaryKey(), legacyId: text("legacy_id"), title: text("title").notNull(), slug: text("slug").notNull(), description: text("description"), price: integer("price").notNull(), currency: text("currency").default("UGX").notNull(), imageUrl: text("image_url"), class: shippingClass("shipping_class").default("small").notNull(), weightGrams: integer("weight_grams"), visibility: text("visibility").$type<"active" | "hidden" | "draft">().default("active").notNull(), active: boolean("active").default(true).notNull(), metadata: jsonb("metadata").default({}).notNull(), ...timestamps
 }, t => [uniqueIndex("products_slug_unique").on(t.slug), uniqueIndex("products_legacy_unique").on(t.legacyId)]);
 
 export const productVariants = pgTable("product_variants", {
@@ -55,8 +55,8 @@ export const deliveryQuotes = pgTable("delivery_quotes", {
 }, t => [index("delivery_quotes_user_idx").on(t.userId), index("delivery_quotes_expiry_idx").on(t.expiresAt)]);
 
 export const orders = pgTable("orders", {
-  id: uuid("id").defaultRandom().primaryKey(), legacyId: text("legacy_id"), userId: uuid("user_id").references(() => users.id).notNull(), quoteId: uuid("quote_id").references(() => deliveryQuotes.id), status: orderStatus("status").default("pending").notNull(), subtotal: integer("subtotal").notNull(), deliveryFee: integer("delivery_fee").notNull(), total: integer("total").notNull(), currency: text("currency").default("UGX").notNull(), customer: jsonb("customer").notNull(), delivery: jsonb("delivery").notNull(), ...timestamps
-}, t => [index("orders_user_idx").on(t.userId), uniqueIndex("orders_legacy_unique").on(t.legacyId)]);
+  id: uuid("id").defaultRandom().primaryKey(), legacyId: text("legacy_id"), userId: uuid("user_id").references(() => users.id).notNull(), quoteId: uuid("quote_id").references(() => deliveryQuotes.id), status: orderStatus("status").default("pending").notNull(), subtotal: integer("subtotal").notNull(), deliveryFee: integer("delivery_fee").notNull(), total: integer("total").notNull(), currency: text("currency").default("UGX").notNull(), customer: jsonb("customer").notNull(), delivery: jsonb("delivery").notNull(), trackingNumber: text("tracking_number"), shippingCarrier: text("shipping_carrier"), trackingUrl: text("tracking_url"), shippedAt: timestamp("shipped_at", { withTimezone: true }), deliveredAt: timestamp("delivered_at", { withTimezone: true }), ...timestamps
+}, t => [index("orders_user_idx").on(t.userId), index("orders_tracking_number_idx").on(t.trackingNumber), uniqueIndex("orders_legacy_unique").on(t.legacyId)]);
 
 export const orderItems = pgTable("order_items", {
   id: uuid("id").defaultRandom().primaryKey(), orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }).notNull(), productId: uuid("product_id").references(() => products.id).notNull(), variantId: uuid("variant_id").references(() => productVariants.id), title: text("title").notNull(), sku: text("sku"), quantity: integer("quantity").notNull(), unitPrice: integer("unit_price").notNull(), options: jsonb("options").default({}).notNull()
@@ -85,3 +85,18 @@ export const reviews = pgTable("reviews", {
 export const storefrontSettings = pgTable("storefront_settings", {
   key: text("key").primaryKey(), value: jsonb("value").default({}).notNull(), updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 });
+
+export const accountAppeals = pgTable("account_appeals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  reference: text("reference").notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  email: text("email").notNull(),
+  blockReason: text("block_reason"),
+  explanation: text("explanation").notNull(),
+  evidence: jsonb("evidence").default([]).notNull(),
+  status: text("status").default("submitted").notNull(),
+  adminResponse: text("admin_response"),
+  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  ...timestamps
+}, t => [uniqueIndex("account_appeals_reference_unique").on(t.reference), index("account_appeals_user_idx").on(t.userId), index("account_appeals_status_idx").on(t.status)]);

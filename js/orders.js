@@ -252,6 +252,14 @@ const orderTotal = Number(order.total) || 0;
 const orderSubtotal = Number(order.subtotal ?? Math.max(0, orderTotal - deliveryFee));
 const deliveryLabel = "Delivery";
 const deliveryDestination = [order.delivery?.city, order.delivery?.district].filter(Boolean).join(", ");
+const trackingUrl = /^https?:\/\/[^\s]+$/i.test(String(order.trackingUrl || "")) ? String(order.trackingUrl) : "";
+const trackingPanel = order.trackingNumber ? `
+    <section class="order-tracking">
+        <div><small>Shipment tracking</small><h3>${safeText(order.shippingCarrier || "MPWR delivery")}</h3></div>
+        <p><span>Tracking number</span><strong>${safeText(order.trackingNumber)}</strong></p>
+        ${order.shippedAt ? `<p><span>Shipped</span><strong>${safeText(refundDate(order.shippedAt.toDate?.() || order.shippedAt))}</strong></p>` : ""}
+        ${trackingUrl ? `<a href="${safeText(trackingUrl)}" target="_blank" rel="noopener noreferrer">Track shipment</a>` : ""}
+    </section>` : "";
 
 orderCard.innerHTML = `
     <div class="order-header">
@@ -278,6 +286,8 @@ orderCard.innerHTML = `
         ${order.delivery?.etaLabel ? `<small>Estimated delivery: ${order.delivery.etaLabel}</small>` : ""}
         <p class="order-total"><span>Total</span><strong>UGX ${orderTotal.toLocaleString()}</strong></p>
     </div>
+
+    ${trackingPanel}
 
     ${customerRefundPanel(order.delivery?.refund)}
 

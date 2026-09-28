@@ -1,8 +1,9 @@
 import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Inject, Module, NotFoundException, Param, Patch, Put, Query, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { IsArray, IsBoolean, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
-import { and, desc, eq, ne, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, ne, not, or } from "drizzle-orm";
 import { AdminGuard, AuthGuard, AuthUser, CurrentUser } from "../common/auth";
+import { normalizePhone } from "../common/phone";
 import { DB, Database } from "../database/database.module";
 import { carts, favorites, orderItems, orders, products, reviews, storefrontSettings, users } from "../database/schema";
 
@@ -26,6 +27,7 @@ class ReviewAttachmentDto { @IsObject() attachment!: Record<string, unknown>; }
 class ReviewReplyDto { @IsString() @MaxLength(1200) reply!: string; }
 class ReviewSeenDto { @IsBoolean() seen!: boolean; }
 class SettingDto { @IsObject() value!: Record<string, unknown>; }
+class UserBlockDto { @IsBoolean() blocked!: boolean; @IsOptional() @IsString() @MaxLength(500) reason?: string; }
 type StoredReviewAttachment =
   | { key: string; url: string; type: string; name: string }
   | { items: StoredReviewAttachment[] };
@@ -42,7 +44,7 @@ async function resolveProduct(db: Database, identifier: string) {
 class ProfileController {
   constructor(@Inject(DB) private db: Database) {}
   @Get() async get(@CurrentUser() auth: AuthUser) { const [user] = await this.db.select().from(users).where(eq(users.id, auth.sub)).limit(1); if (!user) throw new NotFoundException("Profile not found"); const legacy = user.legacyData as Record<string, unknown>; return { id: user.id, firebaseUid: user.firebaseUid, email: user.email, firstName: user.firstName, lastName: user.lastName, phone: user.phone, profileImage: user.profileImage, role: user.role, paymentMethods: user.paymentMethods, ...legacy }; }
-  @Patch() async update(@CurrentUser() auth: AuthUser, @Body() dto: ProfileDto) { const [current] = await this.db.select().from(users).where(eq(users.id, auth.sub)).limit(1); if (!current) throw new NotFoundException("Profile not found"); const { shippingAddresses, paymentMethods, ...fields } = dto; const legacyData = { ...(current.legacyData as Record<string, unknown>), ...(shippingAddresses ? { shippingAddresses } : {}) }; const [user] = await this.db.update(users).set({ ...fields, ...(paymentMethods ? { paymentMethods } : {}), legacyData, updatedAt: new Date() }).where(eq(users.id, auth.sub)).returning(); return user; }
+  @Patch() async update(@CurrentUser() auth: AuthUser, @Body() dto: ProfileDto) { const [current] = await this.db.select().from(users).where(eq(users.id, auth.sub)).limit(1); if (!current) throw new NotFoundException("Profile not found"); const normalizedPhone = normalizePhone(dto.phone); if (normalizedPhone) { const blockedPhones = await this.db.select({ phone: users.phone }).from(users).where(and(eq(users.role, "customer"), not(eq(users.id, auth.sub)), isNotNull(users.blockedAt))); if (blockedPhones.some(account => normalizePhone(account.phone) === normalizedPhone)) throw new ForbiddenException("This mobile number has been blocked. Contact MPWR support if you think this is a mistake."); } const { shippingAddresses, paymentMethods, ...fields } = dto; const legacyData = { ...(current.legacyData as Record<string, unknown>), ...(shippingAddresses ? { shippingAddresses } : {}) }; const [user] = await this.db.update(users).set({ ...fields, ...(paymentMethods ? { paymentMethods } : {}), legacyData, updatedAt: new Date() }).where(eq(users.id, auth.sub)).returning(); return user; }
 }
 
 @UseGuards(AuthGuard)
@@ -126,7 +128,21 @@ class StorefrontController {
 @Controller("admin/users")
 class AdminUsersController {
   constructor(@Inject(DB) private db: Database) {}
-  @Get(":identifier") async one(@Param("identifier") identifier: string) { const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier); const [user] = await this.db.select().from(users).where(isUuid ? or(eq(users.id, identifier), eq(users.firebaseUid, identifier)) : eq(users.firebaseUid, identifier)).limit(1); if (!user) throw new NotFoundException("User not found"); return user; }
+  private publicUser = { id: users.id, uid: users.id, firebaseUid: users.firebaseUid, email: users.email, firstName: users.firstName, lastName: users.lastName, phone: users.phone, role: users.role, blockedAt: users.blockedAt, blockedBy: users.blockedBy, blockReason: users.blockReason, createdAt: users.createdAt, updatedAt: users.updatedAt };
+  private identifierWhere(identifier: string) { const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier); return isUuid ? or(eq(users.id, identifier), eq(users.firebaseUid, identifier)) : eq(users.firebaseUid, identifier); }
+  @Get() list() { return this.db.select(this.publicUser).from(users).orderBy(desc(users.createdAt)); }
+  @Get(":identifier") async one(@Param("identifier") identifier: string) { const [user] = await this.db.select(this.publicUser).from(users).where(this.identifierWhere(identifier)).limit(1); if (!user) throw new NotFoundException("User not found"); return user; }
+  @Patch(":identifier/block") async block(@CurrentUser() admin: AuthUser, @Param("identifier") identifier: string, @Body() dto: UserBlockDto) {
+    const [target] = await this.db.select({ id: users.id, role: users.role, phone: users.phone }).from(users).where(this.identifierWhere(identifier)).limit(1);
+    if (!target) throw new NotFoundException("User not found");
+    if (target.role === "admin") throw new ForbiddenException("Admin accounts cannot be blocked here");
+    const reason = dto.reason?.trim() || null;
+    const phone = normalizePhone(target.phone);
+    const customerAccounts = phone ? await this.db.select({ id: users.id, phone: users.phone }).from(users).where(eq(users.role, "customer")) : [];
+    const accountIds = phone ? customerAccounts.filter(account => normalizePhone(account.phone) === phone).map(account => account.id) : [target.id];
+    const updated = await this.db.update(users).set({ blockedAt: dto.blocked ? new Date() : null, blockedBy: dto.blocked ? admin.sub : null, blockReason: dto.blocked ? reason : null, updatedAt: new Date() }).where(inArray(users.id, accountIds)).returning(this.publicUser);
+    return updated.find(user => user.id === target.id);
+  }
 }
 
 @Module({ controllers: [ProfileController, CartController, FavoritesController, ReviewsController, AdminReviewsController, StorefrontController, AdminUsersController] })

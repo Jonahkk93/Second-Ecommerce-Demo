@@ -8,7 +8,7 @@ import { orderItems, products, productVariants, storefrontSettings } from "../da
 const PRODUCT_TRASH_DAYS = 60;
 
 type ProductMetadata = Record<string, unknown> & {
-  _trash?: { deletedAt?: string; deleteAfter?: string; wasActive?: boolean };
+  _trash?: { deletedAt?: string; deleteAfter?: string; wasActive?: boolean; wasVisibility?: "active" | "hidden" | "draft" };
   _purged?: boolean;
 };
 
@@ -64,6 +64,7 @@ class CreateProductDto {
   @IsOptional() @IsIn(["small", "medium", "large"]) shippingClass?: "small" | "medium" | "large";
   @IsOptional() @IsInt() @Min(0) weightGrams?: number;
   @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsIn(["active", "hidden", "draft"]) visibility?: "active" | "hidden" | "draft";
   @IsOptional() @IsObject() metadata?: Record<string, unknown>;
 }
 
@@ -77,6 +78,7 @@ class UpdateProductDto {
   @IsOptional() @IsIn(["small", "medium", "large"]) shippingClass?: "small" | "medium" | "large";
   @IsOptional() @IsInt() @Min(0) weightGrams?: number;
   @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsIn(["active", "hidden", "draft"]) visibility?: "active" | "hidden" | "draft";
   @IsOptional() @IsObject() metadata?: Record<string, unknown>;
 }
 
@@ -124,13 +126,24 @@ class AdminProductsController {
     const rows = await this.db.select().from(products).where(eq(products.active, false)).limit(500);
     return rows.filter(product => Boolean(((product.metadata || {}) as ProductMetadata)._trash));
   }
-  @Post() async create(@Body() dto: CreateProductDto) { const { shippingClass, ...values } = dto; const [product] = await this.db.insert(products).values({ ...values, class: shippingClass }).returning(); return product; }
-  @Patch(":id") async update(@Param("id") id: string, @Body() dto: UpdateProductDto) { const current = await this.resolve(id); const { shippingClass, ...values } = dto; const [product] = await this.db.update(products).set({ ...values, ...(shippingClass ? { class: shippingClass } : {}), updatedAt: new Date() }).where(eq(products.id, current.id)).returning(); return product; }
+  @Post() async create(@Body() dto: CreateProductDto) {
+    const { shippingClass, visibility: requestedVisibility, active: requestedActive, ...values } = dto;
+    const visibility = requestedVisibility || (requestedActive === false ? "draft" : "active");
+    const [product] = await this.db.insert(products).values({ ...values, class: shippingClass, visibility, active: visibility === "active" }).returning();
+    return product;
+  }
+  @Patch(":id") async update(@Param("id") id: string, @Body() dto: UpdateProductDto) {
+    const current = await this.resolve(id);
+    const { shippingClass, visibility: requestedVisibility, active: requestedActive, ...values } = dto;
+    const visibility = requestedVisibility || (requestedActive !== undefined ? (requestedActive ? "active" : "draft") : undefined);
+    const [product] = await this.db.update(products).set({ ...values, ...(visibility ? { visibility, active: visibility === "active" } : {}), ...(shippingClass ? { class: shippingClass } : {}), updatedAt: new Date() }).where(eq(products.id, current.id)).returning();
+    return product;
+  }
   @Delete(":id") async moveToTrash(@Param("id") id: string) {
     const current = await this.resolve(id);
     const deletedAt = new Date();
     const deleteAfter = new Date(deletedAt.getTime() + PRODUCT_TRASH_DAYS * 24 * 60 * 60 * 1000);
-    const metadata = { ...((current.metadata || {}) as ProductMetadata), _trash: { deletedAt: deletedAt.toISOString(), deleteAfter: deleteAfter.toISOString(), wasActive: current.active } };
+    const metadata = { ...((current.metadata || {}) as ProductMetadata), _trash: { deletedAt: deletedAt.toISOString(), deleteAfter: deleteAfter.toISOString(), wasActive: current.active, wasVisibility: current.visibility } };
     const [product] = await this.db.update(products).set({ active: false, metadata, updatedAt: deletedAt }).where(eq(products.id, current.id)).returning();
     return product;
   }
@@ -145,7 +158,8 @@ class AdminProductsController {
     const current = await this.resolve(id);
     const { _trash, _purged, ...metadata } = (current.metadata || {}) as ProductMetadata;
     if (!_trash || _purged) throw new NotFoundException("Deleted product not found");
-    const [product] = await this.db.update(products).set({ active: _trash.wasActive !== false, metadata, updatedAt: new Date() }).where(eq(products.id, current.id)).returning();
+    const visibility = _trash.wasVisibility || (_trash.wasActive !== false ? "active" : "draft");
+    const [product] = await this.db.update(products).set({ visibility, active: visibility === "active", metadata, updatedAt: new Date() }).where(eq(products.id, current.id)).returning();
     return product;
   }
 }

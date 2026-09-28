@@ -17,6 +17,8 @@
                     ? "analytics"
                     : page === "admin-customers.html"
                         ? "customers"
+                    : page === "admin-appeals.html"
+                        ? "appeals"
                     : "";
 
     const icon = (file) => `<span><img src="images/Icon Folder/${file}" alt=""></span>`;
@@ -58,6 +60,7 @@
             ${link("search", "admin-products.html#search-page", "Search Page", icon("Search Icon_Light Gray.PNG"), searchExtra)}
             ${link("deleted", "admin-products.html#deleted-products", '<span class="management-nav-label">Deleted Products <em id="deleted-nav-count">0</em></span>', icon("Delete Icon_Light Gray.PNG"), deletedExtra)}
             ${link("customers", "admin-customers.html", "Customers", icon("Customers Icon_Light Gray.PNG"))}
+            ${link("appeals", "admin-appeals.html", "Account Appeals", "<span>⚑</span>")}
             ${link("reviews", "admin-reviews.html", '<span class="management-nav-label">Reviews <em id="reviews-nav-count">0</em></span>', icon("Reviews Icon_Light Gray.PNG"))}
             ${link("analytics", "admin-analytics.html", "Analytics", icon("Analytics Icon_Light Gray.PNG"))}
             ${comingSoon("Marketing", icon("Marketing Icon_Light Gray.PNG"))}

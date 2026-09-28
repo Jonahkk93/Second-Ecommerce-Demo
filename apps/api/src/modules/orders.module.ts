@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Inject, Injectable, Logger, Module, NotFoundException, Param, Patch, Post, UseGuards } from "@nestjs/common";
-import { IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Min } from "class-validator";
+import { IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from "class-validator";
 import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { AuthGuard, AuthUser, CurrentUser, OrdersGuard } from "../common/auth";
 import { DB, Database } from "../database/database.module";
@@ -7,6 +7,11 @@ import { deliveryQuotes, orderItems, orders, paymentEvents, payments, products, 
 
 class CreateOrderDto { @IsUUID() quoteId!: string; @IsString() firstName!: string; @IsString() lastName!: string; @IsEmail() email!: string; @IsString() phone!: string; @IsOptional() @IsString() notes?: string; }
 class UpdateStatusDto { @IsIn(["pending", "processing", "shipped", "delivered", "cancelled"]) status!: "pending" | "processing" | "shipped" | "delivered" | "cancelled"; }
+class UpdateTrackingDto {
+  @IsString() @MaxLength(120) trackingNumber!: string;
+  @IsOptional() @IsString() @MaxLength(120) shippingCarrier?: string;
+  @IsOptional() @IsString() @MaxLength(1000) trackingUrl?: string;
+}
 class UpdateCancellationSeenDto { @IsBoolean() seen!: boolean; }
 class UpdateRefundDto { @IsIn(["pending", "initiated", "processing", "refunded", "failed"]) status!: "pending" | "initiated" | "processing" | "refunded" | "failed"; @IsOptional() @IsString() reference?: string; @IsOptional() @IsString() note?: string; }
 class LegacyOrderDto { @IsArray() items!: unknown[]; @IsObject() customer!: Record<string, unknown>; @IsObject() delivery!: Record<string, unknown>; @IsOptional() @IsObject() payment?: Record<string, unknown>; @IsInt() @Min(0) deliveryFee!: number; }
@@ -92,13 +97,35 @@ export class OrdersService {
       delete delivery.cancellationSource;
       delete delivery.cancelledAt;
     }
-    const [order] = await this.db.update(orders).set({ status, delivery, updatedAt: new Date() }).where(eq(orders.id, id)).returning();
+    const now = new Date();
+    const lifecycle = status === "shipped" && !existing.shippedAt
+      ? { shippedAt: now }
+      : status === "delivered" && !existing.deliveredAt
+        ? { shippedAt: existing.shippedAt || now, deliveredAt: now }
+        : {};
+    const [order] = await this.db.update(orders).set({ status, delivery, ...lifecycle, updatedAt: now }).where(eq(orders.id, id)).returning();
     if (!order) throw new NotFoundException("Order not found");
     try {
       await this.refreshBestsellers();
     } catch (error) {
       this.logger.error("Could not refresh bestseller rankings", error instanceof Error ? error.stack : String(error));
     }
+    return order;
+  }
+  async updateTracking(id: string, dto: UpdateTrackingDto) {
+    const [existing] = await this.db.select().from(orders).where(eq(orders.id, id)).limit(1);
+    if (!existing) throw new NotFoundException("Order not found");
+    if (existing.status === "cancelled") throw new BadRequestException("Tracking cannot be added to a cancelled order");
+    const trackingNumber = dto.trackingNumber.trim();
+    if (!trackingNumber) throw new BadRequestException("Tracking number is required");
+    const trackingUrl = dto.trackingUrl?.trim() || null;
+    if (trackingUrl && !/^https?:\/\/[^\s]+$/i.test(trackingUrl)) throw new BadRequestException("Tracking link must be a valid HTTP or HTTPS URL");
+    const [order] = await this.db.update(orders).set({
+      trackingNumber,
+      shippingCarrier: dto.shippingCarrier?.trim() || null,
+      trackingUrl,
+      updatedAt: new Date()
+    }).where(eq(orders.id, id)).returning();
     return order;
   }
   async cancelByCustomer(userId: string, id: string) {
@@ -215,6 +242,7 @@ class OrdersController {
   @UseGuards(AuthGuard) @Patch(":id/cancel") cancel(@CurrentUser() user: AuthUser, @Param("id") id: string) { return this.service.cancelByCustomer(user.sub, id); }
   @UseGuards(OrdersGuard) @Patch(":id/cancellation-seen") cancellationSeen(@Param("id") id: string, @Body() dto: UpdateCancellationSeenDto) { return this.service.markCustomerCancellationSeen(id, dto.seen); }
   @UseGuards(OrdersGuard) @Patch(":id/refund") refund(@Param("id") id: string, @Body() dto: UpdateRefundDto) { return this.service.updateRefund(id, dto); }
+  @UseGuards(OrdersGuard) @Patch(":id/tracking") tracking(@Param("id") id: string, @Body() dto: UpdateTrackingDto) { return this.service.updateTracking(id, dto); }
   @UseGuards(OrdersGuard) @Patch(":id/status") status(@Param("id") id: string, @Body() dto: UpdateStatusDto) { return this.service.updateStatus(id, dto.status); }
 }
 @Module({ controllers: [OrdersController], providers: [OrdersService], exports: [OrdersService] })

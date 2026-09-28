@@ -30,7 +30,13 @@ async function request(path, options = {}) {
     const payload = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) {
         const error = new Error(payload?.message || `Authentication request failed (${response.status})`);
-        error.code = response.status === 401 ? "auth/invalid-credential" : response.status === 409 ? "auth/email-already-in-use" : "auth/request-failed";
+        error.code = response.status === 401
+            ? "auth/invalid-credential"
+            : response.status === 403 && /blocked/i.test(error.message)
+                ? "auth/account-blocked"
+                : response.status === 409
+                    ? "auth/email-already-in-use"
+                    : "auth/request-failed";
         throw error;
     }
     return payload;
@@ -57,19 +63,50 @@ export function createAuth() {
         async refresh() {
             const startingRevision = auth.revision;
             let refreshedUser = null;
+            let blocked = false;
             try { refreshedUser = localUser(await request("/auth/me"), auth); }
             catch (error) {
-                if (error.code !== "auth/invalid-credential" && error.code !== "auth/network-request-failed") throw error;
+                blocked = error.code === "auth/account-blocked";
+                if (error.code === "auth/network-request-failed") return auth.currentUser;
+                if (!blocked && error.code !== "auth/invalid-credential") throw error;
             }
             // A login/register may finish while the initial session check is in
             // flight. Never let that older response erase the new account.
-            if (startingRevision === auth.revision) auth.currentUser = refreshedUser;
+            if (startingRevision === auth.revision) {
+                const previousUser = auth.currentUser;
+                auth.currentUser = refreshedUser;
+                if (previousUser && !refreshedUser) {
+                    auth.revision += 1;
+                    auth.notify();
+                    if (blocked) window.dispatchEvent(new CustomEvent("mpwr:account-blocked", { detail: { message: "This account has been blocked. Contact MPWR support if you think this is a mistake." } }));
+                }
+            }
+            if (blocked) request("/auth/logout", { method: "POST" }).catch(() => {});
             return auth.currentUser;
         },
         notify() { auth.listeners.forEach(listener => listener(auth.currentUser)); }
     };
     auth.ready = auth.refresh();
     return auth;
+}
+
+export function startSessionMonitor(auth, intervalMs = 2000) {
+    let checking = false;
+    const check = async () => {
+        if (checking || !auth.currentUser || document.visibilityState === "hidden") return;
+        checking = true;
+        try { await auth.refresh(); }
+        catch (error) {
+            if (error.code !== "auth/network-request-failed") console.warn("Unable to verify the active session:", error);
+        } finally { checking = false; }
+    };
+    const timer = window.setInterval(check, intervalMs);
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") check(); });
+    return () => {
+        window.clearInterval(timer);
+        window.removeEventListener("focus", check);
+    };
 }
 
 async function applySession(auth, payload) {

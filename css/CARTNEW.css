@@ -190,22 +190,30 @@ header{
 
 .mpwr-announcement-bar{
     position:fixed;
-    top:0;
+    /* Slightly overscan the viewport edges to prevent white compositor seams
+       while mobile browsers resize their chrome during scrolling. */
+    top:-2px;
     left:0;
+    right:0;
     z-index:1100;
     display:flex;
     align-items:center;
     justify-content:center;
     gap:10px;
-    width:100%;
+    width:auto;
     min-height:34px;
-    padding:8px 9%;
+    padding:10px 9% 8px;
     background:#201b19;
     color:#fff;
     font-size:13px;
     font-weight:700;
     text-align:center;
     letter-spacing:.01em;
+    box-shadow:0 2px 0 #201b19;
+    transform:translateZ(0);
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    will-change:transform;
 }
 
 .mpwr-announcement-bar a{
@@ -433,6 +441,10 @@ body.has-announcement-bar{
     box-shadow:0 14px 35px rgba(32,27,25,.1);
 }
 
+body:not(.has-homepage-hero) .homepage-campaign-banner{
+    margin-top:calc(132px + var(--announcement-bar-height, 0px));
+}
+
 .homepage-campaign-banner + .shop{
     padding-top:34px;
 }
@@ -557,7 +569,7 @@ body.has-announcement-bar{
 @media (max-width: 760px){
     .mpwr-announcement-bar{
         min-height:38px;
-        padding:8px 16px;
+        padding:10px 16px 8px;
         font-size:12px;
         line-height:1.25;
     }
@@ -600,6 +612,10 @@ body.has-announcement-bar{
         padding:14px;
         border-radius:20px;
         text-align:left;
+    }
+
+    body:not(.has-homepage-hero) .homepage-campaign-banner{
+        margin-top:calc(112px + var(--announcement-bar-height, 0px));
     }
 
     .homepage-campaign-image{
@@ -815,7 +831,8 @@ body.has-announcement-bar{
     left: 0;
     width: 100vw;
     height: auto;
-    z-index: 1098;
+    /* Open navigation must cover the fixed announcement bar (z-index: 1100). */
+    z-index: 1198;
     background: rgba(20, 15, 12, .38);
     opacity: 0;
     visibility: hidden;
@@ -828,7 +845,7 @@ body.has-announcement-bar{
     top: 0;
     bottom: 0;
     left: 0;
-    z-index: 1099;
+    z-index: 1199;
     display: flex;
     width: min(330px, 86vw);
     height: auto;
@@ -1094,7 +1111,7 @@ body.has-announcement-bar{
 
 .cart {
     position: fixed;
-    top: 0;
+    top: var(--announcement-bar-height, 0px);
     bottom: 0;
     right: 0;
     width: 360px;
@@ -1103,7 +1120,8 @@ body.has-announcement-bar{
     background: #fff;
     box-shadow: -2px 0 10px rgba(93,93,93,.13);
 
-    z-index: 1002;
+    /* Keep the announcement visible while the drawer is open. */
+    z-index: 1200;
 
     display: flex;
     flex-direction: column;
@@ -2018,7 +2036,7 @@ e
 
     position: fixed;
 
-    top: 0;
+    top: var(--announcement-bar-height, 0px);
     bottom: 0;
 
     right: 0;
@@ -2031,7 +2049,7 @@ e
 
     box-shadow: -2px 0 10px rgba(93,93,93,.13);
 
-    z-index: 1002;
+    z-index: 1200;
 
     display: flex;
 
@@ -2711,6 +2729,73 @@ e
     margin-bottom:10px;
 }
 
+.account-header h2.signin-error-message{
+    max-width:460px;
+    margin:0 auto;
+    padding:13px 15px;
+    border:1px solid #d92d2d;
+    border-radius:10px;
+    background:#fff0f0;
+    color:#b42323;
+    font-size:13px;
+    font-weight:500;
+    line-height:1.5;
+    text-align:left;
+}
+
+.signin-error-contact{
+    color:#9f1717;
+    font-weight:700;
+    text-decoration:underline;
+    text-underline-offset:2px;
+}
+
+.blocked-logout-overlay{
+    position:fixed;
+    inset:0;
+    z-index:200000;
+    display:grid;
+    padding:20px;
+    background:rgba(24,19,17,.55);
+    opacity:0;
+    pointer-events:none;
+    place-items:center;
+    transition:opacity .2s ease;
+}
+
+.blocked-logout-overlay.active{
+    opacity:1;
+    pointer-events:auto;
+}
+
+.blocked-logout-modal{
+    position:relative;
+    width:min(390px,100%);
+    padding:34px 28px 28px;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 22px 60px rgba(31,24,21,.24);
+    text-align:center;
+}
+
+.blocked-logout-modal h2{
+    margin:0 0 22px;
+    color:#2f2926;
+    font-size:21px;
+}
+
+.blocked-logout-see-why{
+    min-width:130px;
+    padding:12px 20px;
+    border:0;
+    border-radius:12px;
+    background:#b74040;
+    color:#fff;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+}
+
 .account-header p{
     color:#777;
     font-size:15px;
@@ -2750,6 +2835,30 @@ e
     justify-content:space-between;
     align-items:center;
     font-size:14px;
+}
+
+.forgot-password-button{
+    padding:7px 0;
+    border:0;
+    background:transparent;
+    color:#777;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer;
+    transition:color .2s ease;
+}
+
+.forgot-password-button:hover,
+.forgot-password-button:active{
+    background:transparent;
+    color:#333;
+}
+
+.forgot-password-button:focus-visible{
+    outline:0;
+    color:#333;
+    text-decoration:underline;
+    text-underline-offset:3px;
 }
 
 .signin-btn,
@@ -2845,8 +2954,8 @@ e
 
 @media screen and (max-width:600px){
     .account-overlay{
-        align-items:flex-end;
-        padding:max(16px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom));
+        align-items:center;
+        padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
     }
 
     .account-modal{

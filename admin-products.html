@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPWR Management</title>
-    <link rel="stylesheet" href="css/admin-products.css?v=20260927-4">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260928-5">
     <link rel="stylesheet" href="css/review-lightbox.css?v=20260923-2">
     <link rel="stylesheet" href="css/Larke.css">
     <link rel="stylesheet" href="css/touch-interactions.css">
@@ -32,7 +32,8 @@
             </header>
             <div class="stat-grid" aria-label="Catalogue summary">
                 <article><span>Total products</span><strong id="stat-total">0</strong></article>
-                <article><span>Published</span><strong id="stat-active">0</strong></article>
+                <article><span>Active</span><strong id="stat-active">0</strong></article>
+                <article><span>Hidden products</span><strong id="stat-hidden">0</strong></article>
                 <article><span>Draft products</span><strong id="stat-draft">0</strong></article>
                 <article><span>Low stock</span><strong id="stat-low-stock">0</strong></article>
             </div>
@@ -42,7 +43,7 @@
             <div class="products-toolbar">
                 <label class="search-field"><span><img src="images/Icon Folder/Search Icon_Gray.PNG" alt=""></span><input type="search" id="product-search" placeholder="Search title or SKU…"></label>
                 <select id="category-filter" aria-label="Filter by category"><option value="all">All categories</option><option value="uncategorized">No Category</option><option value="press-ons">Press-On Nails</option><option value="wigs">Wigs</option><option value="lashes">Lashes</option><option value="products">Products</option></select>
-                <select id="status-filter" aria-label="Filter by status"><option value="all">All statuses</option><option value="active">Published</option><option value="draft">Draft</option></select>
+                <select id="status-filter" aria-label="Filter by visibility"><option value="all">All visibility</option><option value="active">Active</option><option value="hidden">Hidden</option><option value="draft">Draft</option></select>
             </div>
             <div class="products-list"></div>
             <div class="empty-state hidden" id="products-empty"><strong>No products found</strong><span>Try changing the filters or add a product.</span></div>
@@ -104,11 +105,11 @@
                 <p class="category-order-help">Drag categories or use the arrows. “All” stays first automatically.</p>
             </div>
             <div class="section-heading homepage-heading">
-                <div><p class="eyebrow">Homepage</p><div class="homepage-heading-title"><h2>Popular Products</h2><label class="toggle-row popular-mode-toggle"><input type="checkbox" id="popular-mode-automatic" aria-label="Use automatic popular products"><span class="toggle-control"></span><span class="popular-mode-toggle-label">Manual</span></label></div><p id="popular-mode-description">Choose up to 10 published products and arrange the order shoppers should see.</p></div>
+                <div><p class="eyebrow">Homepage</p><div class="homepage-heading-title"><h2>Popular Products</h2><label class="toggle-row popular-mode-toggle"><input type="checkbox" id="popular-mode-automatic" aria-label="Use automatic popular products"><span class="toggle-control"></span><span class="popular-mode-toggle-label">Manual</span></label></div><p id="popular-mode-description">Choose up to 10 active products and arrange the order shoppers should see.</p></div>
             </div>
             <div class="homepage-layout">
                 <div class="homepage-preview-card" id="popular-preview-card"><span class="preview-label" id="popular-preview-label">Manual section preview</span><h3>Popular</h3><div id="popular-selection" class="popular-selection"></div><p id="popular-selection-help">Select products from the catalogue on the right.</p></div>
-                <div class="homepage-picker-card"><label class="search-field"><span>⌕</span><input type="search" id="homepage-search" placeholder="Find a published product…"></label><div id="homepage-products" class="homepage-products"></div></div>
+                <div class="homepage-picker-card"><label class="search-field"><span>⌕</span><input type="search" id="homepage-search" placeholder="Find an active product…"></label><div id="homepage-products" class="homepage-products"></div></div>
             </div>
             <div class="section-heading homepage-heading discount-management-heading">
                 <div><p class="eyebrow">Homepage</p><div class="homepage-heading-title"><h2>Discount Products</h2><div class="discount-heading-toggles"><label class="toggle-row discount-mode-toggle"><input type="checkbox" id="discount-mode-automatic" aria-label="Use automatic discount products"><span class="toggle-control"></span><span class="discount-mode-toggle-label">Manual</span></label><label class="toggle-row homepage-section-toggle"><input type="checkbox" id="offer-section-enabled" aria-label="Show Offers on the homepage" checked><span class="toggle-control"></span><span class="homepage-section-toggle-label">Shown</span></label></div></div><p id="discount-mode-description">Choose and order every discounted product. The first 10 appear on the homepage; View All opens the complete list.</p></div>
@@ -116,7 +117,7 @@
             </div>
             <div class="homepage-layout discount-management-layout">
                 <div class="homepage-preview-card" id="offer-preview-card"><span class="preview-label" id="discount-campaign-preview">Limited Offers</span><h3>Offers</h3><div id="discount-selection" class="popular-selection discount-selection"></div><p id="discount-selection-help">Select discount products from the catalogue on the right.</p></div>
-                <div class="homepage-picker-card"><label class="search-field"><span>⌕</span><input type="search" id="discount-search" placeholder="Find a published product…"></label><div id="discount-products" class="homepage-products"></div></div>
+                <div class="homepage-picker-card"><label class="search-field"><span>⌕</span><input type="search" id="discount-search" placeholder="Find an active product…"></label><div id="discount-products" class="homepage-products"></div></div>
             </div>
             <div class="homepage-save-footer"><button class="primary-button" id="save-homepage" type="button">Save Changes</button></div>
         </section>
@@ -135,7 +136,7 @@
                 <article class="search-settings-card">
                     <div class="search-settings-card-heading"><div><h3>Popular Picks</h3><p>Use automatic discovery or manually choose up to 12 products.</p></div><div class="search-card-toggles"><label class="toggle-row"><input type="checkbox" id="search-popular-enabled" checked><span class="toggle-control"></span><span class="search-toggle-label">Shown</span></label><label class="toggle-row"><input type="checkbox" id="search-popular-automatic" checked><span class="toggle-control"></span><span class="search-mode-label">Automatic</span></label></div></div>
                     <label class="field"><span>Section heading</span><input id="search-popular-heading" maxlength="60" value="Popular picks"></label>
-                    <label class="search-field"><span>⌕</span><input type="search" id="search-popular-product-search" placeholder="Find a published product…"></label>
+                    <label class="search-field"><span>⌕</span><input type="search" id="search-popular-product-search" placeholder="Find an active product…"></label>
                     <div class="search-popular-products" id="search-popular-products"></div>
                 </article>
                 <article class="search-settings-card search-behaviour-card">
@@ -192,7 +193,7 @@
                 <div class="form-grid">
                     <label class="field field-wide"><span>Product title</span><input type="text" id="product-title" placeholder="e.g. Almond Press-On Set" required></label>
                     <label class="field"><span>Category</span><select id="product-category" required><option value="uncategorized">No Category</option><option value="press-ons">Press-On Nails</option><option value="wigs">Wigs</option><option value="lashes">Lashes</option><option value="products">Products</option></select></label>
-                    <label class="field"><span>Status</span><select id="product-status"><option value="active">Published</option><option value="draft">Draft</option></select></label>
+                    <label class="field"><span>Visibility</span><select id="product-status"><option value="active">Active</option><option value="hidden">Hidden</option><option value="draft">Draft</option></select><small>Only active products appear in the storefront.</small></label>
                     <label class="field field-wide"><span>Description</span><textarea id="product-description" placeholder="Describe the finish, material, fit and what is included…" rows="5"></textarea></label>
                 </div>
             </section>
@@ -244,6 +245,6 @@
 <div class="confirm-modal hidden" id="image-delete-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="image-delete-confirm-title" aria-describedby="image-delete-confirm-message"><div class="confirm-card"><h2 id="image-delete-confirm-title">Delete image?</h2><p id="image-delete-confirm-message">This image will be removed from the product when you save your changes.</p><div><button class="secondary-button" id="cancel-image-delete" type="button">Cancel</button><button class="danger-button" id="confirm-image-delete" type="button">Delete Image</button></div></div></div>
 <div class="admin-products-toast" role="status" aria-live="polite"></div>
 <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/admin-products.js?v=20260927-4"></script>
+    <script type="module" src="js/admin-products.js?v=20260928-5"></script>
  </body>
 </html>

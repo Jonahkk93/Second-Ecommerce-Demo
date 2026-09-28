@@ -1,12 +1,13 @@
-import { Body, ConflictException, Controller, Delete, Get, Inject, Injectable, Module, Patch, Post, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Body, ConflictException, Controller, Delete, ForbiddenException, Get, Inject, Injectable, Module, Patch, Post, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { IsEmail, IsOptional, IsString, MinLength } from "class-validator";
 import { compare, hash } from "bcryptjs";
 import { createHash, randomBytes } from "crypto";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
 import { FastifyReply } from "fastify";
 import { AuthGuard, AuthUser, CurrentUser } from "../common/auth";
+import { normalizePhone } from "../common/phone";
 import { DB, Database } from "../database/database.module";
 import { authTokens, users } from "../database/schema";
 
@@ -26,7 +27,7 @@ class ResetPasswordDto extends TokenDto { @MinLength(8) password!: string; }
 class AuthService {
   constructor(@Inject(DB) private db: Database, private jwt: JwtService, private config: ConfigService) {}
   private publicUser(user: typeof users.$inferSelect) {
-    return { id: user.id, uid: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, displayName: `${user.firstName} ${user.lastName}`.trim(), profileImage: user.profileImage, photoURL: user.profileImage, emailVerified: user.emailVerified, role: user.role };
+    return { id: user.id, uid: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, displayName: `${user.firstName} ${user.lastName}`.trim(), profileImage: user.profileImage, photoURL: user.profileImage, emailVerified: user.emailVerified, role: user.role, blockedAt: user.blockedAt, blockReason: user.blockReason };
   }
   async session(user: typeof users.$inferSelect) {
     const token = await this.jwt.signAsync({ sub: user.id, email: user.email, role: user.role }, { secret: this.config.getOrThrow("JWT_SECRET"), expiresIn: "7d" });
@@ -35,12 +36,18 @@ class AuthService {
   async register(dto: RegisterDto) {
     const email = dto.email.trim().toLowerCase();
     if ((await this.db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1))[0]) throw new ConflictException("Email already registered");
+    const phone = normalizePhone(dto.phone);
+    if (phone) {
+      const blockedPhones = await this.db.select({ phone: users.phone }).from(users).where(and(eq(users.role, "customer"), isNotNull(users.blockedAt)));
+      if (blockedPhones.some(account => normalizePhone(account.phone) === phone)) throw new ForbiddenException("This mobile number has been blocked. Contact MPWR support if you think this is a mistake.");
+    }
     const [user] = await this.db.insert(users).values({ email, passwordHash: await hash(dto.password, 12), firstName: dto.firstName.trim(), lastName: dto.lastName.trim(), phone: dto.phone?.trim() }).returning();
     return { ...(await this.session(user)), verification: await this.issueToken(user, "verify_email", "verify-email.html", "Verify your MPWR email", "Verify your email address") };
   }
   async login(dto: LoginDto) {
     const [user] = await this.db.select().from(users).where(eq(users.email, dto.email.trim().toLowerCase())).limit(1);
     if (!user) throw new UnauthorizedException("Invalid email or password");
+    if (user.blockedAt && user.role === "customer") throw new ForbiddenException("This account has been blocked. Contact MPWR support if you think this is a mistake.");
     if (user.localPasswordSet) {
       if (!(await compare(dto.password, user.passwordHash))) throw new UnauthorizedException("Invalid email or password");
       return this.session(user);
