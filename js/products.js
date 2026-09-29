@@ -743,6 +743,7 @@ const DEFAULT_HOMEPAGE_HERO = {
     buttonLink: "#products",
     image: "images/PressOn Nails_Pink.JPG"
 };
+const HOMEPAGE_HERO_IMAGE_LIMIT = 10;
 const DEFAULT_ANNOUNCEMENT_BAR = {
     enabled: true,
     message: "Free delivery on selected orders this week.",
@@ -770,6 +771,13 @@ function normalizeHomepageHero(value = {}) {
         const cleaned = String(input || "").trim().replace(/\s+/g, " ");
         return (cleaned || fallback).slice(0, maxLength);
     };
+    const hasImageList = Array.isArray(value.images);
+    const image = hasImageList ? "" : text(value.image, DEFAULT_HOMEPAGE_HERO.image, 500);
+    const images = (hasImageList ? value.images : [image])
+        .map(item => text(typeof item === "string" ? item : item?.url, "", 500))
+        .filter(Boolean)
+        .filter((url, index, list) => list.indexOf(url) === index)
+        .slice(0, HOMEPAGE_HERO_IMAGE_LIMIT);
     return {
         enabled: value.enabled !== false,
         eyebrow: text(value.eyebrow, DEFAULT_HOMEPAGE_HERO.eyebrow, 40),
@@ -777,7 +785,8 @@ function normalizeHomepageHero(value = {}) {
         body: text(value.body, DEFAULT_HOMEPAGE_HERO.body, 180),
         buttonLabel: text(value.buttonLabel, DEFAULT_HOMEPAGE_HERO.buttonLabel, 32),
         buttonLink: text(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140),
-        image: text(value.image, DEFAULT_HOMEPAGE_HERO.image, 220)
+        image: images[0] || "",
+        images
     };
 }
 
@@ -790,6 +799,8 @@ function applyHomepageHero(value) {
     document.body.classList.toggle("has-homepage-hero", hero.enabled);
     let section = document.querySelector(".homepage-hero");
     if (!hero.enabled) {
+        if (section?.heroSlideshowTimer) clearInterval(section.heroSlideshowTimer);
+        if (section?.heroFadeTimer) clearTimeout(section.heroFadeTimer);
         section?.remove();
         return;
     }
@@ -803,9 +814,31 @@ function applyHomepageHero(value) {
                 <p class="homepage-hero-body"></p>
                 <a class="homepage-hero-button"></a>
             </div>
-            <div class="homepage-hero-media"><img alt=""></div>
+            <div class="homepage-hero-media" aria-label="Hero image slideshow"></div>
+            <nav class="homepage-hero-categories" aria-label="Shop by category">
+                <a class="is-featured" href="Nails.html">Press-ons</a>
+                <a href="Wigs.html">Wigs</a>
+                <a href="Lashes.html">Lashes</a>
+                <a href="ProductsPage.html">Self-care</a>
+            </nav>
         `;
         productsSection.parentNode.insertBefore(section, productsSection);
+    }
+    const categoryLinks = section.querySelectorAll(".homepage-hero-categories a");
+    const selectCategory = selectedLink => {
+        categoryLinks.forEach(link => link.classList.toggle("is-featured", link === selectedLink));
+    };
+    categoryLinks.forEach(link => {
+        link.onpointerdown = () => selectCategory(link);
+        link.onclick = () => selectCategory(link);
+    });
+    if (section.heroSlideshowTimer) {
+        clearInterval(section.heroSlideshowTimer);
+        section.heroSlideshowTimer = null;
+    }
+    if (section.heroFadeTimer) {
+        clearTimeout(section.heroFadeTimer);
+        section.heroFadeTimer = null;
     }
     section.querySelector(".homepage-hero-eyebrow").textContent = hero.eyebrow;
     section.querySelector("h1").textContent = hero.heading;
@@ -813,9 +846,66 @@ function applyHomepageHero(value) {
     const button = section.querySelector(".homepage-hero-button");
     button.textContent = hero.buttonLabel;
     button.href = hero.buttonLink || "#products";
-    const image = section.querySelector("img");
-    image.src = hero.image;
-    image.alt = hero.heading;
+    const media = section.querySelector(".homepage-hero-media");
+    media.replaceChildren();
+    const track = document.createElement("div");
+    track.className = "homepage-hero-track";
+    const slides = hero.images.map((url, index) => {
+        const image = document.createElement("img");
+        image.className = `homepage-hero-slide${index === 0 ? " is-active" : ""}`;
+        image.src = url;
+        image.alt = index === 0 ? hero.heading : "";
+        image.loading = "eager";
+        image.decoding = "async";
+        track.appendChild(image);
+        return image;
+    });
+    const imageReady = slides.map(image => image.decode().catch(() => {}));
+    media.appendChild(track);
+
+    let activeIndex = 0;
+    let pendingIndex = null;
+    let transitionToken = 0;
+    const showSlide = async index => {
+        const nextIndex = (index + slides.length) % slides.length;
+        if (nextIndex === activeIndex || nextIndex === pendingIndex) return;
+        pendingIndex = nextIndex;
+        const token = ++transitionToken;
+        await imageReady[nextIndex];
+        if (token !== transitionToken) return;
+        clearTimeout(section.heroFadeTimer);
+        slides.forEach(slide => slide.classList.remove("is-leaving"));
+        const outgoingSlide = slides[activeIndex];
+        const incomingSlide = slides[nextIndex];
+        incomingSlide.classList.remove("is-active", "is-leaving");
+        void incomingSlide.offsetWidth;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (token !== transitionToken) return;
+            outgoingSlide.classList.remove("is-active");
+            outgoingSlide.classList.add("is-leaving");
+            outgoingSlide.alt = "";
+            incomingSlide.classList.add("is-active");
+            incomingSlide.alt = hero.heading;
+            activeIndex = nextIndex;
+            pendingIndex = null;
+            section.heroFadeTimer = setTimeout(() => {
+                outgoingSlide.classList.remove("is-leaving");
+                section.heroFadeTimer = null;
+            }, 1250);
+        }));
+    };
+    if (slides.length > 1) {
+        const stop = () => { clearInterval(section.heroSlideshowTimer); section.heroSlideshowTimer = null; };
+        const start = () => {
+            stop();
+            section.heroSlideshowTimer = setInterval(() => showSlide(activeIndex + 1), 4000);
+        };
+        media.onmouseenter = stop;
+        media.onmouseleave = start;
+        media.onfocusin = stop;
+        media.onfocusout = start;
+        start();
+    }
 }
 
 function normalizeAnnouncementBar(value = {}) {
@@ -865,7 +955,7 @@ function normalizeCampaignBanner(value = {}) {
         body: text(value.body, DEFAULT_CAMPAIGN_BANNER.body, 180),
         buttonLabel: text(value.buttonLabel, DEFAULT_CAMPAIGN_BANNER.buttonLabel, 32),
         buttonLink: text(value.buttonLink, DEFAULT_CAMPAIGN_BANNER.buttonLink, 140),
-        image: text(value.image, DEFAULT_CAMPAIGN_BANNER.image, 220)
+        image: text(value.image, DEFAULT_CAMPAIGN_BANNER.image, 500)
     };
 }
 

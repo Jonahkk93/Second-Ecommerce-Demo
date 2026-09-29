@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPWR Management</title>
-    <link rel="stylesheet" href="css/admin-products.css?v=20260928-5">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260929-18">
     <link rel="stylesheet" href="css/review-lightbox.css?v=20260923-2">
     <link rel="stylesheet" href="css/Larke.css">
     <link rel="stylesheet" href="css/touch-interactions.css">
@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/management-navigation.css?v=20260925-2">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
     <script src="js/touch-interactions.js" defer></script>
-    <script src="js/auto-grow-textareas.js?v=20260915-2" defer></script>
+    <script src="js/auto-grow-textareas.js?v=20260929-3" defer></script>
     <script src="js/management-navigation.js?v=20260925-2" defer></script>
     <script type="module" src="js/management-account.js?v=20260909-3"></script>
 </head>
@@ -66,18 +66,42 @@
             <div class="section-heading homepage-heading">
                 <div><p class="eyebrow">Homepage</p><div class="homepage-heading-title"><h2>Hero Banner</h2><label class="toggle-row homepage-section-toggle"><input type="checkbox" id="homepage-hero-enabled" aria-label="Show Hero Banner on the homepage" checked><span class="toggle-control"></span><span class="homepage-hero-toggle-label">Shown</span></label></div><p>Control the first banner shoppers see when they land on MPWR.</p></div>
             </div>
-            <div class="homepage-hero-editor">
+            <div class="homepage-hero-editor homepage-storefront-hero-editor">
                 <article class="homepage-hero-fields">
                     <label class="field"><span>Small label</span><input id="homepage-hero-eyebrow" maxlength="40" placeholder="e.g. New season"></label>
                     <label class="field field-wide"><span>Main heading</span><input id="homepage-hero-heading" maxlength="80" placeholder="e.g. Beauty finds, made easy"></label>
-                    <label class="field field-wide"><span>Short description</span><textarea id="homepage-hero-body" maxlength="180" rows="3" placeholder="Tell shoppers what this collection is about…"></textarea></label>
+                    <label class="field field-wide"><span>Short description</span><textarea id="homepage-hero-body" maxlength="180" rows="1" placeholder="Tell shoppers what this collection is about…"></textarea></label>
                     <label class="field"><span>Button text</span><input id="homepage-hero-button-label" maxlength="32" placeholder="Shop now"></label>
                     <label class="field"><span>Button link</span><input id="homepage-hero-button-link" maxlength="140" placeholder="#products"></label>
-                    <label class="field field-wide"><span>Image URL</span><input id="homepage-hero-image" maxlength="220" placeholder="images/PressOn Nails_Pink.JPG"></label>
+                    <div class="banner-media-field field-wide" data-banner-media="hero">
+                        <span class="banner-upload-heading">Photos <span>(optional, up to 10)</span></span>
+                        <div class="banner-media-row">
+                            <label class="banner-media-dropzone banner-file-button" for="homepage-hero-image-file" aria-label="Add hero banner photos"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></label>
+                            <input id="homepage-hero-image-file" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif">
+                            <div class="banner-media-previews"></div>
+                        </div>
+                        <p class="banner-image-limit">JPEG, PNG, WebP, or GIF · Maximum 10 photos · 50 MB per image</p>
+                        <span class="banner-media-status" aria-live="polite">Images display in this order and slide automatically</span>
+                        <details class="banner-media-advanced"><summary>Advanced: use image URLs</summary><div class="hero-url-grid" aria-label="Hero image URLs">
+                            <label class="field"><span>URL 1</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="0" aria-label="Preview URL 1"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            <label class="field"><span>URL 2</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="1" aria-label="Preview URL 2"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            <label class="field"><span>URL 3</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="2" aria-label="Preview URL 3"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            <label class="field"><span>URL 4</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="3" aria-label="Preview URL 4"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            <label class="field"><span>URL 5</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="4" aria-label="Preview URL 5"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            <label class="field"><span>URL 6</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="5" aria-label="Preview URL 6"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            <label class="field"><span>URL 7</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="6" aria-label="Preview URL 7"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            <label class="field"><span>URL 8</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="7" aria-label="Preview URL 8"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            <label class="field"><span>URL 9</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="8" aria-label="Preview URL 9"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            <label class="field"><span>URL 10</span><span class="hero-url-control"><input class="homepage-hero-url-input" maxlength="500" placeholder="https://…"><button type="button" data-hero-url-preview="9" aria-label="Preview URL 10"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                        </div><input id="homepage-hero-image" type="hidden"></details>
+                        <input id="homepage-hero-image-key" type="hidden">
+                        <input id="homepage-hero-images" type="hidden">
+                    </div>
                 </article>
                 <article class="homepage-hero-preview" id="homepage-hero-preview" aria-live="polite">
-                    <div><span class="preview-label">Hero preview</span><p class="hero-preview-eyebrow"></p><h3></h3><p class="hero-preview-body"></p><span class="hero-preview-button"></span></div>
-                    <img alt="">
+                    <div class="management-storefront-hero-copy"><p class="hero-preview-eyebrow"></p><h3></h3><p class="hero-preview-body"></p><span class="hero-preview-button"></span></div>
+                    <div class="management-storefront-hero-media"><img alt=""></div>
+                    <nav class="management-storefront-hero-categories" aria-label="Hero category preview"><span class="is-featured">Press-ons</span><span>Wigs</span><span>Lashes</span><span>Self-care</span></nav>
                 </article>
             </div>
             <div class="section-heading homepage-heading campaign-banner-heading">
@@ -87,10 +111,21 @@
                 <article class="homepage-hero-fields">
                     <label class="field"><span>Small label</span><input id="homepage-campaign-eyebrow" maxlength="40" placeholder="e.g. Limited offer"></label>
                     <label class="field field-wide"><span>Main heading</span><input id="homepage-campaign-heading" maxlength="80" placeholder="e.g. 15% off selected favourites"></label>
-                    <label class="field field-wide"><span>Short description</span><textarea id="homepage-campaign-body" maxlength="180" rows="3" placeholder="Tell shoppers what the campaign is about…"></textarea></label>
+                    <label class="field field-wide"><span>Short description</span><textarea id="homepage-campaign-body" maxlength="180" rows="1" placeholder="Tell shoppers what the campaign is about…"></textarea></label>
                     <label class="field"><span>Button text</span><input id="homepage-campaign-button-label" maxlength="32" placeholder="Shop offers"></label>
                     <label class="field"><span>Button link</span><input id="homepage-campaign-button-link" maxlength="140" placeholder="#discounts"></label>
-                    <label class="field field-wide"><span>Image URL</span><input id="homepage-campaign-image" maxlength="220" placeholder="images/Icon Folder/Discount Icon_E5A484.PNG"></label>
+                    <div class="banner-media-field field-wide" data-banner-media="campaign">
+                        <span class="banner-upload-heading">Photo <span>(optional, maximum 1)</span></span>
+                        <div class="banner-media-row">
+                            <label class="banner-media-dropzone banner-file-button" for="homepage-campaign-image-file" aria-label="Add campaign banner photo"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></label>
+                            <input id="homepage-campaign-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+                            <div class="banner-media-preview"><img class="banner-media-thumbnail" alt="Current campaign banner"><button class="banner-media-reset" type="button" aria-label="Restore default campaign image"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>
+                        </div>
+                        <p class="banner-image-limit">JPEG, PNG, WebP, or GIF · Maximum 1 photo · 10 MB per image</p>
+                        <span class="banner-media-status" aria-live="polite">Current image</span>
+                        <details class="banner-media-advanced"><summary>Advanced: use an image URL</summary><label class="field"><span>Image URL</span><input id="homepage-campaign-image" maxlength="500" placeholder="https://cdn.example.com/banner.webp"></label></details>
+                        <input id="homepage-campaign-image-key" type="hidden">
+                    </div>
                 </article>
                 <article class="homepage-hero-preview homepage-campaign-preview" id="homepage-campaign-preview" aria-live="polite">
                     <div><span class="preview-label">Campaign preview</span><p class="hero-preview-eyebrow"></p><h3></h3><p class="hero-preview-body"></p><span class="hero-preview-button"></span></div>
@@ -245,6 +280,6 @@
 <div class="confirm-modal hidden" id="image-delete-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="image-delete-confirm-title" aria-describedby="image-delete-confirm-message"><div class="confirm-card"><h2 id="image-delete-confirm-title">Delete image?</h2><p id="image-delete-confirm-message">This image will be removed from the product when you save your changes.</p><div><button class="secondary-button" id="cancel-image-delete" type="button">Cancel</button><button class="danger-button" id="confirm-image-delete" type="button">Delete Image</button></div></div></div>
 <div class="admin-products-toast" role="status" aria-live="polite"></div>
 <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/admin-products.js?v=20260928-5"></script>
+    <script type="module" src="js/admin-products.js?v=20260929-21"></script>
  </body>
 </html>

@@ -44,9 +44,9 @@ export class MediaService {
 
   async upload(user: AuthUser, purpose: string, request: MultipartRequest) {
     this.assertConfigured();
-    if (!["profile", "review", "product", "appeal"].includes(purpose)) throw new UnsupportedMediaTypeException("Unsupported media purpose");
-    if (purpose === "product" && user.role !== "admin") throw new ForbiddenException("Admin access required for product images");
-    const maxFileSize = purpose === "product" ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (!["profile", "review", "product", "banner", "appeal"].includes(purpose)) throw new UnsupportedMediaTypeException("Unsupported media purpose");
+    if (["product", "banner"].includes(purpose) && user.role !== "admin") throw new ForbiddenException("Admin access required for storefront images");
+    const maxFileSize = ["product", "banner"].includes(purpose) ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
     const file = await request.file({ limits: { files: 1, fileSize: maxFileSize } });
     if (!file) throw new UnsupportedMediaTypeException("Media file is required");
     const type = mediaTypes[file.mimetype];

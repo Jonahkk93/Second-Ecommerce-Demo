@@ -28,6 +28,8 @@
         }).observe(document.body, { childList: true, subtree: true });
     };
 
+    window.MPWRAutoGrowTextareas = { resize, prepare, scan };
+
     document.addEventListener("input", event => {
         if (event.target instanceof HTMLTextAreaElement) resize(event.target);
     });

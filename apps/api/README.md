@@ -67,7 +67,7 @@ No additional software is required. For production, create a Resend account, ver
 
 ## Media storage
 
-Images are uploaded through authenticated `POST /v1/media/uploads/:purpose` requests and stored in the configured Cloudflare R2 bucket. Configure `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and `R2_PUBLIC_BASE_URL`. Product uploads require an administrator; profile and review uploads are scoped to the signed-in user. JPEG, PNG, WebP, and GIF files are accepted up to 5 MB and their file signatures are validated by the API.
+Images are uploaded through authenticated `POST /v1/media/uploads/:purpose` requests and stored in the configured Cloudflare R2 bucket. Configure `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and `R2_PUBLIC_BASE_URL`. Product and banner uploads require an administrator; profile and review uploads are scoped to the signed-in user. Banner images accept JPEG, PNG, WebP, and GIF files up to 10 MB; other standard image uploads accept the same formats up to 5 MB. Product media may be larger and may include supported video formats. File signatures are validated by the API.
 
 Run `npm run media:migrate-r2` after configuring R2 to copy unique Firebase-hosted images into R2 and replace nested database URLs. The command is idempotent. Use the `r2.dev` URL only for development and connect a custom media domain before production.
 

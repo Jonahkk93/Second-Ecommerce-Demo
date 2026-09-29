@@ -19,6 +19,7 @@ categoryLabels[UNCATEGORIZED_CATEGORY] = "No Category";
 const POPULAR_PRODUCT_LIMIT = 10;
 const HOMEPAGE_DISCOUNT_PRODUCT_LIMIT = 10;
 const SEARCH_POPULAR_PRODUCT_LIMIT = 12;
+const HOMEPAGE_HERO_IMAGE_LIMIT = 10;
 const DEFAULT_SEARCH_SUGGESTIONS = ["Press-ons", "Wigs", "Lashes", "Nail polish", "Moisturizer", "Pink", "Black", "Shoulder"];
 const DEFAULT_DISCOUNTS = ["12", "15", "1", "4", "11"].map(id => ({ id, percent: 15 }));
 const DEFAULT_ANNOUNCEMENT_BAR = {
@@ -78,6 +79,7 @@ let discountMode = "manual";
 let discountSectionEnabled = true;
 let announcementBar = { ...DEFAULT_ANNOUNCEMENT_BAR };
 let homepageHero = { ...DEFAULT_HOMEPAGE_HERO };
+let homepageHeroPreviewImage = "";
 let campaignBanner = { ...DEFAULT_CAMPAIGN_BANNER };
 let searchSettings = { suggestions: [...DEFAULT_SEARCH_SUGGESTIONS], popularProducts: [], popularMode: "automatic", suggestionsEnabled: true, popularEnabled: true, suggestionsHeading: "Suggested searches", popularHeading: "Popular picks", defaultSort: "relevance" };
 let editingProduct = null;
@@ -163,7 +165,20 @@ function syncAnnouncementBarForm() {
     renderAnnouncementBarPreview();
 }
 
+function normalizeHeroImages(value = {}) {
+    const hasImageList = Array.isArray(value.images);
+    const source = hasImageList
+        ? value.images
+        : [{ url: value.image || DEFAULT_HOMEPAGE_HERO.image, key: value.imageKey }];
+    const images = source.map(item => typeof item === "string" ? { url: item, key: "" } : {
+        url: cleanHeroText(item?.url, "", 500),
+        key: cleanHeroText(item?.key, "", 500)
+    }).filter(item => item.url).slice(0, HOMEPAGE_HERO_IMAGE_LIMIT);
+    return images;
+}
+
 function normalizeHomepageHero(value = {}) {
+    const images = normalizeHeroImages(value);
     return {
         enabled: value.enabled !== false,
         eyebrow: cleanHeroText(value.eyebrow, DEFAULT_HOMEPAGE_HERO.eyebrow, 40),
@@ -171,11 +186,16 @@ function normalizeHomepageHero(value = {}) {
         body: cleanHeroText(value.body, DEFAULT_HOMEPAGE_HERO.body, 180),
         buttonLabel: cleanHeroText(value.buttonLabel, DEFAULT_HOMEPAGE_HERO.buttonLabel, 32),
         buttonLink: cleanHeroText(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140),
-        image: cleanHeroText(value.image, DEFAULT_HOMEPAGE_HERO.image, 220)
+        image: images[0]?.url || "",
+        imageKey: images[0]?.key || "",
+        images
     };
 }
 
 function readHomepageHeroForm() {
+    let images;
+    try { images = JSON.parse($("#homepage-hero-images").value || "[]"); }
+    catch { images = []; }
     homepageHero = normalizeHomepageHero({
         enabled: $("#homepage-hero-enabled").checked,
         eyebrow: $("#homepage-hero-eyebrow").value,
@@ -183,12 +203,14 @@ function readHomepageHeroForm() {
         body: $("#homepage-hero-body").value,
         buttonLabel: $("#homepage-hero-button-label").value,
         buttonLink: $("#homepage-hero-button-link").value,
-        image: $("#homepage-hero-image").value
+        image: $("#homepage-hero-image").value,
+        imageKey: $("#homepage-hero-image-key").value,
+        images
     });
     return homepageHero;
 }
 
-function renderHomepageHeroPreview() {
+function renderHomepageHeroPreview({ syncMedia = true } = {}) {
     const hero = readHomepageHeroForm();
     const preview = $("#homepage-hero-preview");
     preview.classList.toggle("is-hidden", !hero.enabled);
@@ -197,19 +219,49 @@ function renderHomepageHeroPreview() {
     preview.querySelector("h3").textContent = hero.heading;
     preview.querySelector(".hero-preview-body").textContent = hero.body;
     preview.querySelector(".hero-preview-button").textContent = hero.buttonLabel;
-    const image = preview.querySelector("img");
-    image.src = hero.image;
-    image.alt = hero.heading;
+    const availablePreviewImage = hero.images.some(item => item.url === homepageHeroPreviewImage)
+        ? homepageHeroPreviewImage
+        : hero.image;
+    homepageHeroPreviewImage = availablePreviewImage;
+    const image = preview.querySelector(".management-storefront-hero-media img");
+    image.hidden = !availablePreviewImage;
+    if (availablePreviewImage) {
+        image.src = availablePreviewImage;
+        image.alt = hero.heading;
+    } else {
+        image.removeAttribute("src");
+        image.alt = "";
+    }
+    if (syncMedia) syncHeroMediaControl(hero.images);
+}
+
+function showHomepageHeroPreviewImage(imageUrl) {
+    homepageHeroPreviewImage = imageUrl || "";
+    const image = $("#homepage-hero-preview .management-storefront-hero-media img");
+    image.hidden = !homepageHeroPreviewImage;
+    if (homepageHeroPreviewImage) {
+        image.src = homepageHeroPreviewImage;
+        image.alt = $("#homepage-hero-heading").value.trim() || DEFAULT_HOMEPAGE_HERO.heading;
+    } else {
+        image.removeAttribute("src");
+        image.alt = "";
+    }
 }
 
 function syncHomepageHeroForm() {
     $("#homepage-hero-enabled").checked = homepageHero.enabled !== false;
     $("#homepage-hero-eyebrow").value = homepageHero.eyebrow;
     $("#homepage-hero-heading").value = homepageHero.heading;
-    $("#homepage-hero-body").value = homepageHero.body;
+    const bodyField = $("#homepage-hero-body");
+    bodyField.value = homepageHero.body;
+    window.MPWRAutoGrowTextareas?.prepare(bodyField);
     $("#homepage-hero-button-label").value = homepageHero.buttonLabel;
     $("#homepage-hero-button-link").value = homepageHero.buttonLink;
+    const imageUrlFields = [...document.querySelectorAll(".homepage-hero-url-input")];
+    imageUrlFields.forEach((field, index) => { field.value = homepageHero.images[index]?.url || ""; });
     $("#homepage-hero-image").value = homepageHero.image;
+    $("#homepage-hero-image-key").value = homepageHero.imageKey || "";
+    $("#homepage-hero-images").value = JSON.stringify(homepageHero.images);
     renderHomepageHeroPreview();
 }
 
@@ -221,7 +273,8 @@ function normalizeCampaignBanner(value = {}) {
         body: cleanHeroText(value.body, DEFAULT_CAMPAIGN_BANNER.body, 180),
         buttonLabel: cleanHeroText(value.buttonLabel, DEFAULT_CAMPAIGN_BANNER.buttonLabel, 32),
         buttonLink: cleanHeroText(value.buttonLink, DEFAULT_CAMPAIGN_BANNER.buttonLink, 140),
-        image: cleanHeroText(value.image, DEFAULT_CAMPAIGN_BANNER.image, 220)
+        image: cleanHeroText(value.image, DEFAULT_CAMPAIGN_BANNER.image, 500),
+        imageKey: cleanHeroText(value.imageKey, "", 500)
     };
 }
 
@@ -233,7 +286,8 @@ function readCampaignBannerForm() {
         body: $("#homepage-campaign-body").value,
         buttonLabel: $("#homepage-campaign-button-label").value,
         buttonLink: $("#homepage-campaign-button-link").value,
-        image: $("#homepage-campaign-image").value
+        image: $("#homepage-campaign-image").value,
+        imageKey: $("#homepage-campaign-image-key").value
     });
     return campaignBanner;
 }
@@ -250,17 +304,209 @@ function renderCampaignBannerPreview() {
     const image = preview.querySelector("img");
     image.src = banner.image;
     image.alt = banner.heading;
+    syncBannerMediaControl("campaign", banner.image);
 }
 
 function syncCampaignBannerForm() {
     $("#homepage-campaign-enabled").checked = campaignBanner.enabled !== false;
     $("#homepage-campaign-eyebrow").value = campaignBanner.eyebrow;
     $("#homepage-campaign-heading").value = campaignBanner.heading;
-    $("#homepage-campaign-body").value = campaignBanner.body;
+    const bodyField = $("#homepage-campaign-body");
+    bodyField.value = campaignBanner.body;
+    window.MPWRAutoGrowTextareas?.prepare(bodyField);
     $("#homepage-campaign-button-label").value = campaignBanner.buttonLabel;
     $("#homepage-campaign-button-link").value = campaignBanner.buttonLink;
     $("#homepage-campaign-image").value = campaignBanner.image;
+    $("#homepage-campaign-image-key").value = campaignBanner.imageKey || "";
     renderCampaignBannerPreview();
+}
+
+function syncBannerMediaControl(prefix, imageUrl, statusText = "Current image") {
+    const container = $(`[data-banner-media="${prefix}"]`);
+    if (!container) return;
+    container.querySelector(".banner-media-thumbnail").src = imageUrl;
+    container.querySelector(".banner-media-status").textContent = statusText;
+}
+
+function syncHeroMediaControl(images, statusText = "") {
+    const container = $('[data-banner-media="hero"]');
+    const previews = container?.querySelector(".banner-media-previews");
+    if (!previews) return;
+    previews.innerHTML = images.map((item, index) => `<div class="banner-media-preview${item.url === homepageHeroPreviewImage ? " is-previewing" : ""}"><button class="hero-media-preview-button" type="button" data-hero-image-preview="${index}" aria-label="Show hero slide ${index + 1} in the preview"><img class="banner-media-thumbnail" src="${escapeHtml(item.url)}" alt="Hero slide ${index + 1}"></button><button class="banner-media-reset" type="button" data-hero-image-remove="${index}" aria-label="Remove hero slide ${index + 1}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`).join("");
+    const dropzone = container.querySelector(".banner-media-dropzone");
+    const full = images.length >= HOMEPAGE_HERO_IMAGE_LIMIT;
+    dropzone.classList.toggle("is-disabled", full);
+    dropzone.setAttribute("aria-disabled", String(full));
+    container.querySelector(".banner-media-status").textContent = statusText || (images.length
+        ? "Images display in this order and slide automatically"
+        : "No hero photos added");
+}
+
+function initializeHeroMediaUploader() {
+    const container = $('[data-banner-media="hero"]');
+    const fileInput = $("#homepage-hero-image-file");
+    const urlInput = $("#homepage-hero-image");
+    const urlInputs = [...container.querySelectorAll(".homepage-hero-url-input")];
+    const keyInput = $("#homepage-hero-image-key");
+    const imagesInput = $("#homepage-hero-images");
+    const dropzone = container.querySelector(".banner-media-dropzone");
+    const previews = container.querySelector(".banner-media-previews");
+    const status = container.querySelector(".banner-media-status");
+    const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    const urlImages = () => [...new Set(urlInputs.map(input => input.value.trim()).filter(Boolean))]
+        .slice(0, HOMEPAGE_HERO_IMAGE_LIMIT)
+        .map(url => ({ url, key: "" }));
+    const currentImages = () => {
+        try { return normalizeHeroImages({ images: JSON.parse(imagesInput.value || "[]") }); }
+        catch { return normalizeHeroImages({ images: urlImages() }); }
+    };
+    const setImages = (images, message) => {
+        const normalized = normalizeHeroImages({ images });
+        imagesInput.value = JSON.stringify(normalized);
+        urlInputs.forEach((input, index) => { input.value = normalized[index]?.url || ""; });
+        urlInput.value = normalized[0]?.url || "";
+        keyInput.value = normalized[0]?.key || "";
+        renderHomepageHeroPreview();
+        if (message) syncHeroMediaControl(normalized, message);
+    };
+
+    async function uploadHeroFiles(files) {
+        const additions = [...files];
+        if (!additions.length) return;
+        const savedImages = currentImages();
+        const existing = savedImages.length === 1 && savedImages[0].url === DEFAULT_HOMEPAGE_HERO.image && !savedImages[0].key
+            ? []
+            : savedImages;
+        if (existing.length + additions.length > HOMEPAGE_HERO_IMAGE_LIMIT) return showToast(`You can add up to ${HOMEPAGE_HERO_IMAGE_LIMIT} hero photos.`, "error");
+        if (additions.some(file => !acceptedTypes.has(file.type))) return showToast("Choose JPG, PNG, WebP or GIF images.", "error");
+        if (additions.some(file => file.size > 50 * 1024 * 1024)) return showToast("Each hero image must be 50 MB or smaller.", "error");
+
+        dropzone.classList.add("is-uploading");
+        status.textContent = additions.length > 1 ? `Uploading ${additions.length} photos…` : `Uploading ${additions[0].name}…`;
+        const uploadedImages = [];
+        try {
+            for (const file of additions) {
+                const uploaded = await uploadImage(file, "banner");
+                uploadedImages.push({ url: uploaded.url, key: uploaded.key || "" });
+            }
+            const next = [...existing, ...uploadedImages].slice(0, HOMEPAGE_HERO_IMAGE_LIMIT);
+            setImages(next, `${next.length} hero ${next.length === 1 ? "photo" : "photos"} staged · Click Save Changes to publish`);
+        } catch (error) {
+            showToast(error?.message || "Unable to upload the hero photos.", "error");
+        } finally {
+            dropzone.classList.remove("is-uploading");
+            fileInput.value = "";
+        }
+    }
+
+    fileInput.addEventListener("change", () => uploadHeroFiles(fileInput.files || []));
+    ["dragenter", "dragover"].forEach(type => dropzone.addEventListener(type, event => {
+        event.preventDefault();
+        if (!dropzone.classList.contains("is-disabled")) dropzone.classList.add("is-dragging");
+    }));
+    ["dragleave", "drop"].forEach(type => dropzone.addEventListener(type, event => {
+        event.preventDefault();
+        dropzone.classList.remove("is-dragging");
+    }));
+    dropzone.addEventListener("drop", event => uploadHeroFiles(event.dataTransfer?.files || []));
+    previews.addEventListener("click", event => {
+        const button = event.target.closest("[data-hero-image-remove]");
+        if (button) {
+            const next = currentImages().filter((_item, index) => index !== Number(button.dataset.heroImageRemove));
+            setImages(next, "Hero photo removed · Save homepage to publish");
+            return;
+        }
+        const previewButton = event.target.closest("[data-hero-image-preview]");
+        if (!previewButton) return;
+        const imageUrl = currentImages()[Number(previewButton.dataset.heroImagePreview)]?.url || "";
+        showHomepageHeroPreviewImage(imageUrl);
+    });
+    let urlPreviewTimer;
+    const stageUrlImages = () => {
+        const previousImages = currentImages();
+        const previousKeys = new Map(previousImages.map(item => [item.url, item.key]));
+        const next = urlImages().map(item => ({ ...item, key: previousKeys.get(item.url) || "" }));
+        imagesInput.value = JSON.stringify(next);
+        urlInput.value = next[0]?.url || "";
+        keyInput.value = next[0]?.key || "";
+        clearTimeout(urlPreviewTimer);
+        urlPreviewTimer = setTimeout(() => {
+            renderHomepageHeroPreview();
+            syncHeroMediaControl(next, `${next.length} hero image ${next.length === 1 ? "URL" : "URLs"} staged · Click Save Changes to publish`);
+        }, 250);
+    };
+    urlInputs.forEach(input => input.addEventListener("input", stageUrlImages));
+    container.querySelector(".hero-url-grid").addEventListener("click", event => {
+        const previewButton = event.target.closest("[data-hero-url-preview]");
+        if (!previewButton) return;
+        const index = Number(previewButton.dataset.heroUrlPreview);
+        const imageUrl = urlInputs[index]?.value.trim() || "";
+        if (!imageUrl) return showToast(`Add an image URL in URL ${index + 1} first.`, "warning");
+        showHomepageHeroPreviewImage(imageUrl);
+        status.textContent = `Previewing URL ${index + 1}`;
+    });
+}
+
+function initializeBannerMediaUploader({ prefix, defaultImage, render }) {
+    const container = $(`[data-banner-media="${prefix}"]`);
+    const fileInput = $(`#homepage-${prefix}-image-file`);
+    const urlInput = $(`#homepage-${prefix}-image`);
+    const keyInput = $(`#homepage-${prefix}-image-key`);
+    const dropzone = container.querySelector(".banner-media-dropzone");
+    const status = container.querySelector(".banner-media-status");
+    const resetButton = container.querySelector(".banner-media-reset");
+    const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+    async function uploadBannerFile(file) {
+        if (!file) return;
+        if (!acceptedTypes.has(file.type)) return showToast("Choose a JPG, PNG, WebP or GIF image.", "error");
+        if (file.size > 10 * 1024 * 1024) return showToast("Banner images must be 10 MB or smaller.", "error");
+
+        const previousUrl = urlInput.value;
+        const previousKey = keyInput.value;
+        const localPreview = URL.createObjectURL(file);
+        urlInput.value = localPreview;
+        keyInput.value = "";
+        dropzone.classList.add("is-uploading");
+        status.textContent = `Uploading ${file.name}…`;
+        render();
+
+        try {
+            const uploaded = await uploadImage(file, "banner");
+            urlInput.value = uploaded.url;
+            keyInput.value = uploaded.key || "";
+            render();
+            syncBannerMediaControl(prefix, uploaded.url, `${file.name} uploaded · Save homepage to publish`);
+            showToast("Banner image uploaded. Save homepage to publish it.");
+        } catch (error) {
+            urlInput.value = previousUrl;
+            keyInput.value = previousKey;
+            render();
+            showToast(error?.message || "Unable to upload the banner image.", "error");
+        } finally {
+            dropzone.classList.remove("is-uploading");
+            fileInput.value = "";
+            URL.revokeObjectURL(localPreview);
+        }
+    }
+
+    fileInput.addEventListener("change", () => uploadBannerFile(fileInput.files?.[0]));
+    ["dragenter", "dragover"].forEach(type => dropzone.addEventListener(type, event => {
+        event.preventDefault();
+        dropzone.classList.add("is-dragging");
+    }));
+    ["dragleave", "drop"].forEach(type => dropzone.addEventListener(type, event => {
+        event.preventDefault();
+        dropzone.classList.remove("is-dragging");
+    }));
+    dropzone.addEventListener("drop", event => uploadBannerFile(event.dataTransfer?.files?.[0]));
+    urlInput.addEventListener("input", () => { keyInput.value = ""; });
+    resetButton.addEventListener("click", () => {
+        urlInput.value = defaultImage;
+        keyInput.value = "";
+        render();
+        syncBannerMediaControl(prefix, defaultImage, "Default image restored · Save homepage to publish");
+    });
 }
 
 function showToast(message, type = "success") {
@@ -1366,8 +1612,10 @@ function syncHomepageSectionStates() {
     syncDiscountPickerAvailability();
 }
 
-async function saveHomepageSettings() {
-    await Promise.all([savePopularSetting(), saveDiscountSetting(), saveAnnouncementBar(), saveHomepageHero(), saveCampaignBanner(), saveCategorySetting()]);
+async function saveHomepageSettings({ includeHero = false } = {}) {
+    const saves = [savePopularSetting(), saveDiscountSetting(), saveAnnouncementBar(), saveCampaignBanner(), saveCategorySetting()];
+    if (includeHero) saves.push(saveHomepageHero());
+    await Promise.all(saves);
 }
 
 async function saveAnnouncementBar() {
@@ -1959,9 +2207,11 @@ function bindEvents() {
         const field = $(selector);
         field.addEventListener(field.type === "checkbox" ? "change" : "input", renderAnnouncementBarPreview);
     });
-    ["#homepage-hero-enabled", "#homepage-hero-eyebrow", "#homepage-hero-heading", "#homepage-hero-body", "#homepage-hero-button-label", "#homepage-hero-button-link", "#homepage-hero-image"].forEach(selector => {
+    initializeHeroMediaUploader();
+    initializeBannerMediaUploader({ prefix: "campaign", defaultImage: DEFAULT_CAMPAIGN_BANNER.image, render: renderCampaignBannerPreview });
+    ["#homepage-hero-enabled", "#homepage-hero-eyebrow", "#homepage-hero-heading", "#homepage-hero-body", "#homepage-hero-button-label", "#homepage-hero-button-link"].forEach(selector => {
         const field = $(selector);
-        field.addEventListener(field.type === "checkbox" ? "change" : "input", renderHomepageHeroPreview);
+        field.addEventListener(field.type === "checkbox" ? "change" : "input", () => renderHomepageHeroPreview({ syncMedia: false }));
     });
     ["#homepage-campaign-enabled", "#homepage-campaign-eyebrow", "#homepage-campaign-heading", "#homepage-campaign-body", "#homepage-campaign-button-label", "#homepage-campaign-button-link", "#homepage-campaign-image"].forEach(selector => {
         const field = $(selector);
@@ -1987,7 +2237,7 @@ function bindEvents() {
         button.textContent = "Saving…";
         try {
             await homepageAutosaveQueue;
-            await saveHomepageSettings();
+            await saveHomepageSettings({ includeHero: true });
             notifyStorefrontChange();
             $("#homepage-save-modal").classList.add("hidden");
             showToast("Homepage changes saved.");

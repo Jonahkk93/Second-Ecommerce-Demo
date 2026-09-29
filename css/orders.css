@@ -123,10 +123,6 @@ body{
     gap:24px;
 }
 
-.refund-policy-summary{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(300px,1.2fr);gap:28px;align-items:center;margin-bottom:24px;padding:20px 22px;border:1px solid #eadfd9;border-radius:16px;background:#fff}
-.refund-policy-summary small{color:#b46f4d;font-size:10px;font-weight:750;letter-spacing:.12em;text-transform:uppercase}
-.refund-policy-summary h2{margin-top:4px;color:#302a27;font-size:18px}
-.refund-policy-summary p{color:#6f6560;font-size:13px;line-height:1.6}
 
 .order-card{
 
@@ -1003,8 +999,6 @@ body{padding-top:84px}
 }
 
 @media (max-width:600px){
-    .refund-policy-summary{grid-template-columns:1fr;gap:9px;padding:17px}
-    .refund-policy-summary h2{font-size:16px}
     .order-refund-heading,.order-refund-meta{align-items:flex-start;flex-direction:column;gap:7px}
     .orders-confirm-overlay{padding:24px}
     .orders-confirm-box{width:min(300px,100%);padding:18px 16px 16px;border-radius:16px}
