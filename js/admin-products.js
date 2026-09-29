@@ -80,6 +80,10 @@ let discountSectionEnabled = true;
 let announcementBar = { ...DEFAULT_ANNOUNCEMENT_BAR };
 let homepageHero = { ...DEFAULT_HOMEPAGE_HERO };
 let homepageHeroPreviewImage = "";
+let homepageHeroPreviewTimer = null;
+let homepageHeroPreviewFadeTimer = null;
+let homepageHeroPreviewTransitionToken = 0;
+let homepageHeroPreviewPlaying = false;
 let campaignBanner = { ...DEFAULT_CAMPAIGN_BANNER };
 let searchSettings = { suggestions: [...DEFAULT_SEARCH_SUGGESTIONS], popularProducts: [], popularMode: "automatic", suggestionsEnabled: true, popularEnabled: true, suggestionsHeading: "Suggested searches", popularHeading: "Popular picks", defaultSort: "relevance" };
 let editingProduct = null;
@@ -170,11 +174,54 @@ function normalizeHeroImages(value = {}) {
     const source = hasImageList
         ? value.images
         : [{ url: value.image || DEFAULT_HOMEPAGE_HERO.image, key: value.imageKey }];
-    const images = source.map(item => typeof item === "string" ? { url: item, key: "" } : {
+    const images = source.map((item, index) => typeof item === "string" ? { url: item, key: "", source: "", slot: index + 1 } : {
         url: cleanHeroText(item?.url, "", 500),
-        key: cleanHeroText(item?.key, "", 500)
-    }).filter(item => item.url).slice(0, HOMEPAGE_HERO_IMAGE_LIMIT);
+        key: cleanHeroText(item?.key, "", 500),
+        source: item?.source === "upload" ? "upload" : "",
+        slot: Number.isInteger(Number(item?.slot)) && Number(item.slot) >= 1 && Number(item.slot) <= HOMEPAGE_HERO_IMAGE_LIMIT
+            ? Number(item.slot)
+            : index + 1
+    }).filter(item => item.url).slice(0, HOMEPAGE_HERO_IMAGE_LIMIT).sort((a, b) => a.slot - b.slot);
     return images;
+}
+
+function normalizePastedImageUrl(value) {
+    let candidate = String(value || "").trim().replace(/&amp;/gi, "&");
+    if (!candidate) return "";
+    try {
+        const parsed = new URL(candidate);
+        const isGoogle = /(^|\.)google\.[a-z.]+$/i.test(parsed.hostname) || parsed.hostname === "google.com";
+        if (isGoogle) {
+            const embeddedImage = parsed.searchParams.get("imgurl")
+                || parsed.searchParams.get("mediaurl")
+                || parsed.searchParams.get("image_url");
+            if (embeddedImage) candidate = embeddedImage;
+        }
+    } catch {}
+    return candidate;
+}
+
+function isGooglePageLink(value) {
+    try {
+        const parsed = new URL(value);
+        const googleHost = /(^|\.)google\.[a-z.]+$/i.test(parsed.hostname) || parsed.hostname === "google.com";
+        const googleShareLink = parsed.hostname === "images.app.goo.gl";
+        return (googleHost || googleShareLink) && !parsed.searchParams.get("imgurl") && !parsed.searchParams.get("mediaurl") && !parsed.searchParams.get("image_url");
+    } catch {
+        return false;
+    }
+}
+
+function syncHomepageHeroUrlFields(images) {
+    [...document.querySelectorAll(".homepage-hero-url-input")].forEach((field, index) => {
+        const item = images.find(image => image.slot === index + 1);
+        const filledByPhoto = Boolean(item && (item.source === "upload" || item.key));
+        field.disabled = filledByPhoto;
+        field.value = filledByPhoto ? "" : (item?.url || "");
+        field.placeholder = filledByPhoto ? "Image slot is already filled" : "Paste image URL here";
+        const previewButton = field.closest(".hero-url-control")?.querySelector("[data-hero-url-preview]");
+        if (previewButton) previewButton.disabled = filledByPhoto;
+    });
 }
 
 function normalizeHomepageHero(value = {}) {
@@ -223,21 +270,49 @@ function renderHomepageHeroPreview({ syncMedia = true } = {}) {
         ? homepageHeroPreviewImage
         : hero.image;
     homepageHeroPreviewImage = availablePreviewImage;
-    const image = preview.querySelector(".management-storefront-hero-media img");
-    image.hidden = !availablePreviewImage;
-    if (availablePreviewImage) {
-        image.src = availablePreviewImage;
-        image.alt = hero.heading;
-    } else {
-        image.removeAttribute("src");
-        image.alt = "";
+    if (!homepageHeroPreviewPlaying) {
+        const media = preview.querySelector(".management-storefront-hero-media");
+        let image = media.querySelector("img");
+        if (!image) {
+            image = document.createElement("img");
+            media.appendChild(image);
+        }
+        [...media.querySelectorAll("img")].slice(1).forEach(item => item.remove());
+        image.className = availablePreviewImage ? "is-active" : "";
+        image.hidden = !availablePreviewImage;
+        if (availablePreviewImage) {
+            image.src = availablePreviewImage;
+            image.alt = hero.heading;
+        } else {
+            image.removeAttribute("src");
+            image.alt = "";
+        }
     }
+    updateHomepageHeroPreviewCount(availablePreviewImage, hero.images);
+    updateHomepageHeroPreviewPlayButton(hero.images);
     if (syncMedia) syncHeroMediaControl(hero.images);
 }
 
+function updateHomepageHeroPreviewCount(imageUrl, images) {
+    const count = $("#homepage-hero-preview .management-storefront-hero-count");
+    if (!count) return;
+    const items = Array.isArray(images) ? images : (() => {
+        try { return normalizeHeroImages({ images: JSON.parse($("#homepage-hero-images").value || "[]") }); }
+        catch { return []; }
+    })();
+    const index = items.findIndex(item => item.url === imageUrl);
+    count.hidden = items.length === 0;
+    count.textContent = items.length ? `${Math.max(0, index) + 1} / ${items.length}` : "";
+}
+
 function showHomepageHeroPreviewImage(imageUrl) {
+    stopHomepageHeroPreview();
     homepageHeroPreviewImage = imageUrl || "";
-    const image = $("#homepage-hero-preview .management-storefront-hero-media img");
+    const media = $("#homepage-hero-preview .management-storefront-hero-media");
+    media.replaceChildren();
+    const image = document.createElement("img");
+    image.className = homepageHeroPreviewImage ? "is-active" : "";
+    media.appendChild(image);
     image.hidden = !homepageHeroPreviewImage;
     if (homepageHeroPreviewImage) {
         image.src = homepageHeroPreviewImage;
@@ -246,6 +321,93 @@ function showHomepageHeroPreviewImage(imageUrl) {
         image.removeAttribute("src");
         image.alt = "";
     }
+    updateHomepageHeroPreviewCount(homepageHeroPreviewImage);
+}
+
+function updateHomepageHeroPreviewPlayButton(images) {
+    const button = $("#homepage-hero-preview-play");
+    if (!button) return;
+    const canPlay = Array.isArray(images) && images.length > 1;
+    if (!canPlay && homepageHeroPreviewPlaying) stopHomepageHeroPreview();
+    button.disabled = !canPlay;
+    button.setAttribute("aria-pressed", String(homepageHeroPreviewPlaying));
+    button.querySelector(".management-storefront-hero-play-icon").textContent = homepageHeroPreviewPlaying ? "■" : "▶";
+    button.querySelector(".management-storefront-hero-play-label").textContent = homepageHeroPreviewPlaying ? "Stop Preview" : "Play Preview";
+}
+
+function stopHomepageHeroPreview() {
+    clearInterval(homepageHeroPreviewTimer);
+    clearTimeout(homepageHeroPreviewFadeTimer);
+    homepageHeroPreviewTimer = null;
+    homepageHeroPreviewFadeTimer = null;
+    homepageHeroPreviewTransitionToken += 1;
+    homepageHeroPreviewPlaying = false;
+    const media = $("#homepage-hero-preview .management-storefront-hero-media");
+    const activeImage = media?.querySelector("img.is-active") || media?.querySelector("img");
+    if (activeImage && media) {
+        homepageHeroPreviewImage = activeImage.getAttribute("src") || homepageHeroPreviewImage;
+        activeImage.className = "is-active";
+        activeImage.alt = $("#homepage-hero-heading")?.value.trim() || DEFAULT_HOMEPAGE_HERO.heading;
+        media.replaceChildren(activeImage);
+    }
+    updateHomepageHeroPreviewPlayButton(readHomepageHeroForm().images);
+}
+
+function startHomepageHeroPreview() {
+    const hero = readHomepageHeroForm();
+    if (hero.images.length < 2) return;
+    stopHomepageHeroPreview();
+    const media = $("#homepage-hero-preview .management-storefront-hero-media");
+    const startIndex = Math.max(0, hero.images.findIndex(item => item.url === homepageHeroPreviewImage));
+    const slides = hero.images.map((item, index) => {
+        const image = document.createElement("img");
+        image.className = index === startIndex ? "is-active" : "";
+        image.src = item.url;
+        image.alt = index === startIndex ? hero.heading : "";
+        image.loading = "eager";
+        image.decoding = "async";
+        return image;
+    });
+    media.replaceChildren(...slides);
+    const imageReady = slides.map(image => image.decode().catch(() => {}));
+    let activeIndex = startIndex;
+    let pendingIndex = null;
+    homepageHeroPreviewPlaying = true;
+    updateHomepageHeroPreviewPlayButton(hero.images);
+    updateHomepageHeroPreviewCount(hero.images[activeIndex].url, hero.images);
+
+    const showSlide = async index => {
+        const nextIndex = (index + slides.length) % slides.length;
+        if (!homepageHeroPreviewPlaying || nextIndex === activeIndex || nextIndex === pendingIndex) return;
+        pendingIndex = nextIndex;
+        const token = ++homepageHeroPreviewTransitionToken;
+        await imageReady[nextIndex];
+        if (!homepageHeroPreviewPlaying || token !== homepageHeroPreviewTransitionToken) return;
+        clearTimeout(homepageHeroPreviewFadeTimer);
+        slides.forEach(slide => slide.classList.remove("is-leaving"));
+        const outgoingSlide = slides[activeIndex];
+        const incomingSlide = slides[nextIndex];
+        incomingSlide.classList.remove("is-active", "is-leaving");
+        void incomingSlide.offsetWidth;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (!homepageHeroPreviewPlaying || token !== homepageHeroPreviewTransitionToken) return;
+            outgoingSlide.classList.remove("is-active");
+            outgoingSlide.classList.add("is-leaving");
+            outgoingSlide.alt = "";
+            incomingSlide.classList.add("is-active");
+            incomingSlide.alt = hero.heading;
+            activeIndex = nextIndex;
+            pendingIndex = null;
+            homepageHeroPreviewImage = hero.images[activeIndex].url;
+            updateHomepageHeroPreviewCount(homepageHeroPreviewImage, hero.images);
+            syncHeroMediaControl(hero.images);
+            homepageHeroPreviewFadeTimer = setTimeout(() => {
+                outgoingSlide.classList.remove("is-leaving");
+                homepageHeroPreviewFadeTimer = null;
+            }, 1250);
+        }));
+    };
+    homepageHeroPreviewTimer = setInterval(() => showSlide(activeIndex + 1), 4000);
 }
 
 function syncHomepageHeroForm() {
@@ -257,8 +419,7 @@ function syncHomepageHeroForm() {
     window.MPWRAutoGrowTextareas?.prepare(bodyField);
     $("#homepage-hero-button-label").value = homepageHero.buttonLabel;
     $("#homepage-hero-button-link").value = homepageHero.buttonLink;
-    const imageUrlFields = [...document.querySelectorAll(".homepage-hero-url-input")];
-    imageUrlFields.forEach((field, index) => { field.value = homepageHero.images[index]?.url || ""; });
+    syncHomepageHeroUrlFields(homepageHero.images);
     $("#homepage-hero-image").value = homepageHero.image;
     $("#homepage-hero-image-key").value = homepageHero.imageKey || "";
     $("#homepage-hero-images").value = JSON.stringify(homepageHero.images);
@@ -332,7 +493,14 @@ function syncHeroMediaControl(images, statusText = "") {
     const container = $('[data-banner-media="hero"]');
     const previews = container?.querySelector(".banner-media-previews");
     if (!previews) return;
-    previews.innerHTML = images.map((item, index) => `<div class="banner-media-preview${item.url === homepageHeroPreviewImage ? " is-previewing" : ""}"><button class="hero-media-preview-button" type="button" data-hero-image-preview="${index}" aria-label="Show hero slide ${index + 1} in the preview"><img class="banner-media-thumbnail" src="${escapeHtml(item.url)}" alt="Hero slide ${index + 1}"></button><button class="banner-media-reset" type="button" data-hero-image-remove="${index}" aria-label="Remove hero slide ${index + 1}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`).join("");
+    previews.innerHTML = Array.from({ length: HOMEPAGE_HERO_IMAGE_LIMIT }, (_item, index) => {
+        const slot = index + 1;
+        const imageIndex = images.findIndex(item => item.slot === slot);
+        const item = images[imageIndex];
+        if (!item) return `<span class="banner-media-empty" data-slot="${slot}" aria-label="Empty hero image slot ${slot}"></span>`;
+        if (item.source !== "upload" && !item.key) return `<span class="banner-media-empty is-filled-by-url" data-slot="Filled" aria-label="Hero image slot ${slot} is filled by an image URL"></span>`;
+        return `<div class="banner-media-preview${item.url === homepageHeroPreviewImage ? " is-previewing" : ""}"><button class="hero-media-preview-button" type="button" data-hero-image-preview="${imageIndex}" aria-label="Show hero slide ${slot} in the preview"><img class="banner-media-thumbnail" src="${escapeHtml(item.url)}" alt="Hero slide ${slot}"></button><button class="banner-media-reset" type="button" data-hero-image-remove="${imageIndex}" aria-label="Remove hero slide ${slot}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`;
+    }).join("");
     const dropzone = container.querySelector(".banner-media-dropzone");
     const full = images.length >= HOMEPAGE_HERO_IMAGE_LIMIT;
     dropzone.classList.toggle("is-disabled", full);
@@ -353,17 +521,28 @@ function initializeHeroMediaUploader() {
     const previews = container.querySelector(".banner-media-previews");
     const status = container.querySelector(".banner-media-status");
     const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-    const urlImages = () => [...new Set(urlInputs.map(input => input.value.trim()).filter(Boolean))]
-        .slice(0, HOMEPAGE_HERO_IMAGE_LIMIT)
-        .map(url => ({ url, key: "" }));
+    const imagesFromUrlFields = (existingImages = []) => {
+        const seen = new Set();
+        const imagesBySlot = new Map(existingImages.map((item, index) => [item.slot || index + 1, item]));
+        return urlInputs.map((input, index) => {
+            const slot = index + 1;
+            const existing = imagesBySlot.get(slot);
+            if (existing && (existing.source === "upload" || existing.key)) return existing;
+            const url = normalizePastedImageUrl(input.value);
+            if (!url || isGooglePageLink(url) || seen.has(url)) return null;
+            seen.add(url);
+            return { url, key: "", source: "", slot };
+        }).filter(Boolean).slice(0, HOMEPAGE_HERO_IMAGE_LIMIT);
+    };
     const currentImages = () => {
         try { return normalizeHeroImages({ images: JSON.parse(imagesInput.value || "[]") }); }
-        catch { return normalizeHeroImages({ images: urlImages() }); }
+        catch { return normalizeHeroImages({ images: imagesFromUrlFields() }); }
     };
     const setImages = (images, message) => {
+        stopHomepageHeroPreview();
         const normalized = normalizeHeroImages({ images });
         imagesInput.value = JSON.stringify(normalized);
-        urlInputs.forEach((input, index) => { input.value = normalized[index]?.url || ""; });
+        syncHomepageHeroUrlFields(normalized);
         urlInput.value = normalized[0]?.url || "";
         keyInput.value = normalized[0]?.key || "";
         renderHomepageHeroPreview();
@@ -384,10 +563,14 @@ function initializeHeroMediaUploader() {
         dropzone.classList.add("is-uploading");
         status.textContent = additions.length > 1 ? `Uploading ${additions.length} photos…` : `Uploading ${additions[0].name}…`;
         const uploadedImages = [];
+        const occupiedSlots = new Set(existing.map((item, index) => item.slot || index + 1));
         try {
             for (const file of additions) {
                 const uploaded = await uploadImage(file, "banner");
-                uploadedImages.push({ url: uploaded.url, key: uploaded.key || "" });
+                const slot = Array.from({ length: HOMEPAGE_HERO_IMAGE_LIMIT }, (_item, index) => index + 1).find(value => !occupiedSlots.has(value));
+                if (!slot) break;
+                occupiedSlots.add(slot);
+                uploadedImages.push({ url: uploaded.url, key: uploaded.key || "", source: "upload", slot });
             }
             const next = [...existing, ...uploadedImages].slice(0, HOMEPAGE_HERO_IMAGE_LIMIT);
             setImages(next, `${next.length} hero ${next.length === 1 ? "photo" : "photos"} staged · Click Save Changes to publish`);
@@ -422,28 +605,50 @@ function initializeHeroMediaUploader() {
         showHomepageHeroPreviewImage(imageUrl);
     });
     let urlPreviewTimer;
-    const stageUrlImages = () => {
+    const stageUrlImages = event => {
+        stopHomepageHeroPreview();
+        const activeInput = event?.currentTarget;
+        if (activeInput) activeInput.value = normalizePastedImageUrl(activeInput.value);
         const previousImages = currentImages();
-        const previousKeys = new Map(previousImages.map(item => [item.url, item.key]));
-        const next = urlImages().map(item => ({ ...item, key: previousKeys.get(item.url) || "" }));
+        const next = normalizeHeroImages({ images: imagesFromUrlFields(previousImages) });
+        const activeSlot = activeInput ? urlInputs.indexOf(activeInput) + 1 : 0;
+        const activeImage = next.find(item => item.slot === activeSlot);
+        if (activeImage) homepageHeroPreviewImage = activeImage.url;
         imagesInput.value = JSON.stringify(next);
+        syncHomepageHeroUrlFields(next);
         urlInput.value = next[0]?.url || "";
         keyInput.value = next[0]?.key || "";
         clearTimeout(urlPreviewTimer);
         urlPreviewTimer = setTimeout(() => {
             renderHomepageHeroPreview();
+            if (activeInput && isGooglePageLink(activeInput.value)) {
+                syncHeroMediaControl(next, "That Google link is a webpage, not an image. In Google Images, use Copy Image Address.");
+                return;
+            }
             syncHeroMediaControl(next, `${next.length} hero image ${next.length === 1 ? "URL" : "URLs"} staged · Click Save Changes to publish`);
         }, 250);
     };
-    urlInputs.forEach(input => input.addEventListener("input", stageUrlImages));
+    urlInputs.forEach(input => {
+        input.addEventListener("paste", event => {
+            const pasted = event.clipboardData?.getData("text") || "";
+            const normalized = normalizePastedImageUrl(pasted);
+            if (!normalized || normalized === pasted.trim()) return;
+            event.preventDefault();
+            input.value = normalized;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        input.addEventListener("input", stageUrlImages);
+    });
     container.querySelector(".hero-url-grid").addEventListener("click", event => {
         const previewButton = event.target.closest("[data-hero-url-preview]");
         if (!previewButton) return;
         const index = Number(previewButton.dataset.heroUrlPreview);
-        const imageUrl = urlInputs[index]?.value.trim() || "";
-        if (!imageUrl) return showToast(`Add an image URL in URL ${index + 1} first.`, "warning");
+        const pastedUrl = urlInputs[index]?.value.trim() || "";
+        if (isGooglePageLink(pastedUrl)) return showToast("That is a Google webpage link. In Google Images, choose Copy Image Address instead.", "warning");
+        const imageUrl = normalizePastedImageUrl(pastedUrl);
+        if (!imageUrl) return showToast(`Paste a URL for Image ${index + 1} first.`, "warning");
         showHomepageHeroPreviewImage(imageUrl);
-        status.textContent = `Previewing URL ${index + 1}`;
+        status.textContent = `Previewing Image ${index + 1}`;
     });
 }
 
@@ -2208,6 +2413,10 @@ function bindEvents() {
         field.addEventListener(field.type === "checkbox" ? "change" : "input", renderAnnouncementBarPreview);
     });
     initializeHeroMediaUploader();
+    $("#homepage-hero-preview-play").addEventListener("click", () => {
+        if (homepageHeroPreviewPlaying) stopHomepageHeroPreview();
+        else startHomepageHeroPreview();
+    });
     initializeBannerMediaUploader({ prefix: "campaign", defaultImage: DEFAULT_CAMPAIGN_BANNER.image, render: renderCampaignBannerPreview });
     ["#homepage-hero-enabled", "#homepage-hero-eyebrow", "#homepage-hero-heading", "#homepage-hero-body", "#homepage-hero-button-label", "#homepage-hero-button-link"].forEach(selector => {
         const field = $(selector);
