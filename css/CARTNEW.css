@@ -665,6 +665,69 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     opacity:1;
 }
 
+.homepage-hero-controls{
+    position:absolute;
+    top:24px;
+    right:24px;
+    bottom:auto;
+    z-index:6;
+    display:flex;
+    gap:6px;
+}
+
+.homepage-hero-controls[hidden]{display:none}
+
+.homepage-hero-controls button{
+    display:grid;
+    width:36px;
+    height:36px;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:rgba(255,255,255,.1);
+    color:transparent;
+    font:700 18px/1 Arial,sans-serif;
+    cursor:pointer;
+    filter:drop-shadow(0 1px 2px rgba(25,20,18,.55));
+    mask-position:center;
+    mask-repeat:no-repeat;
+    mask-size:18px 18px;
+    opacity:.76;
+    place-items:center;
+    backdrop-filter:brightness(1.14) saturate(1.08) contrast(1.02);
+    -webkit-backdrop-filter:brightness(1.14) saturate(1.08) contrast(1.02);
+    -webkit-mask-position:center;
+    -webkit-mask-repeat:no-repeat;
+    -webkit-mask-size:18px 18px;
+}
+
+.homepage-hero-controls button:is(:hover,:focus-visible){
+    background:rgba(255,255,255,.16);
+    outline:none;
+    filter:drop-shadow(0 1px 3px rgba(25,20,18,.7));
+    opacity:.9;
+}
+
+.homepage-hero-controls [data-hero-control="previous"]{
+    mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15 5 8 12l7 7' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15 5 8 12l7 7' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.homepage-hero-controls [data-hero-control="next"]{
+    mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m9 5 7 7-7 7' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m9 5 7 7-7 7' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.homepage-hero-controls [data-hero-control="pause"]{
+    mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5v14M16 5v14' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+    -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5v14M16 5v14' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.homepage-hero-controls [data-hero-control="pause"][aria-label^="Play"]{
+    mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m8 5 11 7-11 7Z' fill='black'/%3E%3C/svg%3E");
+    -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m8 5 11 7-11 7Z' fill='black'/%3E%3C/svg%3E");
+}
+
 @media (max-width: 760px){
     .mpwr-announcement-bar{
         min-height:38px;
@@ -724,6 +787,18 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
         min-height:30px;
         padding:7px 11px;
         font-size:10px;
+    }
+
+    .homepage-hero-controls{
+        top:16px;
+        right:16px;
+        bottom:auto;
+    }
+
+    .homepage-hero-controls button{
+        width:32px;
+        height:32px;
+        font-size:16px;
     }
 
     .homepage-hero + .shop{

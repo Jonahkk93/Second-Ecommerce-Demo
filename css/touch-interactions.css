@@ -21,6 +21,16 @@ summary{
     textarea{
         font-size:16px !important;
     }
+
+    /* The compact, two-column hero URL editor intentionally uses smaller
+       type. Keep entered URLs identical to their placeholder text. */
+    .management-panel[data-panel-content="homepage"] [data-banner-media="hero"] .hero-url-grid .homepage-hero-url-input{
+        font-size:10px !important;
+    }
+
+    .management-panel[data-panel-content="homepage"] [data-banner-media="hero"] .hero-url-grid .homepage-hero-url-input::placeholder{
+        font-size:10px !important;
+    }
 }
 
 @media (hover:none), (pointer:coarse){

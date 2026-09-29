@@ -909,9 +909,49 @@ body{overscroll-behavior-y:none}
     }
 
     .hero-url-grid{
-        grid-template-columns:minmax(0,1fr);
-        grid-template-rows:none;
-        grid-auto-flow:row;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        grid-template-rows:repeat(5,auto);
+        grid-auto-flow:column;
+        gap:9px 10px;
+    }
+
+    .hero-url-grid .field{
+        gap:4px;
+    }
+
+    .hero-url-grid .field > span{
+        font-size:8px;
+    }
+
+    .hero-url-control{
+        grid-template-columns:minmax(0,1fr) 28px;
+        gap:5px;
+    }
+
+    .hero-url-grid input{
+        min-height:30px;
+        padding:8px 9px;
+        font-size:10px!important;
+        font-weight:400;
+        letter-spacing:0;
+        -webkit-text-size-adjust:100%;
+    }
+
+    .hero-url-grid input::placeholder{
+        font-size:10px!important;
+        font-weight:400;
+        letter-spacing:0;
+    }
+
+    .hero-url-control button{
+        width:28px;
+        height:28px;
+        padding:5px;
+    }
+
+    .hero-url-control button img{
+        width:13px;
+        height:13px;
     }
 
     .homepage-preview-card,

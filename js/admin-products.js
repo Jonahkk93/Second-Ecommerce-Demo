@@ -1,6 +1,6 @@
 import { onAuthStateChanged } from "./auth-api.js";
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getManagementBootstrap, setDoc, updateDoc } from "./firestore-api.js?v=20260928-2";
-import { deleteImage, uploadImage } from "./media-api.js";
+import { deleteImage, importImage, uploadImage } from "./media-api.js?v=20260929-2";
 import { openReviewLightbox } from "./review-lightbox.js?v=20260923-3";
 
 const auth = window.auth;
@@ -20,6 +20,8 @@ const POPULAR_PRODUCT_LIMIT = 10;
 const HOMEPAGE_DISCOUNT_PRODUCT_LIMIT = 10;
 const SEARCH_POPULAR_PRODUCT_LIMIT = 12;
 const HOMEPAGE_HERO_IMAGE_LIMIT = 10;
+const HOMEPAGE_HERO_UPLOAD_LIMIT = 5 * 1024 * 1024;
+const HOMEPAGE_HERO_MAX_DIMENSION = 1920;
 const DEFAULT_SEARCH_SUGGESTIONS = ["Press-ons", "Wigs", "Lashes", "Nail polish", "Moisturizer", "Pink", "Black", "Shoulder"];
 const DEFAULT_DISCOUNTS = ["12", "15", "1", "4", "11"].map(id => ({ id, percent: 15 }));
 const DEFAULT_ANNOUNCEMENT_BAR = {
@@ -84,6 +86,8 @@ let homepageHeroPreviewTimer = null;
 let homepageHeroPreviewFadeTimer = null;
 let homepageHeroPreviewTransitionToken = 0;
 let homepageHeroPreviewPlaying = false;
+let savedHomepageHeroImageKeys = new Set();
+const pendingHomepageHeroImageKeys = new Set();
 let campaignBanner = { ...DEFAULT_CAMPAIGN_BANNER };
 let searchSettings = { suggestions: [...DEFAULT_SEARCH_SUGGESTIONS], popularProducts: [], popularMode: "automatic", suggestionsEnabled: true, popularEnabled: true, suggestionsHeading: "Suggested searches", popularHeading: "Popular picks", defaultSort: "relevance" };
 let editingProduct = null;
@@ -190,6 +194,7 @@ function normalizePastedImageUrl(value) {
     if (!candidate) return "";
     try {
         const parsed = new URL(candidate);
+        if (!["http:", "https:"].includes(parsed.protocol)) return "";
         const isGoogle = /(^|\.)google\.[a-z.]+$/i.test(parsed.hostname) || parsed.hostname === "google.com";
         if (isGoogle) {
             const embeddedImage = parsed.searchParams.get("imgurl")
@@ -197,19 +202,51 @@ function normalizePastedImageUrl(value) {
                 || parsed.searchParams.get("image_url");
             if (embeddedImage) candidate = embeddedImage;
         }
-    } catch {}
-    return candidate;
+        const normalized = new URL(candidate);
+        return ["http:", "https:"].includes(normalized.protocol) ? normalized.href : "";
+    } catch { return ""; }
 }
 
 function isGooglePageLink(value) {
     try {
         const parsed = new URL(value);
         const googleHost = /(^|\.)google\.[a-z.]+$/i.test(parsed.hostname) || parsed.hostname === "google.com";
-        const googleShareLink = parsed.hostname === "images.app.goo.gl";
+        const googleShareLink = parsed.hostname === "images.app.goo.gl" || parsed.hostname === "share.google";
         return (googleHost || googleShareLink) && !parsed.searchParams.get("imgurl") && !parsed.searchParams.get("mediaurl") && !parsed.searchParams.get("image_url");
     } catch {
         return false;
     }
+}
+
+function normalizeStorefrontLink(value, fallback = "#products") {
+    const candidate = String(value || "").trim();
+    if (!candidate) return fallback;
+    if (candidate.startsWith("#") || candidate.startsWith("/") || candidate.startsWith("./") || candidate.startsWith("../")) return candidate;
+    try {
+        const parsed = new URL(candidate, window.location.href);
+        return ["http:", "https:"].includes(parsed.protocol) ? candidate : fallback;
+    } catch { return fallback; }
+}
+
+async function optimizeHeroImage(file) {
+    if (file.type === "image/gif") return file;
+    let bitmap;
+    try { bitmap = await createImageBitmap(file); }
+    catch { return file; }
+    const scale = Math.min(1, HOMEPAGE_HERO_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size <= HOMEPAGE_HERO_UPLOAD_LIMIT && file.type === "image/webp") {
+        bitmap.close();
+        return file;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d", { alpha: true }).drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", .86));
+    if (!blob) return file;
+    const optimized = new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp", lastModified: file.lastModified });
+    return optimized.size < file.size || file.size > HOMEPAGE_HERO_UPLOAD_LIMIT ? optimized : file;
 }
 
 function syncHomepageHeroUrlFields(images) {
@@ -232,7 +269,7 @@ function normalizeHomepageHero(value = {}) {
         heading: cleanHeroText(value.heading, DEFAULT_HOMEPAGE_HERO.heading, 80),
         body: cleanHeroText(value.body, DEFAULT_HOMEPAGE_HERO.body, 180),
         buttonLabel: cleanHeroText(value.buttonLabel, DEFAULT_HOMEPAGE_HERO.buttonLabel, 32),
-        buttonLink: cleanHeroText(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140),
+        buttonLink: normalizeStorefrontLink(cleanHeroText(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140), DEFAULT_HOMEPAGE_HERO.buttonLink),
         image: images[0]?.url || "",
         imageKey: images[0]?.key || "",
         images
@@ -281,6 +318,10 @@ function renderHomepageHeroPreview({ syncMedia = true } = {}) {
         image.className = availablePreviewImage ? "is-active" : "";
         image.hidden = !availablePreviewImage;
         if (availablePreviewImage) {
+            image.onerror = () => {
+                image.hidden = true;
+                syncHeroMediaControl(hero.images, "This image could not be loaded. Remove or replace it before saving.");
+            };
             image.src = availablePreviewImage;
             image.alt = hero.heading;
         } else {
@@ -315,6 +356,10 @@ function showHomepageHeroPreviewImage(imageUrl) {
     media.appendChild(image);
     image.hidden = !homepageHeroPreviewImage;
     if (homepageHeroPreviewImage) {
+        image.onerror = () => {
+            image.hidden = true;
+            syncHeroMediaControl(readHomepageHeroForm().images, "This image could not be loaded. Remove or replace it before saving.");
+        };
         image.src = homepageHeroPreviewImage;
         image.alt = $("#homepage-hero-heading").value.trim() || DEFAULT_HOMEPAGE_HERO.heading;
     } else {
@@ -364,12 +409,16 @@ function startHomepageHeroPreview() {
         image.className = index === startIndex ? "is-active" : "";
         image.src = item.url;
         image.alt = index === startIndex ? hero.heading : "";
-        image.loading = "eager";
+        image.loading = index === startIndex ? "eager" : "lazy";
         image.decoding = "async";
         return image;
     });
     media.replaceChildren(...slides);
-    const imageReady = slides.map(image => image.decode().catch(() => {}));
+    const imageReady = slides.map(image => new Promise(resolve => {
+        if (image.complete) return resolve(image.naturalWidth > 0);
+        image.addEventListener("load", () => resolve(true), { once: true });
+        image.addEventListener("error", () => resolve(false), { once: true });
+    }));
     let activeIndex = startIndex;
     let pendingIndex = null;
     homepageHeroPreviewPlaying = true;
@@ -377,11 +426,20 @@ function startHomepageHeroPreview() {
     updateHomepageHeroPreviewCount(hero.images[activeIndex].url, hero.images);
 
     const showSlide = async index => {
-        const nextIndex = (index + slides.length) % slides.length;
-        if (!homepageHeroPreviewPlaying || nextIndex === activeIndex || nextIndex === pendingIndex) return;
+        if (!homepageHeroPreviewPlaying || pendingIndex !== null) return;
+        pendingIndex = -1;
+        let nextIndex = -1;
+        for (let offset = 0; offset < slides.length; offset += 1) {
+            const candidate = (index + offset + slides.length) % slides.length;
+            if (candidate !== activeIndex && await imageReady[candidate]) { nextIndex = candidate; break; }
+        }
+        if (!homepageHeroPreviewPlaying || nextIndex < 0) {
+            pendingIndex = null;
+            if (nextIndex < 0) syncHeroMediaControl(hero.images, "No additional hero images could be loaded. Check or replace broken links.");
+            return;
+        }
         pendingIndex = nextIndex;
         const token = ++homepageHeroPreviewTransitionToken;
-        await imageReady[nextIndex];
         if (!homepageHeroPreviewPlaying || token !== homepageHeroPreviewTransitionToken) return;
         clearTimeout(homepageHeroPreviewFadeTimer);
         slides.forEach(slide => slide.classList.remove("is-leaving"));
@@ -558,23 +616,32 @@ function initializeHeroMediaUploader() {
             : savedImages;
         if (existing.length + additions.length > HOMEPAGE_HERO_IMAGE_LIMIT) return showToast(`You can add up to ${HOMEPAGE_HERO_IMAGE_LIMIT} hero photos.`, "error");
         if (additions.some(file => !acceptedTypes.has(file.type))) return showToast("Choose JPG, PNG, WebP or GIF images.", "error");
-        if (additions.some(file => file.size > 50 * 1024 * 1024)) return showToast("Each hero image must be 50 MB or smaller.", "error");
+        if (additions.some(file => file.size > 25 * 1024 * 1024)) return showToast("Choose source images smaller than 25 MB so they can be optimized safely.", "error");
+        if (additions.some(file => file.type === "image/gif" && file.size > HOMEPAGE_HERO_UPLOAD_LIMIT)) return showToast("Animated GIF hero images must be 5 MB or smaller.", "error");
 
         dropzone.classList.add("is-uploading");
-        status.textContent = additions.length > 1 ? `Uploading ${additions.length} photos…` : `Uploading ${additions[0].name}…`;
+        status.textContent = additions.length > 1 ? `Optimizing and uploading ${additions.length} photos…` : `Optimizing ${additions[0].name}…`;
         const uploadedImages = [];
         const occupiedSlots = new Set(existing.map((item, index) => item.slot || index + 1));
         try {
             for (const file of additions) {
-                const uploaded = await uploadImage(file, "banner");
+                const optimizedFile = await optimizeHeroImage(file);
+                if (optimizedFile.size > HOMEPAGE_HERO_UPLOAD_LIMIT) throw new Error(`${file.name} is still larger than 5 MB after optimization.`);
+                status.textContent = `Uploading ${optimizedFile.name}…`;
+                const uploaded = await uploadImage(optimizedFile, "banner");
                 const slot = Array.from({ length: HOMEPAGE_HERO_IMAGE_LIMIT }, (_item, index) => index + 1).find(value => !occupiedSlots.has(value));
                 if (!slot) break;
                 occupiedSlots.add(slot);
+                if (uploaded.key) pendingHomepageHeroImageKeys.add(uploaded.key);
                 uploadedImages.push({ url: uploaded.url, key: uploaded.key || "", source: "upload", slot });
             }
             const next = [...existing, ...uploadedImages].slice(0, HOMEPAGE_HERO_IMAGE_LIMIT);
             setImages(next, `${next.length} hero ${next.length === 1 ? "photo" : "photos"} staged · Click Save Changes to publish`);
         } catch (error) {
+            await Promise.all(uploadedImages.filter(item => item.key).map(item => {
+                pendingHomepageHeroImageKeys.delete(item.key);
+                return deleteImage(item.key).catch(() => {});
+            }));
             showToast(error?.message || "Unable to upload the hero photos.", "error");
         } finally {
             dropzone.classList.remove("is-uploading");
@@ -592,11 +659,17 @@ function initializeHeroMediaUploader() {
         dropzone.classList.remove("is-dragging");
     }));
     dropzone.addEventListener("drop", event => uploadHeroFiles(event.dataTransfer?.files || []));
-    previews.addEventListener("click", event => {
+    previews.addEventListener("click", async event => {
         const button = event.target.closest("[data-hero-image-remove]");
         if (button) {
-            const next = currentImages().filter((_item, index) => index !== Number(button.dataset.heroImageRemove));
+            const images = currentImages();
+            const removed = images[Number(button.dataset.heroImageRemove)];
+            const next = images.filter((_item, index) => index !== Number(button.dataset.heroImageRemove));
             setImages(next, "Hero photo removed · Save homepage to publish");
+            if (removed?.key && pendingHomepageHeroImageKeys.has(removed.key)) {
+                pendingHomepageHeroImageKeys.delete(removed.key);
+                await deleteImage(removed.key).catch(() => showToast("The staged photo was removed, but storage cleanup will be retried later.", "warning"));
+            }
             return;
         }
         const previewButton = event.target.closest("[data-hero-image-preview]");
@@ -1201,6 +1274,7 @@ async function loadData() {
     discountSectionEnabled = discountSetting.enabled !== false;
     announcementBar = normalizeAnnouncementBar(announcementSetting);
     homepageHero = normalizeHomepageHero(heroSetting);
+    savedHomepageHeroImageKeys = new Set(homepageHero.images.map(image => image.key).filter(Boolean));
     campaignBanner = normalizeCampaignBanner(campaignSetting);
     searchSettings = {
         suggestions: Array.isArray(storedSearch.suggestions) ? storedSearch.suggestions.map(String).filter(Boolean).slice(0, 20) : [...DEFAULT_SEARCH_SUGGESTIONS],
@@ -1831,8 +1905,35 @@ async function saveAnnouncementBar() {
 
 async function saveHomepageHero() {
     const hero = readHomepageHeroForm();
-    await setDoc(doc(db, "storefront", "homepageHero"), hero);
-    localStorage.setItem("mpwrHomepageHero", JSON.stringify(hero));
+    const importedKeys = [];
+    try {
+        for (const image of hero.images) {
+            if (image.key || !/^https?:\/\//i.test(image.url)) continue;
+            const imported = await importImage(image.url, "banner");
+            image.url = imported.url;
+            image.key = imported.key || "";
+            image.source = "upload";
+            if (image.key) {
+                importedKeys.push(image.key);
+                pendingHomepageHeroImageKeys.add(image.key);
+            }
+        }
+        hero.image = hero.images[0]?.url || "";
+        hero.imageKey = hero.images[0]?.key || "";
+        await setDoc(doc(db, "storefront", "homepageHero"), hero);
+        const currentKeys = new Set(hero.images.map(image => image.key).filter(Boolean));
+        const removedKeys = [...savedHomepageHeroImageKeys].filter(key => !currentKeys.has(key));
+        await Promise.all(removedKeys.map(key => deleteImage(key).catch(() => {})));
+        savedHomepageHeroImageKeys = currentKeys;
+        currentKeys.forEach(key => pendingHomepageHeroImageKeys.delete(key));
+        homepageHero = normalizeHomepageHero(hero);
+        syncHomepageHeroForm();
+        localStorage.setItem("mpwrHomepageHero", JSON.stringify(hero));
+    } catch (error) {
+        await Promise.all(importedKeys.map(key => deleteImage(key).catch(() => {})));
+        importedKeys.forEach(key => pendingHomepageHeroImageKeys.delete(key));
+        throw error;
+    }
 }
 
 async function saveCampaignBanner() {
@@ -2784,6 +2885,11 @@ function bindEvents() {
         renderDiscountSelection();
     });
 }
+
+window.addEventListener("pagehide", () => {
+    for (const key of pendingHomepageHeroImageKeys) deleteImage(key, { keepalive: true }).catch(() => {});
+    pendingHomepageHeroImageKeys.clear();
+});
 
 onAuthStateChanged(auth, async user => {
     if (!user) return void (window.location.href = "admin-login.html");

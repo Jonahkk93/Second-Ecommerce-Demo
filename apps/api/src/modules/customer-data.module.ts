@@ -32,6 +32,59 @@ type StoredReviewAttachment =
   | { key: string; url: string; type: string; name: string }
   | { items: StoredReviewAttachment[] };
 
+function settingText(value: unknown, name: string, maxLength: number) {
+  if (typeof value !== "string") throw new BadRequestException(`${name} must be text`);
+  const cleaned = value.trim().replace(/\s+/g, " ");
+  if (!cleaned || cleaned.length > maxLength) throw new BadRequestException(`${name} must contain 1 to ${maxLength} characters`);
+  return cleaned;
+}
+
+function safeStorefrontLink(value: unknown) {
+  const link = settingText(value, "Hero button link", 140);
+  if (/^(?:#|\/|\.\/|\.\.\/)/.test(link)) return link;
+  try {
+    const parsed = new URL(link, "https://mpwr.local/");
+    if (["http:", "https:"].includes(parsed.protocol)) return link;
+  } catch {}
+  throw new BadRequestException("Hero button link must be a page, section, HTTP, or HTTPS URL");
+}
+
+function normalizeHomepageHeroSetting(value: Record<string, unknown>, publicMediaBase: string) {
+  const allowed = new Set(["enabled", "eyebrow", "heading", "body", "buttonLabel", "buttonLink", "image", "imageKey", "images"]);
+  if (Object.keys(value).some(key => !allowed.has(key))) throw new BadRequestException("Homepage hero contains unsupported fields");
+  if (typeof value.enabled !== "boolean") throw new BadRequestException("Hero visibility must be true or false");
+  if (!Array.isArray(value.images) || value.images.length > 10) throw new BadRequestException("Add no more than 10 hero images");
+  const slots = new Set<number>();
+  const images = value.images.map((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new BadRequestException("Invalid hero image");
+    const item = entry as Record<string, unknown>;
+    if (Object.keys(item).some(key => !["url", "key", "source", "slot"].includes(key))) throw new BadRequestException("Hero image contains unsupported fields");
+    const url = settingText(item.url, "Hero image URL", 500);
+    const key = typeof item.key === "string" ? item.key.trim() : "";
+    const slot = Number(item.slot ?? index + 1);
+    if (!Number.isInteger(slot) || slot < 1 || slot > 10 || slots.has(slot)) throw new BadRequestException("Hero image slots must be unique numbers from 1 to 10");
+    slots.add(slot);
+    const isBundledImage = /^(?:\/)?images\//i.test(url);
+    if (key) {
+      if (!/^banner\/[0-9a-f-]{36}\/[0-9a-f-]+\.(?:jpe?g|png|webp|gif)$/i.test(key) || !publicMediaBase || url !== `${publicMediaBase}/${key}`) throw new BadRequestException("Invalid stored hero image");
+    } else if (!isBundledImage) {
+      throw new BadRequestException("External hero images must be imported into MPWR storage before saving");
+    }
+    return { url, key, source: key ? "upload" : "", slot };
+  }).sort((a, b) => a.slot - b.slot);
+  return {
+    enabled: value.enabled,
+    eyebrow: settingText(value.eyebrow, "Hero small label", 40),
+    heading: settingText(value.heading, "Hero heading", 80),
+    body: settingText(value.body, "Hero description", 180),
+    buttonLabel: settingText(value.buttonLabel, "Hero button text", 32),
+    buttonLink: safeStorefrontLink(value.buttonLink),
+    image: images[0]?.url || "",
+    imageKey: images[0]?.key || "",
+    images
+  };
+}
+
 async function resolveProduct(db: Database, identifier: string) {
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
   const [product] = await db.select().from(products).where(isUuid ? or(eq(products.id, identifier), eq(products.legacyId, identifier)) : eq(products.legacyId, identifier)).limit(1);
@@ -119,9 +172,14 @@ class AdminReviewsController {
 
 @Controller("storefront")
 class StorefrontController {
-  constructor(@Inject(DB) private db: Database) {}
+  constructor(@Inject(DB) private db: Database, private config: ConfigService) {}
   @Get(":key") async get(@Param("key") key: string) { const [setting] = await this.db.select().from(storefrontSettings).where(eq(storefrontSettings.key, key)).limit(1); return setting?.value || {}; }
-  @UseGuards(AdminGuard) @Put(":key") async put(@Param("key") key: string, @Body() dto: SettingDto) { const [setting] = await this.db.insert(storefrontSettings).values({ key, value: dto.value }).onConflictDoUpdate({ target: storefrontSettings.key, set: { value: dto.value, updatedAt: new Date() } }).returning(); return setting.value; }
+  @UseGuards(AdminGuard) @Put(":key") async put(@Param("key") key: string, @Body() dto: SettingDto) {
+    const publicMediaBase = String(this.config.get("R2_PUBLIC_BASE_URL", "")).replace(/\/$/, "");
+    const value = key === "homepageHero" ? normalizeHomepageHeroSetting(dto.value, publicMediaBase) : dto.value;
+    const [setting] = await this.db.insert(storefrontSettings).values({ key, value }).onConflictDoUpdate({ target: storefrontSettings.key, set: { value, updatedAt: new Date() } }).returning();
+    return setting.value;
+  }
 }
 
 @UseGuards(AdminGuard)

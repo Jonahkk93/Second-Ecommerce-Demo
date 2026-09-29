@@ -10,7 +10,19 @@ export async function uploadImage(file, purpose) {
     return payload;
 }
 
-export async function deleteImage(key) {
-    const response = await fetch(`${API_ROOT}/media`, { method: "DELETE", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) });
+export async function importImage(url, purpose) {
+    const response = await fetch(`${API_ROOT}/media/import`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, purpose })
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.message || `Image import failed (${response.status})`);
+    return payload;
+}
+
+export async function deleteImage(key, { keepalive = false } = {}) {
+    const response = await fetch(`${API_ROOT}/media`, { method: "DELETE", credentials: "include", keepalive, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) });
     if (!response.ok) { const payload = await response.json().catch(() => null); throw new Error(payload?.message || "Image removal failed"); }
 }

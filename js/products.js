@@ -784,10 +784,20 @@ function normalizeHomepageHero(value = {}) {
         heading: text(value.heading, DEFAULT_HOMEPAGE_HERO.heading, 80),
         body: text(value.body, DEFAULT_HOMEPAGE_HERO.body, 180),
         buttonLabel: text(value.buttonLabel, DEFAULT_HOMEPAGE_HERO.buttonLabel, 32),
-        buttonLink: text(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140),
+        buttonLink: safeStorefrontLink(text(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140), DEFAULT_HOMEPAGE_HERO.buttonLink),
         image: images[0] || "",
         images
     };
+}
+
+function safeStorefrontLink(value, fallback) {
+    const candidate = String(value || "").trim();
+    if (!candidate) return fallback;
+    if (candidate.startsWith("#") || candidate.startsWith("/") || candidate.startsWith("./") || candidate.startsWith("../")) return candidate;
+    try {
+        const parsed = new URL(candidate, window.location.href);
+        return ["http:", "https:"].includes(parsed.protocol) ? candidate : fallback;
+    } catch { return fallback; }
 }
 
 function applyHomepageHero(value) {
@@ -799,8 +809,7 @@ function applyHomepageHero(value) {
     document.body.classList.toggle("has-homepage-hero", hero.enabled);
     let section = document.querySelector(".homepage-hero");
     if (!hero.enabled) {
-        if (section?.heroSlideshowTimer) clearInterval(section.heroSlideshowTimer);
-        if (section?.heroFadeTimer) clearTimeout(section.heroFadeTimer);
+        section?.heroCleanup?.();
         section?.remove();
         return;
     }
@@ -815,6 +824,11 @@ function applyHomepageHero(value) {
                 <a class="homepage-hero-button"></a>
             </div>
             <div class="homepage-hero-media" aria-label="Hero image slideshow"></div>
+            <div class="homepage-hero-controls" aria-label="Hero slideshow controls">
+                <button type="button" data-hero-control="previous" aria-label="Previous hero image">‹</button>
+                <button type="button" data-hero-control="pause" aria-label="Pause hero slideshow" aria-pressed="false">Ⅱ</button>
+                <button type="button" data-hero-control="next" aria-label="Next hero image">›</button>
+            </div>
             <nav class="homepage-hero-categories" aria-label="Shop by category">
                 <a class="is-featured" href="Nails.html">Press-ons</a>
                 <a href="Wigs.html">Wigs</a>
@@ -824,6 +838,7 @@ function applyHomepageHero(value) {
         `;
         productsSection.parentNode.insertBefore(section, productsSection);
     }
+    section.heroCleanup?.();
     const categoryLinks = section.querySelectorAll(".homepage-hero-categories a");
     const selectCategory = selectedLink => {
         categoryLinks.forEach(link => link.classList.toggle("is-featured", link === selectedLink));
@@ -832,14 +847,6 @@ function applyHomepageHero(value) {
         link.onpointerdown = () => selectCategory(link);
         link.onclick = () => selectCategory(link);
     });
-    if (section.heroSlideshowTimer) {
-        clearInterval(section.heroSlideshowTimer);
-        section.heroSlideshowTimer = null;
-    }
-    if (section.heroFadeTimer) {
-        clearTimeout(section.heroFadeTimer);
-        section.heroFadeTimer = null;
-    }
     section.querySelector(".homepage-hero-eyebrow").textContent = hero.eyebrow;
     section.querySelector("h1").textContent = hero.heading;
     section.querySelector(".homepage-hero-body").textContent = hero.body;
@@ -853,25 +860,55 @@ function applyHomepageHero(value) {
     const slides = hero.images.map((url, index) => {
         const image = document.createElement("img");
         image.className = `homepage-hero-slide${index === 0 ? " is-active" : ""}`;
-        image.src = url;
         image.alt = index === 0 ? hero.heading : "";
-        image.loading = "eager";
+        image.loading = index === 0 ? "eager" : "lazy";
+        image.fetchPriority = index === 0 ? "high" : "low";
         image.decoding = "async";
+        image.dataset.src = url;
         track.appendChild(image);
         return image;
     });
-    const imageReady = slides.map(image => image.decode().catch(() => {}));
+    const imageReady = slides.map(image => new Promise(resolve => {
+        if (image.getAttribute("src") && image.complete) return resolve(image.naturalWidth > 0);
+        image.addEventListener("load", () => resolve(true), { once: true });
+        image.addEventListener("error", () => resolve(false), { once: true });
+    }));
+    if (slides[0]?.dataset.src) {
+        slides[0].src = slides[0].dataset.src;
+        delete slides[0].dataset.src;
+    }
+    const ensureImage = index => {
+        const image = slides[index];
+        if (image?.dataset.src) {
+            image.src = image.dataset.src;
+            delete image.dataset.src;
+        }
+        return imageReady[index];
+    };
     media.appendChild(track);
 
     let activeIndex = 0;
     let pendingIndex = null;
     let transitionToken = 0;
-    const showSlide = async index => {
-        const nextIndex = (index + slides.length) % slides.length;
-        if (nextIndex === activeIndex || nextIndex === pendingIndex) return;
+    let disposed = false;
+    let pausedByUser = false;
+    const controls = section.querySelector(".homepage-hero-controls");
+    const pauseButton = controls.querySelector('[data-hero-control="pause"]');
+    const step = async (index, direction = 1) => {
+        if (slides.length < 2) return -1;
+        for (let offset = 0; offset < slides.length; offset += 1) {
+            const candidate = (index + offset * direction + slides.length) % slides.length;
+            if (candidate !== activeIndex && await ensureImage(candidate)) return candidate;
+        }
+        return -1;
+    };
+    const showSlide = async (index, direction = 1) => {
+        if (disposed || pendingIndex !== null) return;
+        pendingIndex = -1;
+        const nextIndex = await step(index, direction);
+        if (disposed || nextIndex < 0) { pendingIndex = null; return; }
         pendingIndex = nextIndex;
         const token = ++transitionToken;
-        await imageReady[nextIndex];
         if (token !== transitionToken) return;
         clearTimeout(section.heroFadeTimer);
         slides.forEach(slide => slide.classList.remove("is-leaving"));
@@ -880,7 +917,7 @@ function applyHomepageHero(value) {
         incomingSlide.classList.remove("is-active", "is-leaving");
         void incomingSlide.offsetWidth;
         requestAnimationFrame(() => requestAnimationFrame(() => {
-            if (token !== transitionToken) return;
+            if (disposed || token !== transitionToken) return;
             outgoingSlide.classList.remove("is-active");
             outgoingSlide.classList.add("is-leaving");
             outgoingSlide.alt = "";
@@ -894,16 +931,42 @@ function applyHomepageHero(value) {
             }, 1250);
         }));
     };
+    const stop = () => { clearInterval(section.heroSlideshowTimer); section.heroSlideshowTimer = null; };
+    const start = () => {
+        stop();
+        if (disposed || pausedByUser || document.hidden || slides.length < 2) return;
+        section.heroSlideshowTimer = setInterval(() => showSlide(activeIndex + 1), 5000);
+    };
+    const setPaused = paused => {
+        pausedByUser = paused;
+        pauseButton.setAttribute("aria-pressed", String(paused));
+        pauseButton.setAttribute("aria-label", paused ? "Play hero slideshow" : "Pause hero slideshow");
+        pauseButton.textContent = paused ? "▶" : "Ⅱ";
+        if (paused) stop(); else start();
+    };
+    const onVisibilityChange = () => { if (document.hidden) stop(); else start(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    controls.hidden = slides.length < 2;
+    controls.onclick = event => {
+        const action = event.target.closest("[data-hero-control]")?.dataset.heroControl;
+        if (!action) return;
+        if (action === "pause") return setPaused(!pausedByUser);
+        stop();
+        showSlide(activeIndex + (action === "previous" ? -1 : 1), action === "previous" ? -1 : 1).finally(start);
+    };
+    section.heroCleanup = () => {
+        disposed = true;
+        stop();
+        transitionToken += 1;
+        pendingIndex = null;
+        clearTimeout(section.heroFadeTimer);
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+        controls.onclick = null;
+    };
+    imageReady[0]?.then(loaded => {
+        if (!loaded && section.isConnected) showSlide(1);
+    });
     if (slides.length > 1) {
-        const stop = () => { clearInterval(section.heroSlideshowTimer); section.heroSlideshowTimer = null; };
-        const start = () => {
-            stop();
-            section.heroSlideshowTimer = setInterval(() => showSlide(activeIndex + 1), 4000);
-        };
-        media.onmouseenter = stop;
-        media.onmouseleave = start;
-        media.onfocusin = stop;
-        media.onfocusout = start;
         start();
     }
 }
