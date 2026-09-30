@@ -1,7 +1,7 @@
 (() => {
     const resize = textarea => {
         textarea.style.height = "auto";
-        if (textarea.scrollHeight) textarea.style.height = `${textarea.scrollHeight}px`;
+        if (textarea.scrollHeight) textarea.style.height = `${textarea.scrollHeight + 6}px`;
     };
 
     const prepare = textarea => {

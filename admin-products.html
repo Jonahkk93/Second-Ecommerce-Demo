@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPWR Management</title>
-    <link rel="stylesheet" href="css/admin-products.css?v=20260929-32">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260930-44">
     <link rel="stylesheet" href="css/review-lightbox.css?v=20260923-2">
     <link rel="stylesheet" href="css/Larke.css">
     <link rel="stylesheet" href="css/touch-interactions.css?v=20260929-3">
@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/management-navigation.css?v=20260929-3">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
     <script src="js/touch-interactions.js" defer></script>
-    <script src="js/auto-grow-textareas.js?v=20260929-3" defer></script>
+    <script src="js/auto-grow-textareas.js?v=20260930-1" defer></script>
     <script src="js/management-navigation.js?v=20260925-2" defer></script>
     <script type="module" src="js/management-account.js?v=20260909-3"></script>
 </head>
@@ -111,6 +111,11 @@
             </div>
             <div class="homepage-hero-editor homepage-campaign-editor">
                 <article class="homepage-hero-fields">
+                    <label class="field field-wide"><span>Linked discount campaign</span><select id="homepage-campaign-source"><option value="custom">None (custom banner)</option><option value="discounts">Current Discount Products campaign</option></select></label>
+                    <div class="campaign-sync-settings field-wide">
+                        <label class="toggle-row"><input type="checkbox" id="homepage-campaign-sync" aria-label="Keep the Campaign Banner synced with the selected discount campaign"><span class="toggle-control"></span><span>Sync banner with campaign</span></label>
+                        <p id="homepage-campaign-sync-status">Choose the current discount campaign to automatically fill and show this banner.</p>
+                    </div>
                     <label class="field"><span>Small label</span><input id="homepage-campaign-eyebrow" maxlength="40" placeholder="e.g. Limited offer"></label>
                     <label class="field field-wide"><span>Main heading</span><input id="homepage-campaign-heading" maxlength="80" placeholder="e.g. 15% off selected favourites"></label>
                     <label class="field field-wide"><span>Short description</span><textarea id="homepage-campaign-body" maxlength="180" rows="1" placeholder="Tell shoppers what the campaign is about…"></textarea></label>
@@ -129,9 +134,10 @@
                         <input id="homepage-campaign-image-key" type="hidden">
                     </div>
                 </article>
-                <article class="homepage-hero-preview homepage-campaign-preview" id="homepage-campaign-preview" aria-live="polite">
-                    <div><span class="preview-label">Campaign preview</span><p class="hero-preview-eyebrow"></p><h3></h3><p class="hero-preview-body"></p><span class="hero-preview-button"></span></div>
-                    <img alt="">
+                <article class="homepage-hero-preview homepage-campaign-preview" id="homepage-campaign-preview" aria-label="Campaign banner preview" aria-live="polite">
+                    <img class="homepage-campaign-image" alt="">
+                    <div class="homepage-campaign-copy"><p class="hero-preview-eyebrow homepage-campaign-eyebrow"></p><h3></h3><p class="hero-preview-body homepage-campaign-body"></p></div>
+                    <span class="hero-preview-button homepage-campaign-button"></span>
                 </article>
             </div>
             <div class="section-heading homepage-heading category-order-heading">
@@ -282,6 +288,6 @@
 <div class="confirm-modal hidden" id="image-delete-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="image-delete-confirm-title" aria-describedby="image-delete-confirm-message"><div class="confirm-card"><h2 id="image-delete-confirm-title">Delete image?</h2><p id="image-delete-confirm-message">This image will be removed from the product when you save your changes.</p><div><button class="secondary-button" id="cancel-image-delete" type="button">Cancel</button><button class="danger-button" id="confirm-image-delete" type="button">Delete Image</button></div></div></div>
 <div class="admin-products-toast" role="status" aria-live="polite"></div>
 <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/admin-products.js?v=20260929-28"></script>
+    <script type="module" src="js/admin-products.js?v=20260930-29"></script>
  </body>
 </html>

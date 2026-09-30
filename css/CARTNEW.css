@@ -806,7 +806,8 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     }
 
     .homepage-campaign-banner{
-        grid-template-columns:48px minmax(0,1fr);
+        grid-template-columns:48px minmax(0,1fr) auto;
+        gap:12px;
         width:calc(100% - 32px);
         padding:14px;
         border-radius:20px;
@@ -825,14 +826,32 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     }
 
     .homepage-campaign-button{
-        grid-column:1/-1;
-        width:100%;
-        margin-top:2px;
+        grid-column:auto;
+        min-width:100px;
+        width:auto;
+        margin-top:0;
+        padding:10px 13px;
+        font-size:11px;
     }
+
+    .homepage-campaign-eyebrow{font-size:9px}
+
+    .homepage-campaign-banner h2{font-size:20px}
+
+    .homepage-campaign-body{font-size:12px}
 
     .homepage-campaign-banner + .shop{
         padding-top:26px;
     }
+}
+
+@media (max-width:520px){
+    .homepage-campaign-banner{grid-template-columns:48px minmax(0,1fr) auto;gap:8px;width:calc(100% - 32px);padding:10px;border-radius:16px}
+    .homepage-campaign-image{width:48px;height:48px;padding:10px;border-radius:15px}
+    .homepage-campaign-eyebrow{margin-bottom:3px;font-size:7.5px}
+    .homepage-campaign-banner h2{font-size:14px}
+    .homepage-campaign-body{margin-top:4px;font-size:9px;line-height:1.25}
+    .homepage-campaign-button{grid-column:auto;min-width:66px;width:auto;margin-top:0;padding:8px 8px;font-size:8.5px}
 }
 
 @media (min-width:601px) and (max-width:760px){

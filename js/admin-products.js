@@ -56,6 +56,12 @@ const DISCOUNT_CAMPAIGN_ICONS = {
     "Christmas Offers": "images/Icon Folder/Christmas Icon_Red.PNG",
     "Black Friday": "images/Icon Folder/Black Friday.png"
 };
+const DISCOUNT_CAMPAIGN_COPY = {
+    "Limited Offers": "Save on selected beauty favourites while this limited-time campaign is live.",
+    "Valentines Offers": "Share the love and save on selected beauty favourites in our Valentine's campaign.",
+    "Christmas Offers": "Celebrate the season with savings on selected beauty favourites.",
+    "Black Friday": "Shop Black Friday savings on selected beauty favourites while stocks last."
+};
 
 function normalizeDiscountCampaignLabel(label) {
     const normalizedLabel = LEGACY_DISCOUNT_CAMPAIGN_LABELS[label] || label;
@@ -485,8 +491,12 @@ function syncHomepageHeroForm() {
 }
 
 function normalizeCampaignBanner(value = {}) {
+    const source = value.source === "discounts" ? "discounts" : "custom";
     return {
         enabled: value.enabled !== false,
+        source,
+        syncWithCampaign: source === "discounts" && value.syncWithCampaign === true,
+        linkedCampaignLabel: source === "discounts" ? normalizeDiscountCampaignLabel(value.linkedCampaignLabel) : "",
         eyebrow: cleanHeroText(value.eyebrow, DEFAULT_CAMPAIGN_BANNER.eyebrow, 40),
         heading: cleanHeroText(value.heading, DEFAULT_CAMPAIGN_BANNER.heading, 80),
         body: cleanHeroText(value.body, DEFAULT_CAMPAIGN_BANNER.body, 180),
@@ -500,6 +510,9 @@ function normalizeCampaignBanner(value = {}) {
 function readCampaignBannerForm() {
     campaignBanner = normalizeCampaignBanner({
         enabled: $("#homepage-campaign-enabled").checked,
+        source: $("#homepage-campaign-source").value,
+        syncWithCampaign: $("#homepage-campaign-sync").checked,
+        linkedCampaignLabel: discountCampaignLabel,
         eyebrow: $("#homepage-campaign-eyebrow").value,
         heading: $("#homepage-campaign-heading").value,
         body: $("#homepage-campaign-body").value,
@@ -509,6 +522,58 @@ function readCampaignBannerForm() {
         imageKey: $("#homepage-campaign-image-key").value
     });
     return campaignBanner;
+}
+
+function linkedDiscountCampaignPreset() {
+    const percents = discountMode === "automatic"
+        ? [15]
+        : [...new Set(discountSelections.map(item => Math.min(95, Math.max(1, Math.round(Number(item.percent) || 15)))))];
+    const highestPercent = percents.length ? Math.max(...percents) : 15;
+    const discountText = percents.length <= 1 ? `${highestPercent}% off` : `Up to ${highestPercent}% off`;
+    return {
+        eyebrow: discountCampaignLabel,
+        heading: `${discountText} selected favourites`,
+        body: DISCOUNT_CAMPAIGN_COPY[discountCampaignLabel] || DEFAULT_CAMPAIGN_BANNER.body,
+        buttonLabel: "Shop offers",
+        buttonLink: "#discounts",
+        image: DISCOUNT_CAMPAIGN_ICONS[discountCampaignLabel] || DEFAULT_CAMPAIGN_BANNER.image
+    };
+}
+
+function syncLinkedCampaignControls({ refreshContent = false } = {}) {
+    const source = $("#homepage-campaign-source").value;
+    const linkedOption = $("#homepage-campaign-source").querySelector('option[value="discounts"]');
+    linkedOption.textContent = `Current: ${discountCampaignLabel}`;
+    const syncToggle = $("#homepage-campaign-sync");
+    const linked = source === "discounts";
+    const activelySynced = linked && syncToggle.checked;
+    syncToggle.disabled = !linked;
+    if (!linked) syncToggle.checked = false;
+    $("#homepage-campaign-enabled").disabled = activelySynced;
+    syncToggle.closest(".campaign-sync-settings")?.classList.toggle("is-disabled", !linked);
+    const status = $("#homepage-campaign-sync-status");
+    if (!linked) {
+        status.textContent = "Choose the current discount campaign to automatically fill and show this banner.";
+    } else if (syncToggle.checked) {
+        status.textContent = `${discountCampaignLabel} is linked. Banner visibility follows Discount Products.`;
+    } else {
+        status.textContent = `${discountCampaignLabel} is linked, but automatic visibility is off.`;
+    }
+    if (linked && refreshContent) {
+        const preset = linkedDiscountCampaignPreset();
+        $("#homepage-campaign-eyebrow").value = preset.eyebrow;
+        $("#homepage-campaign-heading").value = preset.heading;
+        const bodyField = $("#homepage-campaign-body");
+        bodyField.value = preset.body;
+        window.MPWRAutoGrowTextareas?.prepare(bodyField);
+        $("#homepage-campaign-button-label").value = preset.buttonLabel;
+        $("#homepage-campaign-button-link").value = preset.buttonLink;
+        $("#homepage-campaign-image").value = preset.image;
+        $("#homepage-campaign-image-key").value = "";
+    }
+    if (activelySynced) $("#homepage-campaign-enabled").checked = discountSectionEnabled;
+    productDropdownSync.get($("#homepage-campaign-source"))?.();
+    renderCampaignBannerPreview();
 }
 
 function renderCampaignBannerPreview() {
@@ -528,6 +593,8 @@ function renderCampaignBannerPreview() {
 
 function syncCampaignBannerForm() {
     $("#homepage-campaign-enabled").checked = campaignBanner.enabled !== false;
+    $("#homepage-campaign-source").value = campaignBanner.source;
+    $("#homepage-campaign-sync").checked = campaignBanner.syncWithCampaign;
     $("#homepage-campaign-eyebrow").value = campaignBanner.eyebrow;
     $("#homepage-campaign-heading").value = campaignBanner.heading;
     const bodyField = $("#homepage-campaign-body");
@@ -537,7 +604,7 @@ function syncCampaignBannerForm() {
     $("#homepage-campaign-button-link").value = campaignBanner.buttonLink;
     $("#homepage-campaign-image").value = campaignBanner.image;
     $("#homepage-campaign-image-key").value = campaignBanner.imageKey || "";
-    renderCampaignBannerPreview();
+    syncLinkedCampaignControls();
 }
 
 function syncBannerMediaControl(prefix, imageUrl, statusText = "Current image") {
@@ -967,6 +1034,9 @@ function updateDiscountSelection(product, action, sourceCard = null) {
     }
     updateHomepageProductCard(id, action === "add");
     renderDiscountSelection();
+    if ($("#homepage-campaign-source").value === "discounts" && $("#homepage-campaign-sync").checked) {
+        syncLinkedCampaignControls({ refreshContent: true });
+    }
     syncDiscountPickerAvailability();
     if (action === "add") animateProductToDiscount(sourceCard, id);
     return true;
@@ -1203,6 +1273,8 @@ function enhanceProductDropdown(select) {
         picker.classList.toggle("disabled", select.disabled);
         if (select.disabled) close();
         menu.querySelectorAll("button").forEach(option => {
+            const nativeOption = [...select.options].find(item => item.value === option.dataset.value);
+            if (!isCampaignDropdown && nativeOption) option.textContent = nativeOption.textContent;
             const active = option.dataset.value === select.value;
             option.classList.toggle("selected", active);
             option.setAttribute("aria-selected", String(active));
@@ -1887,6 +1959,11 @@ function syncHomepageSectionStates() {
     campaignSelect.disabled = !discountSectionEnabled;
     campaignSelect.closest(".discount-campaign-field")?.classList.toggle("section-disabled", !discountSectionEnabled);
     productDropdownSync.get(campaignSelect)?.();
+    const linkedBanner = $("#homepage-campaign-source")?.value === "discounts" && $("#homepage-campaign-sync")?.checked;
+    if (linkedBanner) {
+        $("#homepage-campaign-enabled").checked = discountSectionEnabled;
+        syncLinkedCampaignControls();
+    }
     renderHomepageProducts();
     syncDiscountPickerAvailability();
 }
@@ -2468,7 +2545,7 @@ function bindEvents() {
         $("#selected-media-count").textContent = selectedMediaFiles.length ? `${selectedMediaFiles.length} new file${selectedMediaFiles.length === 1 ? "" : "s"} selected.` : "No new files selected.";
     });
     ["#product-search", "#category-filter", "#status-filter"].forEach(selector => $(selector).addEventListener(selector === "#product-search" ? "input" : "change", renderProducts));
-    ["#category-filter", "#status-filter", "#product-category", "#product-status", "#product-shipping", "#discount-campaign-label"].forEach(selector => enhanceProductDropdown($(selector)));
+    ["#category-filter", "#status-filter", "#product-category", "#product-status", "#product-shipping", "#discount-campaign-label", "#homepage-campaign-source"].forEach(selector => enhanceProductDropdown($(selector)));
     document.addEventListener("click", () => {
         document.querySelectorAll(".product-dropdown-menu:not([hidden])").forEach(menu => {
             menu.hidden = true;
@@ -2527,6 +2604,14 @@ function bindEvents() {
         const field = $(selector);
         field.addEventListener(field.type === "checkbox" ? "change" : "input", renderCampaignBannerPreview);
     });
+    $("#homepage-campaign-source").addEventListener("change", event => {
+        productDropdownSync.get(event.target)?.();
+        if (event.target.value === "discounts") $("#homepage-campaign-sync").checked = true;
+        syncLinkedCampaignControls({ refreshContent: event.target.value === "discounts" });
+    });
+    $("#homepage-campaign-sync").addEventListener("change", event => {
+        syncLinkedCampaignControls({ refreshContent: event.target.checked });
+    });
     const closeHomepageSaveConfirmation = () => {
         $("#homepage-save-modal").classList.add("hidden");
         $("#save-homepage").focus();
@@ -2568,6 +2653,9 @@ function bindEvents() {
         discountMode = event.target.checked ? "automatic" : "manual";
         syncHomepageSectionStates();
         renderHomepage();
+        if ($("#homepage-campaign-source").value === "discounts" && $("#homepage-campaign-sync").checked) {
+            syncLinkedCampaignControls({ refreshContent: true });
+        }
     });
     $("#discount-campaign-label").addEventListener("change", event => {
         discountCampaignLabel = DISCOUNT_CAMPAIGN_LABELS.includes(event.target.value)
@@ -2576,6 +2664,9 @@ function bindEvents() {
         event.target.value = discountCampaignLabel;
         productDropdownSync.get(event.target)?.();
         $("#discount-campaign-preview").textContent = discountCampaignLabel;
+        if ($("#homepage-campaign-source").value === "discounts" && $("#homepage-campaign-sync").checked) {
+            syncLinkedCampaignControls({ refreshContent: true });
+        }
     });
     homepagePanelResizeObserver = new ResizeObserver(syncHomepagePanelHeights);
     $$(".homepage-preview-card").forEach(panel => homepagePanelResizeObserver.observe(panel));
@@ -2833,6 +2924,9 @@ function bindEvents() {
         const selection = discountSelection(input.closest(".discount-item")?.dataset.id);
         if (selection) {
             selection.percent = Math.min(95, Math.max(1, Math.round(Number(input.value) || 1)));
+            if ($("#homepage-campaign-source").value === "discounts" && $("#homepage-campaign-sync").checked) {
+                syncLinkedCampaignControls({ refreshContent: true });
+            }
         }
     });
     $("#discount-selection").addEventListener("change", event => {
@@ -2850,6 +2944,9 @@ function bindEvents() {
         discountSelections = discountSelections.filter(item => item.id !== id);
         closeDiscountRemovalConfirmation();
         renderDiscountSelection();
+        if ($("#homepage-campaign-source").value === "discounts" && $("#homepage-campaign-sync").checked) {
+            syncLinkedCampaignControls({ refreshContent: true });
+        }
         syncDiscountPickerAvailability();
         updateHomepageProductCard(id, false);
     });

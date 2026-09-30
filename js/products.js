@@ -1011,8 +1011,11 @@ function normalizeCampaignBanner(value = {}) {
         const cleaned = String(input || "").trim().replace(/\s+/g, " ");
         return (cleaned || fallback).slice(0, maxLength);
     };
+    const source = value.source === "discounts" ? "discounts" : "custom";
     return {
         enabled: value.enabled !== false,
+        source,
+        syncWithCampaign: source === "discounts" && value.syncWithCampaign === true,
         eyebrow: text(value.eyebrow, DEFAULT_CAMPAIGN_BANNER.eyebrow, 40),
         heading: text(value.heading, DEFAULT_CAMPAIGN_BANNER.heading, 80),
         body: text(value.body, DEFAULT_CAMPAIGN_BANNER.body, 180),
@@ -1020,6 +1023,14 @@ function normalizeCampaignBanner(value = {}) {
         buttonLink: text(value.buttonLink, DEFAULT_CAMPAIGN_BANNER.buttonLink, 140),
         image: text(value.image, DEFAULT_CAMPAIGN_BANNER.image, 500)
     };
+}
+
+function resolveCampaignBanner(value, discountSetting = null) {
+    const banner = normalizeCampaignBanner(value);
+    if (banner.source === "discounts" && banner.syncWithCampaign && discountSetting && typeof discountSetting.enabled === "boolean") {
+        banner.enabled = discountSetting.enabled;
+    }
+    return banner;
 }
 
 function applyCampaignBanner(value) {
@@ -1158,7 +1169,9 @@ window.MPWRCatalogueReady = fetch(`${catalogueHost}/products`, { credentials: "i
         } catch (_) {
             cachedCampaign = null;
         }
-        applyCampaignBanner(cachedCampaign || DEFAULT_CAMPAIGN_BANNER);
+        const cachedDiscountEnabled = localStorage.getItem("mpwrDiscountSectionEnabled");
+        const cachedDiscountSetting = cachedDiscountEnabled === null ? null : { enabled: cachedDiscountEnabled !== "false" };
+        applyCampaignBanner(resolveCampaignBanner(cachedCampaign || DEFAULT_CAMPAIGN_BANNER, cachedDiscountSetting));
         let cachedCategories = null;
         try {
             cachedCategories = JSON.parse(localStorage.getItem("mpwrCategories") || "null");
@@ -1193,10 +1206,14 @@ window.MPWRCatalogueReady = fetch(`${catalogueHost}/products`, { credentials: "i
                     applyHomepageHero(remoteHero);
                     localStorage.setItem("mpwrHomepageHero", JSON.stringify(normalizeHomepageHero(remoteHero)));
                 }
-                const campaignSnapshot = await getDoc(doc(window.db, "storefront", "campaignBanner"));
+                const [campaignSnapshot, discountSnapshot] = await Promise.all([
+                    getDoc(doc(window.db, "storefront", "campaignBanner")),
+                    getDoc(doc(window.db, "storefront", "discounts"))
+                ]);
                 const remoteCampaign = campaignSnapshot.data();
+                const remoteDiscountSetting = discountSnapshot.data();
                 if (remoteCampaign) {
-                    applyCampaignBanner(remoteCampaign);
+                    applyCampaignBanner(resolveCampaignBanner(remoteCampaign, remoteDiscountSetting));
                     localStorage.setItem("mpwrCampaignBanner", JSON.stringify(normalizeCampaignBanner(remoteCampaign)));
                 }
                 const categorySnapshot = await getDoc(doc(window.db, "storefront", "categories"));
@@ -1206,8 +1223,7 @@ window.MPWRCatalogueReady = fetch(`${catalogueHost}/products`, { credentials: "i
                     applyCategoryOrder(normalizedCategories);
                     localStorage.setItem("mpwrCategories", JSON.stringify(normalizedCategories));
                 }
-                const snapshot = await getDoc(doc(window.db, "storefront", "discounts"));
-                const remoteDiscounts = snapshot.data()?.products;
+                const remoteDiscounts = remoteDiscountSetting?.products;
                 if (Array.isArray(remoteDiscounts)) {
                     setMPWRDiscounts(remoteDiscounts);
                     localStorage.setItem("mpwrDiscountProducts", JSON.stringify(remoteDiscounts));

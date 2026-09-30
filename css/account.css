@@ -297,10 +297,17 @@ body{
 
 .account-profile-link > span:last-child,
 .account-order-status-link > span:last-child{
-    color:var(--accent);
-    font-size:28px;
-    font-weight:400;
+    flex:0 0 16px;
+    width:16px;
+    height:16px;
+    overflow:hidden;
+    color:transparent;
+    font-size:0;
     line-height:1;
+    background-image:url("../images/Icon Folder/Back Icon_E5A484 Right.PNG");
+    background-position:center;
+    background-repeat:no-repeat;
+    background-size:contain;
 }
 
 .account-profile-overview > .account-signout{
