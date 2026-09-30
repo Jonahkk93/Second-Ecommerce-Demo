@@ -756,7 +756,7 @@ const DEFAULT_CAMPAIGN_BANNER = {
     heading: "15% off selected favourites",
     body: "Bring your next beauty refresh home for less with limited-time campaign deals.",
     buttonLabel: "Shop offers",
-    buttonLink: "#discounts",
+    buttonLink: "Campaign.html",
     image: "images/Icon Folder/Discount Icon_E5A484.PNG"
 };
 const DEFAULT_CATALOGUE_CATEGORIES = [
@@ -1065,7 +1065,9 @@ function applyCampaignBanner(value) {
     section.querySelector(".homepage-campaign-body").textContent = banner.body;
     const button = section.querySelector(".homepage-campaign-button");
     button.textContent = banner.buttonLabel;
-    button.href = banner.buttonLink || "#discounts";
+    button.href = banner.source === "discounts" && (!banner.buttonLink || banner.buttonLink === "#discounts")
+        ? "Campaign.html"
+        : (banner.buttonLink || DEFAULT_CAMPAIGN_BANNER.buttonLink);
     const image = section.querySelector(".homepage-campaign-image");
     image.src = banner.image;
     image.alt = banner.heading;

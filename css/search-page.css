@@ -36,7 +36,7 @@ html.site-loading-enabled:not(.site-page-ready) .search-chip{overflow:hidden;col
 .recent-searches-more:hover{color:#E5A484}
 .recent-searches-more[hidden]{display:none}
 .recent-empty{color:#888;font-size:14px}
-.suggested-searches-section{margin-top:34px}
+.trending-searches-section,.suggested-searches-section{margin-top:34px}
 
 .search-results-section{width:100%;margin:42px 0 0}
 .results-kicker{margin-bottom:4px;color:#E5A484;font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase}
@@ -50,6 +50,7 @@ html.site-loading-enabled:not(.site-page-ready) .search-chip{overflow:hidden;col
 @media(max-width:600px){.search-page-header{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none}}
 .search-empty{padding:70px 20px;text-align:center;color:#777}
 .search-empty h2{margin-bottom:9px;color:#333;font-size:24px}
+.search-empty-fallback{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:18px}
 
 @media(min-width:1024px){
     .search-page-header{padding-right:5%;padding-left:5%}
@@ -67,10 +68,10 @@ html.site-loading-enabled:not(.site-page-ready) .search-chip{overflow:hidden;col
     .live-search-suggestions{top:65px;max-height:calc(100dvh - 65px);padding:5px 22px 24px}
     .live-suggestion{gap:16px;padding:17px 0;font-size:18px}
     .search-page-main{padding:22px 16px 56px}
-    .search-section-heading h1,.suggested-searches-section h2{font-size:18px}
+    .search-section-heading h1,.trending-searches-section h2,.suggested-searches-section h2{font-size:18px}
     .results-heading h2{font-size:21px}
     .search-chip{padding:9px 12px;font-size:13px;line-height:16px}
     .recent-searches{max-height:78px}
-    .suggested-searches-section{margin-top:30px}
+    .trending-searches-section,.suggested-searches-section{margin-top:30px}
     .search-results-section{margin-top:36px}
 }

@@ -43,12 +43,15 @@ const sortResults = document.querySelector("#sort-results");
 const colorFilter = document.querySelector("#color-filter");
 const sizeFilter = document.querySelector("#size-filter");
 const resultsToolbar = document.querySelector(".results-toolbar");
+let searchResultSettings = {};
+let resultSearchSynonyms = [];
 try {
     const localHost = /^(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname);
     const apiRoot = window.MPWR_API_URL || (localHost ? `http://${window.location.hostname}:3000/v1` : "/api/v1");
     const response = await fetch(`${apiRoot}/storefront/search`, { credentials:"include", cache:"no-store" });
-    const setting = response.ok ? await response.json() : {};
-    if (["relevance", "popular", "newest", "low", "high"].includes(setting.defaultSort)) sortResults.value = setting.defaultSort;
+    searchResultSettings = response.ok ? await response.json() : {};
+    if (["relevance", "popular", "newest", "low", "high"].includes(searchResultSettings.defaultSort)) sortResults.value = searchResultSettings.defaultSort;
+    if (Array.isArray(searchResultSettings.synonyms)) resultSearchSynonyms = searchResultSettings.synonyms;
 } catch (error) {
     console.warn("Using the default result sorting", error);
 }
@@ -440,6 +443,26 @@ function normalizeSearchText(value = "") {
         .trim();
 }
 
+function normalizeSearchSynonyms(value) {
+    const source = Array.isArray(value) ? value : [];
+    return source.map(rule => ({
+        term: normalizeSearchText(rule?.term),
+        synonyms: Array.isArray(rule?.synonyms) ? rule.synonyms.map(normalizeSearchText).filter(Boolean) : []
+    })).filter(rule => rule.term && rule.synonyms.length);
+}
+
+function expandedSearchTerms(searchQuery) {
+    const normalized = normalizeSearchText(searchQuery);
+    const terms = new Set(normalized ? [normalized] : []);
+    normalizeSearchSynonyms(resultSearchSynonyms).forEach(rule => {
+        if (rule.term === normalized || rule.synonyms.includes(normalized)) {
+            terms.add(rule.term);
+            rule.synonyms.forEach(item => terms.add(item));
+        }
+    });
+    return [...terms];
+}
+
 function canonicalToken(token) {
     if (token.length > 3 && token.endsWith("ies")) return `${token.slice(0,-3)}y`;
     if (token.length > 3 && token.endsWith("s") && !token.endsWith("ss")) return token.slice(0,-1);
@@ -507,6 +530,12 @@ function searchScore(product, searchQuery) {
     if (queryFamilies.some(family => family.some(alias => productText.includes(alias)))) score += 100;
 
     return score;
+}
+
+function expandedSearchScore(product, searchQuery) {
+    const terms = expandedSearchTerms(searchQuery);
+    if (!terms.length) return 1;
+    return Math.max(0,...terms.map(term => searchScore(product, term)));
 }
 
 function closeProductModal() {
@@ -751,10 +780,61 @@ function resultCard(product) {
 
 function matchingProducts() {
     return products
-        .map((product,index) => ({product,index,score:searchScore(product,query)}))
+        .map((product,index) => ({product,index,score:expandedSearchScore(product,query)}))
         .filter(match => match.score > 0)
         .sort((a,b) => b.score - a.score || a.index - b.index)
         .map(match => match.product);
+}
+
+function noResultsChip(label) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "no-results-chip";
+    button.textContent = label;
+    button.addEventListener("click",() => {
+        location.href = `search-results.html?q=${encodeURIComponent(label)}`;
+    });
+    return button;
+}
+
+function configuredList(key) {
+    const value = searchResultSettings[key];
+    return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+}
+
+function fallbackProducts() {
+    const configured = Array.isArray(searchResultSettings.popularProducts) ? searchResultSettings.popularProducts : [];
+    const ids = configured.map(item => String(item.id || item));
+    const selected = ids.map(id => products.find(product => String(product.id) === id)).filter(Boolean);
+    if (selected.length) return selected.slice(0,4);
+    return products.slice(0,4);
+}
+
+function renderNoResultsFallback() {
+    noResults.querySelector("p").textContent = searchResultSettings.emptyMessage || "Try a trending search or browse our popular picks.";
+    let fallback = noResults.querySelector(".no-results-fallback");
+    if (!fallback) {
+        fallback = document.createElement("div");
+        fallback.className = "no-results-fallback";
+        noResults.appendChild(fallback);
+    }
+    const mode = searchResultSettings.emptyFallback || "popular";
+    fallback.replaceChildren();
+    if (mode === "message") {
+        fallback.hidden = true;
+        return;
+    }
+    if (mode === "popular") {
+        const items = fallbackProducts();
+        fallback.className = "no-results-fallback no-results-products";
+        fallback.replaceChildren(...items.map(resultCard));
+        fallback.hidden = items.length === 0;
+        return;
+    }
+    const labels = mode === "trending" ? configuredList("trendingSearches") : configuredList("suggestions");
+    fallback.className = "no-results-fallback no-results-chips";
+    fallback.replaceChildren(...labels.slice(0,8).map(noResultsChip));
+    fallback.hidden = labels.length === 0;
 }
 
 const relevanceMatches = matchingProducts();
@@ -786,6 +866,7 @@ function render() {
     resultsGrid.replaceChildren(...matches.map(resultCard));
     resultsGrid.hidden = matches.length === 0;
     noResults.hidden = matches.length > 0;
+    if (matches.length === 0) renderNoResultsFallback();
 }
 
 queryInput.value = query;

@@ -760,7 +760,11 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     .homepage-hero-body{max-width:440px}
 
     .homepage-hero-button{
+        min-width:112px;
+        min-height:38px;
         margin-top:22px;
+        padding:9px 16px;
+        font-size:11px;
     }
 
     .homepage-hero-media::after{

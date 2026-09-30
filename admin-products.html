@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPWR Management</title>
-    <link rel="stylesheet" href="css/admin-products.css?v=20260930-44">
+    <link rel="stylesheet" href="css/admin-products.css?v=20260930-58">
     <link rel="stylesheet" href="css/review-lightbox.css?v=20260923-2">
     <link rel="stylesheet" href="css/Larke.css">
     <link rel="stylesheet" href="css/touch-interactions.css?v=20260929-3">
@@ -111,10 +111,11 @@
             </div>
             <div class="homepage-hero-editor homepage-campaign-editor">
                 <article class="homepage-hero-fields">
-                    <label class="field field-wide"><span>Linked discount campaign</span><select id="homepage-campaign-source"><option value="custom">None (custom banner)</option><option value="discounts">Current Discount Products campaign</option></select></label>
-                    <div class="campaign-sync-settings field-wide">
-                        <label class="toggle-row"><input type="checkbox" id="homepage-campaign-sync" aria-label="Keep the Campaign Banner synced with the selected discount campaign"><span class="toggle-control"></span><span>Sync banner with campaign</span></label>
-                        <p id="homepage-campaign-sync-status">Choose the current discount campaign to automatically fill and show this banner.</p>
+                    <div class="campaign-link-row field-wide">
+                        <label class="field campaign-source-field"><span>Linked discount campaign</span><select id="homepage-campaign-source"><option value="custom">None (custom banner)</option><option value="discounts">Current Discount Products campaign</option></select></label>
+                        <div class="campaign-sync-settings">
+                            <label class="toggle-row"><input type="checkbox" id="homepage-campaign-sync" aria-label="Keep the Campaign Banner synced with the selected discount campaign"><span class="toggle-control"></span><span>Sync banner with campaign</span></label>
+                        </div>
                     </div>
                     <label class="field"><span>Small label</span><input id="homepage-campaign-eyebrow" maxlength="40" placeholder="e.g. Limited offer"></label>
                     <label class="field field-wide"><span>Main heading</span><input id="homepage-campaign-heading" maxlength="80" placeholder="e.g. 15% off selected favourites"></label>
@@ -130,7 +131,9 @@
                         </div>
                         <p class="banner-image-limit">JPEG, PNG, WebP, or GIF · Maximum 1 photo · 10 MB per image</p>
                         <span class="banner-media-status" aria-live="polite">Current image</span>
-                        <details class="banner-media-advanced"><summary>Advanced: use an image URL</summary><label class="field"><span>Image URL</span><input id="homepage-campaign-image" maxlength="500" placeholder="https://cdn.example.com/banner.webp"></label></details>
+                        <details class="banner-media-advanced"><summary>Advanced: use an image URL</summary><div class="hero-url-grid campaign-url-grid" aria-label="Campaign banner image URL">
+                            <label class="field"><span>Image 1</span><span class="hero-url-control"><input id="homepage-campaign-image" maxlength="500" placeholder="Paste image URL here"><button type="button" data-banner-url-preview="campaign" aria-label="Preview campaign image"><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                        </div></details>
                         <input id="homepage-campaign-image-key" type="hidden">
                     </div>
                 </article>
@@ -186,8 +189,22 @@
                     <div><h3>Search Behaviour</h3><p>Choose how matching products are ordered when a shopper searches.</p></div>
                     <label class="field"><span>Default results sort</span><select id="search-default-sort"><option value="relevance">Most relevant</option><option value="popular">Most popular</option><option value="newest">Newest</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label>
                 </article>
+                <article class="search-settings-card">
+                    <div class="search-settings-card-heading"><div><h3>Trending Searches</h3><p>Show timely searches shoppers can tap before typing.</p></div><label class="toggle-row"><input type="checkbox" id="search-trending-enabled" checked><span class="toggle-control"></span><span class="search-trending-toggle-label">Shown</span></label></div>
+                    <label class="field"><span>Section heading</span><input id="search-trending-heading" maxlength="60" value="Trending searches"></label>
+                    <label class="field"><span>Search terms</span><textarea id="search-trending-terms" rows="5" placeholder="pink nails&#10;black wig&#10;Black Friday"></textarea></label>
+                </article>
+                <article class="search-settings-card">
+                    <div><h3>Search Synonyms</h3><p>Connect shopper words to the terms your catalogue uses.</p></div>
+                    <label class="field"><span>Synonym rules</span><textarea id="search-synonyms" rows="7" placeholder="nails = press-ons, press on nails&#10;wig = wigs, hair&#10;false lashes = lashes"></textarea></label>
+                </article>
+                <article class="search-settings-card">
+                    <div><h3>No Results Fallback</h3><p>Choose what shoppers see when a search finds no products.</p></div>
+                    <label class="field"><span>Fallback content</span><select id="search-empty-fallback"><option value="popular">Show Popular Picks</option><option value="trending">Show Trending Searches</option><option value="suggestions">Show Suggested Searches</option><option value="message">Custom message only</option></select></label>
+                    <label class="field"><span>Fallback message</span><input id="search-empty-message" maxlength="120" value="Try a trending search or browse our popular picks."></label>
+                </article>
                 <article class="search-settings-card search-preview-card">
-                    <span class="preview-label">Customer preview</span><h3 id="search-preview-suggestions-heading">Suggested searches</h3><div class="search-preview-chips" id="search-preview-chips"></div><h3 id="search-preview-popular-heading">Popular picks</h3><div class="search-preview-products" id="search-preview-products"></div>
+                    <span class="preview-label">Customer preview</span><h3 id="search-preview-trending-heading">Trending searches</h3><div class="search-preview-chips" id="search-preview-trending"></div><h3 id="search-preview-suggestions-heading">Suggested searches</h3><div class="search-preview-chips" id="search-preview-chips"></div><h3 id="search-preview-popular-heading">Popular picks</h3><div class="search-preview-products" id="search-preview-products"></div>
                 </article>
             </div>
             <div class="homepage-save-footer"><button class="primary-button" id="save-search-settings" type="button">Save Changes</button></div>
@@ -288,6 +305,6 @@
 <div class="confirm-modal hidden" id="image-delete-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="image-delete-confirm-title" aria-describedby="image-delete-confirm-message"><div class="confirm-card"><h2 id="image-delete-confirm-title">Delete image?</h2><p id="image-delete-confirm-message">This image will be removed from the product when you save your changes.</p><div><button class="secondary-button" id="cancel-image-delete" type="button">Cancel</button><button class="danger-button" id="confirm-image-delete" type="button">Delete Image</button></div></div></div>
 <div class="admin-products-toast" role="status" aria-live="polite"></div>
 <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/admin-products.js?v=20260930-29"></script>
+    <script type="module" src="js/admin-products.js?v=20260930-34"></script>
  </body>
 </html>

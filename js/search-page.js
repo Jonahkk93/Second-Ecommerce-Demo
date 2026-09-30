@@ -8,6 +8,7 @@ const searchEmpty = document.querySelector(".search-empty");
 const resultTitle = document.querySelector("#search-results-title");
 const resultCount = document.querySelector(".results-count");
 const recentContainer = document.querySelector(".recent-searches");
+const trendingContainer = document.querySelector(".trending-searches");
 const suggestedContainer = document.querySelector(".suggested-searches");
 const clearRecent = document.querySelector(".clear-recent");
 const recentMore = document.querySelector(".recent-searches-more");
@@ -36,6 +37,8 @@ let selectedModalOptions = {};
 let selectedModalPrice = 0;
 let selectedModalRegularPrice = 0;
 let suggestions = [];
+let trendingSearches = [];
+let searchSynonyms = [];
 let searchPageSettings = {};
 try {
     const configuredSuggestions = JSON.parse(document.querySelector("#search-suggestions-data")?.textContent || "[]");
@@ -49,8 +52,34 @@ try {
     const response = await fetch(`${apiRoot}/storefront/search`, { credentials:"include", cache:"no-store" });
     if (response.ok) searchPageSettings = await response.json();
     if (Array.isArray(searchPageSettings.suggestions)) suggestions = searchPageSettings.suggestions.map(String).filter(Boolean);
+    if (Array.isArray(searchPageSettings.trendingSearches)) trendingSearches = searchPageSettings.trendingSearches.map(String).filter(Boolean);
+    if (Array.isArray(searchPageSettings.synonyms)) searchSynonyms = normalizeSearchSynonyms(searchPageSettings.synonyms);
 } catch (error) {
     console.warn("Using default search page settings", error);
+}
+
+function normalizeSearchTerm(value) {
+    return String(value || "").toLowerCase().replace(/['’]s\b/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function normalizeSearchSynonyms(value) {
+    const source = Array.isArray(value) ? value : [];
+    return source.map(rule => ({
+        term: normalizeSearchTerm(rule?.term),
+        synonyms: Array.isArray(rule?.synonyms) ? rule.synonyms.map(normalizeSearchTerm).filter(Boolean) : []
+    })).filter(rule => rule.term && rule.synonyms.length);
+}
+
+function expandedSearchTerms(query) {
+    const normalized = normalizeSearchTerm(query);
+    const terms = new Set(normalized ? [normalized] : []);
+    searchSynonyms.forEach(rule => {
+        if (rule.term === normalized || rule.synonyms.includes(normalized)) {
+            terms.add(rule.term);
+            rule.synonyms.forEach(item => terms.add(item));
+        }
+    });
+    return [...terms];
 }
 
 function openResultsPage(query) {
@@ -61,7 +90,11 @@ function openResultsPage(query) {
 }
 
 function suggestionLabels() {
-    const labels = new Set(suggestions);
+    const labels = new Set([...trendingSearches,...suggestions]);
+    searchSynonyms.forEach(rule => {
+        labels.add(rule.term);
+        rule.synonyms.forEach(label => labels.add(label));
+    });
     products.forEach(product => {
         labels.add(product.title);
         (product.options || []).forEach(group => {
@@ -149,6 +182,27 @@ function chip(label) {
     return button;
 }
 
+function fallbackLabels() {
+    const fallback = searchPageSettings.emptyFallback || "popular";
+    if (fallback === "trending") return trendingSearches;
+    if (fallback === "suggestions") return suggestions;
+    return [...trendingSearches,...suggestions].slice(0,8);
+}
+
+function renderSearchEmptyFallback() {
+    const message = searchEmpty.querySelector("p");
+    message.textContent = searchPageSettings.emptyMessage || "Try a trending search or browse our popular picks.";
+    let fallback = searchEmpty.querySelector(".search-empty-fallback");
+    if (!fallback) {
+        fallback = document.createElement("div");
+        fallback.className = "search-empty-fallback";
+        searchEmpty.appendChild(fallback);
+    }
+    const labels = searchPageSettings.emptyFallback === "message" ? [] : fallbackLabels();
+    fallback.replaceChildren(...labels.slice(0,8).map(chip));
+    fallback.hidden = labels.length === 0;
+}
+
 function updateRecentSearchLimit() {
     cancelAnimationFrame(recentLayoutFrame);
     recentLayoutFrame = requestAnimationFrame(() => {
@@ -193,7 +247,14 @@ function renderRecentSearches() {
 
 function searchableText(product) {
     const optionValues = (product.options || []).flatMap(group => group.values || []);
-    return [product.title,product.description,...(product.colors || []),...(product.sizes || []),...optionValues].join(" ").toLowerCase();
+    return normalizeSearchTerm([product.title,product.description,...(product.colors || []),...(product.sizes || []),...optionValues].join(" "));
+}
+
+function searchMatchesProduct(product, query) {
+    const terms = expandedSearchTerms(query);
+    if (!terms.length) return true;
+    const text = searchableText(product);
+    return terms.some(term => text.includes(term));
 }
 
 function storedList(key) {
@@ -396,7 +457,7 @@ function productCard(product) {
 function renderResults(query = "") {
     const normalized = query.trim().toLowerCase();
     let matches = normalized
-        ? products.filter(product => searchableText(product).includes(normalized))
+        ? products.filter(product => searchMatchesProduct(product, normalized))
         : products;
     if (!normalized && searchPageSettings.popularMode === "manual" && Array.isArray(searchPageSettings.popularProducts)) {
         const preferredIds = searchPageSettings.popularProducts.map(item => String(item.id || item));
@@ -414,6 +475,7 @@ function renderResults(query = "") {
     searchResults.replaceChildren(...matches.map(productCard));
     searchEmpty.hidden = matches.length > 0;
     searchResults.hidden = matches.length === 0;
+    renderSearchEmptyFallback();
     resultTitle.textContent = normalized ? `Results for “${query.trim()}”` : (searchPageSettings.popularHeading || "Popular picks");
     resultCount.textContent = `${matches.length} product${matches.length === 1 ? "" : "s"}`;
 }
@@ -479,8 +541,11 @@ backButton.addEventListener("click",() => {
 });
 
 document.querySelector(".suggested-searches-section h2").textContent = searchPageSettings.suggestionsHeading || "Suggested searches";
+document.querySelector(".trending-searches-section h2").textContent = searchPageSettings.trendingHeading || "Trending searches";
+document.querySelector(".trending-searches-section").hidden = searchPageSettings.trendingEnabled === false;
 document.querySelector(".suggested-searches-section").hidden = searchPageSettings.suggestionsEnabled === false;
 document.querySelector(".search-results-section").hidden = searchPageSettings.popularEnabled === false;
+trendingContainer.replaceChildren(...trendingSearches.map(chip));
 suggestedContainer.replaceChildren(...suggestions.map(chip));
 renderRecentSearches();
 const initialQuery = new URLSearchParams(location.search).get("q") || "";
@@ -490,6 +555,7 @@ document.documentElement.dataset.siteContentReady = "true";
 window.MPWRLoading?.ready();
 const finishSearchDiscoveryLoading = () => {
     recentContainer.setAttribute("aria-busy","false");
+    trendingContainer.setAttribute("aria-busy","false");
     suggestedContainer.setAttribute("aria-busy","false");
 };
 if (document.documentElement.classList.contains("site-page-ready")) {

@@ -23,6 +23,12 @@ const HOMEPAGE_HERO_IMAGE_LIMIT = 10;
 const HOMEPAGE_HERO_UPLOAD_LIMIT = 5 * 1024 * 1024;
 const HOMEPAGE_HERO_MAX_DIMENSION = 1920;
 const DEFAULT_SEARCH_SUGGESTIONS = ["Press-ons", "Wigs", "Lashes", "Nail polish", "Moisturizer", "Pink", "Black", "Shoulder"];
+const DEFAULT_TRENDING_SEARCHES = ["Pink nails", "Black wig", "Press-ons", "Lashes", "Black Friday"];
+const DEFAULT_SEARCH_SYNONYMS = [
+    { term: "nails", synonyms: ["press-ons", "press on nails"] },
+    { term: "wig", synonyms: ["wigs", "hair"] },
+    { term: "false lashes", synonyms: ["lashes"] }
+];
 const DEFAULT_DISCOUNTS = ["12", "15", "1", "4", "11"].map(id => ({ id, percent: 15 }));
 const DEFAULT_ANNOUNCEMENT_BAR = {
     enabled: true,
@@ -45,7 +51,7 @@ const DEFAULT_CAMPAIGN_BANNER = {
     heading: "15% off selected favourites",
     body: "Bring your next beauty refresh home for less with limited-time campaign deals.",
     buttonLabel: "Shop offers",
-    buttonLink: "#discounts",
+    buttonLink: "Campaign.html",
     image: "images/Icon Folder/Discount Icon_E5A484.PNG"
 };
 const DISCOUNT_CAMPAIGN_LABELS = ["Limited Offers", "Valentines Offers", "Christmas Offers", "Black Friday"];
@@ -95,7 +101,7 @@ let homepageHeroPreviewPlaying = false;
 let savedHomepageHeroImageKeys = new Set();
 const pendingHomepageHeroImageKeys = new Set();
 let campaignBanner = { ...DEFAULT_CAMPAIGN_BANNER };
-let searchSettings = { suggestions: [...DEFAULT_SEARCH_SUGGESTIONS], popularProducts: [], popularMode: "automatic", suggestionsEnabled: true, popularEnabled: true, suggestionsHeading: "Suggested searches", popularHeading: "Popular picks", defaultSort: "relevance" };
+let searchSettings = { suggestions: [...DEFAULT_SEARCH_SUGGESTIONS], popularProducts: [], popularMode: "automatic", suggestionsEnabled: true, popularEnabled: true, suggestionsHeading: "Suggested searches", popularHeading: "Popular picks", defaultSort: "relevance", trendingEnabled: true, trendingHeading: "Trending searches", trendingSearches: [...DEFAULT_TRENDING_SEARCHES], synonyms: DEFAULT_SEARCH_SYNONYMS.map(item => ({ ...item, synonyms: [...item.synonyms] })), emptyFallback: "popular", emptyMessage: "Try a trending search or browse our popular picks." };
 let editingProduct = null;
 let pendingMediaPreviewUrls = [];
 let selectedMediaFiles = [];
@@ -508,6 +514,7 @@ function normalizeCampaignBanner(value = {}) {
 }
 
 function readCampaignBannerForm() {
+    const campaignImageInput = $("#homepage-campaign-image");
     campaignBanner = normalizeCampaignBanner({
         enabled: $("#homepage-campaign-enabled").checked,
         source: $("#homepage-campaign-source").value,
@@ -518,7 +525,7 @@ function readCampaignBannerForm() {
         body: $("#homepage-campaign-body").value,
         buttonLabel: $("#homepage-campaign-button-label").value,
         buttonLink: $("#homepage-campaign-button-link").value,
-        image: $("#homepage-campaign-image").value,
+        image: campaignImageInput.disabled ? (campaignImageInput.dataset.filledUrl || "") : campaignImageInput.value,
         imageKey: $("#homepage-campaign-image-key").value
     });
     return campaignBanner;
@@ -535,7 +542,7 @@ function linkedDiscountCampaignPreset() {
         heading: `${discountText} selected favourites`,
         body: DISCOUNT_CAMPAIGN_COPY[discountCampaignLabel] || DEFAULT_CAMPAIGN_BANNER.body,
         buttonLabel: "Shop offers",
-        buttonLink: "#discounts",
+        buttonLink: "Campaign.html",
         image: DISCOUNT_CAMPAIGN_ICONS[discountCampaignLabel] || DEFAULT_CAMPAIGN_BANNER.image
     };
 }
@@ -551,14 +558,6 @@ function syncLinkedCampaignControls({ refreshContent = false } = {}) {
     if (!linked) syncToggle.checked = false;
     $("#homepage-campaign-enabled").disabled = activelySynced;
     syncToggle.closest(".campaign-sync-settings")?.classList.toggle("is-disabled", !linked);
-    const status = $("#homepage-campaign-sync-status");
-    if (!linked) {
-        status.textContent = "Choose the current discount campaign to automatically fill and show this banner.";
-    } else if (syncToggle.checked) {
-        status.textContent = `${discountCampaignLabel} is linked. Banner visibility follows Discount Products.`;
-    } else {
-        status.textContent = `${discountCampaignLabel} is linked, but automatic visibility is off.`;
-    }
     if (linked && refreshContent) {
         const preset = linkedDiscountCampaignPreset();
         $("#homepage-campaign-eyebrow").value = preset.eyebrow;
@@ -607,11 +606,31 @@ function syncCampaignBannerForm() {
     syncLinkedCampaignControls();
 }
 
+function syncBannerUrlField(prefix) {
+    const container = $(`[data-banner-media="${prefix}"]`);
+    if (!container) return;
+    const urlInput = $(`#homepage-${prefix}-image`);
+    const keyInput = $(`#homepage-${prefix}-image-key`);
+    const previewButton = container.querySelector("[data-banner-url-preview]");
+    const filledByPhoto = Boolean(keyInput?.value);
+    if (filledByPhoto) {
+        if (urlInput.value) urlInput.dataset.filledUrl = urlInput.value;
+        urlInput.value = "";
+        urlInput.disabled = true;
+        urlInput.placeholder = "Image slot is already filled";
+    } else {
+        urlInput.disabled = false;
+        urlInput.placeholder = "Paste image URL here";
+    }
+    if (previewButton) previewButton.disabled = filledByPhoto;
+}
+
 function syncBannerMediaControl(prefix, imageUrl, statusText = "Current image") {
     const container = $(`[data-banner-media="${prefix}"]`);
     if (!container) return;
     container.querySelector(".banner-media-thumbnail").src = imageUrl;
     container.querySelector(".banner-media-status").textContent = statusText;
+    syncBannerUrlField(prefix);
 }
 
 function syncHeroMediaControl(images, statusText = "") {
@@ -800,6 +819,7 @@ function initializeBannerMediaUploader({ prefix, defaultImage, render }) {
     const dropzone = container.querySelector(".banner-media-dropzone");
     const status = container.querySelector(".banner-media-status");
     const resetButton = container.querySelector(".banner-media-reset");
+    const previewButton = container.querySelector("[data-banner-url-preview]");
     const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
     async function uploadBannerFile(file) {
@@ -807,10 +827,11 @@ function initializeBannerMediaUploader({ prefix, defaultImage, render }) {
         if (!acceptedTypes.has(file.type)) return showToast("Choose a JPG, PNG, WebP or GIF image.", "error");
         if (file.size > 10 * 1024 * 1024) return showToast("Banner images must be 10 MB or smaller.", "error");
 
-        const previousUrl = urlInput.value;
+        const previousUrl = urlInput.disabled ? (urlInput.dataset.filledUrl || "") : urlInput.value;
         const previousKey = keyInput.value;
         const localPreview = URL.createObjectURL(file);
         urlInput.value = localPreview;
+        urlInput.disabled = false;
         keyInput.value = "";
         dropzone.classList.add("is-uploading");
         status.textContent = `Uploading ${file.name}…`;
@@ -819,6 +840,7 @@ function initializeBannerMediaUploader({ prefix, defaultImage, render }) {
         try {
             const uploaded = await uploadImage(file, "banner");
             urlInput.value = uploaded.url;
+            urlInput.dataset.filledUrl = uploaded.url;
             keyInput.value = uploaded.key || "";
             render();
             syncBannerMediaControl(prefix, uploaded.url, `${file.name} uploaded · Save homepage to publish`);
@@ -845,9 +867,43 @@ function initializeBannerMediaUploader({ prefix, defaultImage, render }) {
         dropzone.classList.remove("is-dragging");
     }));
     dropzone.addEventListener("drop", event => uploadBannerFile(event.dataTransfer?.files?.[0]));
-    urlInput.addEventListener("input", () => { keyInput.value = ""; });
+    let urlPreviewTimer;
+    const stageUrlImage = () => {
+        urlInput.value = normalizePastedImageUrl(urlInput.value);
+        keyInput.value = "";
+        clearTimeout(urlPreviewTimer);
+        urlPreviewTimer = setTimeout(() => {
+            render();
+            if (isGooglePageLink(urlInput.value)) {
+                syncBannerMediaControl(prefix, urlInput.value || defaultImage, "That Google link is a webpage, not an image. In Google Images, use Copy Image Address.");
+                return;
+            }
+            syncBannerMediaControl(prefix, urlInput.value || defaultImage, "Image URL staged · Click Save Changes to publish");
+        }, 250);
+    };
+    urlInput.addEventListener("paste", event => {
+        const pasted = event.clipboardData?.getData("text") || "";
+        const normalized = normalizePastedImageUrl(pasted);
+        if (!normalized || normalized === pasted.trim()) return;
+        event.preventDefault();
+        urlInput.value = normalized;
+        urlInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    urlInput.addEventListener("input", stageUrlImage);
+    previewButton?.addEventListener("click", () => {
+        const pastedUrl = urlInput.value.trim();
+        if (isGooglePageLink(pastedUrl)) return showToast("That is a Google webpage link. In Google Images, choose Copy Image Address instead.", "warning");
+        const imageUrl = normalizePastedImageUrl(pastedUrl);
+        if (!imageUrl) return showToast("Paste a URL for Image 1 first.", "warning");
+        urlInput.value = imageUrl;
+        keyInput.value = "";
+        render();
+        syncBannerMediaControl(prefix, imageUrl, "Previewing Image 1");
+    });
     resetButton.addEventListener("click", () => {
         urlInput.value = defaultImage;
+        delete urlInput.dataset.filledUrl;
+        urlInput.disabled = false;
         keyInput.value = "";
         render();
         syncBannerMediaControl(prefix, defaultImage, "Default image restored · Save homepage to publish");
@@ -1349,14 +1405,20 @@ async function loadData() {
     savedHomepageHeroImageKeys = new Set(homepageHero.images.map(image => image.key).filter(Boolean));
     campaignBanner = normalizeCampaignBanner(campaignSetting);
     searchSettings = {
-        suggestions: Array.isArray(storedSearch.suggestions) ? storedSearch.suggestions.map(String).filter(Boolean).slice(0, 20) : [...DEFAULT_SEARCH_SUGGESTIONS],
+        suggestions: normalizeSearchList(storedSearch.suggestions, DEFAULT_SEARCH_SUGGESTIONS, 20),
         popularProducts: Array.isArray(storedSearch.popularProducts) ? storedSearch.popularProducts.map(item => String(item.id || item)).slice(0, SEARCH_POPULAR_PRODUCT_LIMIT) : [],
         popularMode: storedSearch.popularMode === "manual" ? "manual" : "automatic",
         suggestionsEnabled: storedSearch.suggestionsEnabled !== false,
         popularEnabled: storedSearch.popularEnabled !== false,
         suggestionsHeading: String(storedSearch.suggestionsHeading || "Suggested searches").slice(0, 60),
         popularHeading: String(storedSearch.popularHeading || "Popular picks").slice(0, 60),
-        defaultSort: ["relevance", "popular", "newest", "low", "high"].includes(storedSearch.defaultSort) ? storedSearch.defaultSort : "relevance"
+        defaultSort: ["relevance", "popular", "newest", "low", "high"].includes(storedSearch.defaultSort) ? storedSearch.defaultSort : "relevance",
+        trendingEnabled: storedSearch.trendingEnabled !== false,
+        trendingHeading: String(storedSearch.trendingHeading || "Trending searches").slice(0, 60),
+        trendingSearches: normalizeSearchList(storedSearch.trendingSearches, DEFAULT_TRENDING_SEARCHES, 20),
+        synonyms: normalizeSearchSynonyms(storedSearch.synonyms),
+        emptyFallback: ["popular", "trending", "suggestions", "message"].includes(storedSearch.emptyFallback) ? storedSearch.emptyFallback : "popular",
+        emptyMessage: String(storedSearch.emptyMessage || "Try a trending search or browse our popular picks.").slice(0, 120)
     };
     $("#popular-mode-automatic").checked = popularMode === "automatic";
     $("#discount-mode-automatic").checked = discountMode === "automatic";
@@ -1693,6 +1755,37 @@ function searchPopularSelection() {
     return [...new Set(ids)].map(id => products.find(product => String(product.id) === id && isStorefrontActive(product))).filter(Boolean).slice(0, SEARCH_POPULAR_PRODUCT_LIMIT);
 }
 
+function normalizeSearchList(value, fallback = [], limit = 20) {
+    const source = Array.isArray(value) ? value : fallback;
+    const seen = new Set();
+    return source.map(item => String(item || "").trim().replace(/\s+/g, " "))
+        .filter(item => item && !seen.has(item.toLowerCase()) && seen.add(item.toLowerCase()))
+        .slice(0, limit);
+}
+
+function normalizeSearchSynonyms(value) {
+    const source = Array.isArray(value) ? value : DEFAULT_SEARCH_SYNONYMS;
+    return source.map(rule => ({
+        term: String(rule?.term || "").trim().replace(/\s+/g, " "),
+        synonyms: normalizeSearchList(rule?.synonyms || [], [], 8)
+    })).filter(rule => rule.term && rule.synonyms.length).slice(0, 30);
+}
+
+function parseSearchTermsTextarea(value, fallback = []) {
+    return normalizeSearchList(String(value || "").split(/\n+/), fallback, 20);
+}
+
+function parseSearchSynonymsTextarea(value) {
+    return String(value || "").split(/\n+/).map(line => {
+        const [term, synonyms = ""] = line.split("=");
+        return { term: term?.trim(), synonyms: synonyms.split(",").map(item => item.trim()) };
+    }).filter(rule => rule.term && rule.synonyms.some(Boolean)).slice(0, 30);
+}
+
+function searchSynonymsToTextarea(items) {
+    return normalizeSearchSynonyms(items).map(rule => `${rule.term} = ${rule.synonyms.join(", ")}`).join("\n");
+}
+
 function renderSearchSettings() {
     if (!$("#search-suggestion-list")) return;
     $("#search-suggestions-enabled").checked = searchSettings.suggestionsEnabled;
@@ -1701,9 +1794,17 @@ function renderSearchSettings() {
     $("#search-suggestions-heading").value = searchSettings.suggestionsHeading;
     $("#search-popular-heading").value = searchSettings.popularHeading;
     $("#search-default-sort").value = searchSettings.defaultSort;
+    $("#search-trending-enabled").checked = searchSettings.trendingEnabled !== false;
+    $("#search-trending-heading").value = searchSettings.trendingHeading;
+    $("#search-trending-terms").value = searchSettings.trendingSearches.join("\n");
+    $("#search-synonyms").value = searchSynonymsToTextarea(searchSettings.synonyms);
+    $("#search-empty-fallback").value = searchSettings.emptyFallback;
+    $("#search-empty-fallback").managementPickerSync?.();
+    $("#search-empty-message").value = searchSettings.emptyMessage;
     $("#search-default-sort").managementPickerSync?.();
     $("#search-suggestions-enabled").closest(".toggle-row").querySelector(".search-toggle-label").textContent = searchSettings.suggestionsEnabled ? "Shown" : "Hidden";
     $("#search-popular-enabled").closest(".toggle-row").querySelector(".search-toggle-label").textContent = searchSettings.popularEnabled ? "Shown" : "Hidden";
+    $(".search-trending-toggle-label").textContent = searchSettings.trendingEnabled !== false ? "Shown" : "Hidden";
     $(".search-mode-label").textContent = searchSettings.popularMode === "automatic" ? "Automatic" : "Manual";
     $("#search-suggestion-list").innerHTML = searchSettings.suggestions.map((label, index) => `<div class="search-suggestion-row" data-index="${index}"><button class="search-suggestion-drag" type="button" aria-label="Drag ${escapeHtml(label)} to reorder"><img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt=""></button><span>${escapeHtml(label)}</span><button type="button" data-remove aria-label="Remove ${escapeHtml(label)}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`).join("") || '<p class="search-setting-empty">No suggested searches added.</p>';
     const query = $("#search-popular-product-search").value.trim().toLowerCase();
@@ -1723,6 +1824,10 @@ function renderSearchSettings() {
     $("#search-preview-suggestions-heading").hidden = !searchSettings.suggestionsEnabled;
     $("#search-preview-chips").hidden = !searchSettings.suggestionsEnabled;
     $("#search-preview-chips").innerHTML = searchSettings.suggestions.map(label => `<span>${escapeHtml(label)}</span>`).join("");
+    $("#search-preview-trending-heading").textContent = searchSettings.trendingHeading;
+    $("#search-preview-trending-heading").hidden = searchSettings.trendingEnabled === false;
+    $("#search-preview-trending").hidden = searchSettings.trendingEnabled === false;
+    $("#search-preview-trending").innerHTML = searchSettings.trendingSearches.map(label => `<span>${escapeHtml(label)}</span>`).join("");
     $("#search-preview-popular-heading").textContent = searchSettings.popularHeading;
     $("#search-preview-popular-heading").hidden = !searchSettings.popularEnabled;
     $("#search-preview-products").hidden = !searchSettings.popularEnabled;
@@ -2250,6 +2355,7 @@ function enhanceManagementSelect(select) {
 
 function bindEvents() {
     enhanceManagementSelect($("#search-default-sort"));
+    enhanceManagementSelect($("#search-empty-fallback"));
     $("#search-suggestion-form").addEventListener("submit", event => {
         event.preventDefault();
         const input = $("#search-suggestion-input");
@@ -2316,6 +2422,15 @@ function bindEvents() {
     $("#search-suggestions-heading").addEventListener("input", event => { searchSettings.suggestionsHeading = event.target.value.trimStart().slice(0, 60) || "Suggested searches"; $("#search-preview-suggestions-heading").textContent = searchSettings.suggestionsHeading; });
     $("#search-popular-heading").addEventListener("input", event => { searchSettings.popularHeading = event.target.value.trimStart().slice(0, 60) || "Popular picks"; $("#search-preview-popular-heading").textContent = searchSettings.popularHeading; });
     $("#search-default-sort").addEventListener("change", event => { searchSettings.defaultSort = event.target.value; });
+    $("#search-trending-enabled").addEventListener("change", event => { searchSettings.trendingEnabled = event.target.checked; renderSearchSettings(); });
+    $("#search-trending-heading").addEventListener("input", event => { searchSettings.trendingHeading = event.target.value.trimStart().slice(0, 60) || "Trending searches"; $("#search-preview-trending-heading").textContent = searchSettings.trendingHeading; });
+    $("#search-trending-terms").addEventListener("input", event => {
+        searchSettings.trendingSearches = parseSearchTermsTextarea(event.target.value, DEFAULT_TRENDING_SEARCHES);
+        $("#search-preview-trending").innerHTML = searchSettings.trendingSearches.map(label => `<span>${escapeHtml(label)}</span>`).join("");
+    });
+    $("#search-synonyms").addEventListener("input", event => { searchSettings.synonyms = normalizeSearchSynonyms(parseSearchSynonymsTextarea(event.target.value)); });
+    $("#search-empty-fallback").addEventListener("change", event => { searchSettings.emptyFallback = ["popular", "trending", "suggestions", "message"].includes(event.target.value) ? event.target.value : "popular"; });
+    $("#search-empty-message").addEventListener("input", event => { searchSettings.emptyMessage = event.target.value.trimStart().slice(0, 120) || "Try a trending search or browse our popular picks."; });
     $("#save-search-settings").addEventListener("click", () => { $("#search-save-modal").classList.remove("hidden"); $("#confirm-search-save").focus(); });
     const closeSearchSave = () => { $("#search-save-modal").classList.add("hidden"); $("#save-search-settings").focus(); };
     $("#cancel-search-save").addEventListener("click", closeSearchSave);
