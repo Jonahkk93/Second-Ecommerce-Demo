@@ -3,15 +3,18 @@ import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getManagementBoots
 import { deleteImage, importImage, uploadImage } from "./media-api.js?v=20260929-2";
 import { openReviewLightbox } from "./review-lightbox.js?v=20260923-3";
 
+const redirectingToDashboard = window.location.pathname.endsWith("/admin-products.html") && !window.location.hash;
+if (redirectingToDashboard) window.location.replace("admin.html");
+
 const auth = window.auth;
 const db = window.db;
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const DEFAULT_CATEGORIES = [
-    { slug: "press-ons", label: "Press-On Nails" },
-    { slug: "wigs", label: "Wigs" },
-    { slug: "lashes", label: "Lashes" },
-    { slug: "products", label: "Products" }
+    { slug: "press-ons", label: "Press-On Nails", image: "images/optimized/nails-icon.png" },
+    { slug: "wigs", label: "Wigs", image: "images/optimized/wigs-icon.png" },
+    { slug: "lashes", label: "Lashes", image: "images/optimized/lashes-icon.png" },
+    { slug: "products", label: "Products", image: "images/Icon Folder/Products 2 Icon_333.PNG" }
 ];
 const UNCATEGORIZED_CATEGORY = "uncategorized";
 const categoryLabels = Object.fromEntries(DEFAULT_CATEGORIES.map(category => [category.slug, category.label]));
@@ -20,6 +23,9 @@ const POPULAR_PRODUCT_LIMIT = 10;
 const HOMEPAGE_DISCOUNT_PRODUCT_LIMIT = 10;
 const SEARCH_POPULAR_PRODUCT_LIMIT = 12;
 const HOMEPAGE_HERO_IMAGE_LIMIT = 10;
+const HOMEPAGE_HERO_DESKTOP_CATEGORY_LIMIT = 6;
+const HOMEPAGE_HERO_MOBILE_CATEGORY_LIMIT = 4;
+const HOMEPAGE_HERO_SMALL_MOBILE_CATEGORY_LIMIT = 3;
 const HOMEPAGE_HERO_UPLOAD_LIMIT = 5 * 1024 * 1024;
 const HOMEPAGE_HERO_MAX_DIMENSION = 1920;
 const DEFAULT_SEARCH_SUGGESTIONS = ["Press-ons", "Wigs", "Lashes", "Nail polish", "Moisturizer", "Pink", "Black", "Shoulder"];
@@ -68,6 +74,31 @@ const DISCOUNT_CAMPAIGN_COPY = {
     "Christmas Offers": "Celebrate the season with savings on selected beauty favourites.",
     "Black Friday": "Shop Black Friday savings on selected beauty favourites while stocks last."
 };
+const HOMEPAGE_LINK_DESTINATIONS = new Set(["#products", "#discounts", "Campaign.html", "Discounts.html", "Nails.html", "Wigs.html", "Lashes.html", "ProductsPage.html", "search.html"]);
+const HOMEPAGE_DESTINATION_SELECTORS = ["#homepage-announcement-link-choice", "#homepage-hero-button-link-choice", "#homepage-campaign-button-link-choice"];
+const HOMEPAGE_DESTINATION_GROUPS = [
+    {
+        type: "homepage",
+        label: "Homepage section",
+        description: "Send shoppers to a specific section on your homepage.",
+        icon: "images/Icon Folder/Home Icon_Black.PNG",
+        values: ["#products", "#discounts"]
+    },
+    {
+        type: "store",
+        label: "Store page",
+        description: "Send shoppers to a page in your store.",
+        icon: "images/Icon Folder/Products 2 Icon_Black.PNG",
+        values: ["Campaign.html", "Discounts.html", "Nails.html", "Wigs.html", "Lashes.html", "ProductsPage.html", "search.html"]
+    },
+    {
+        type: "advanced",
+        label: "Advanced",
+        description: "Custom destination URL.",
+        icon: "images/Icon Folder/Share Icon_Black.PNG",
+        values: ["custom"]
+    }
+];
 
 function normalizeDiscountCampaignLabel(label) {
     const normalizedLabel = LEGACY_DISCOUNT_CAMPAIGN_LABELS[label] || label;
@@ -83,6 +114,7 @@ let toastTimer;
 let products = [];
 let deletedProducts = [];
 let categories = DEFAULT_CATEGORIES.map(category => ({ ...category }));
+let heroCategoryOrder = DEFAULT_CATEGORIES.map(category => category.slug);
 let popularIds = [];
 let automaticPopularIds = [];
 let automaticPopularSales = new Map();
@@ -122,6 +154,8 @@ let categorySlugEdited = false;
 let categoryProductIds = new Set();
 let categoryReassignmentIds = new Set();
 let categoryReassignmentTarget = null;
+let categoryImageFile = null;
+let categoryImagePreviewUrl = "";
 const catalogueChannel = "BroadcastChannel" in window ? new BroadcastChannel("mpwr-catalogue") : null;
 const panelHashes = { catalogue: "products", homepage: "homepage", search: "search-page", deleted: "deleted-products" };
 const hashPanels = Object.fromEntries(Object.entries(panelHashes).map(([panel, hash]) => [hash, panel]));
@@ -147,12 +181,36 @@ function cleanHeroText(value, fallback, maxLength) {
     return (text || fallback).slice(0, maxLength);
 }
 
+function canonicalHomepageLink(value, context = "") {
+    const link = String(value || "").trim();
+    return link;
+}
+
+function syncHomepageLinkDestination(select, { writePreset = false } = {}) {
+    if (!select) return;
+    const input = document.getElementById(select.dataset.linkInput);
+    if (!input) return;
+    const currentLink = canonicalHomepageLink(input.value, select.dataset.linkContext);
+    const choice = HOMEPAGE_LINK_DESTINATIONS.has(currentLink) ? currentLink : "custom";
+    if (!writePreset) select.value = choice;
+    if (writePreset && select.value !== "custom") input.value = select.value;
+    if (!writePreset && choice !== "custom") input.value = choice;
+    const customField = document.querySelector(`[data-link-custom-field="${select.dataset.linkInput}"]`);
+    if (customField) customField.hidden = select.value !== "custom";
+    productDropdownSync.get(select)?.();
+    select.homepageDestinationSync?.();
+}
+
+function syncHomepageLinkDestinations() {
+    HOMEPAGE_DESTINATION_SELECTORS.forEach(selector => syncHomepageLinkDestination($(selector)));
+}
+
 function normalizeAnnouncementBar(value = {}) {
     return {
         enabled: value.enabled !== false,
         message: cleanHeroText(value.message, DEFAULT_ANNOUNCEMENT_BAR.message, 120),
         linkLabel: cleanHeroText(value.linkLabel, DEFAULT_ANNOUNCEMENT_BAR.linkLabel, 32),
-        link: cleanHeroText(value.link, DEFAULT_ANNOUNCEMENT_BAR.link, 140)
+        link: normalizeStorefrontLink(cleanHeroText(value.link, DEFAULT_ANNOUNCEMENT_BAR.link, 140), DEFAULT_ANNOUNCEMENT_BAR.link)
     };
 }
 
@@ -182,6 +240,7 @@ function syncAnnouncementBarForm() {
     $("#homepage-announcement-message").value = announcementBar.message;
     $("#homepage-announcement-link-label").value = announcementBar.linkLabel;
     $("#homepage-announcement-link").value = announcementBar.link;
+    syncHomepageLinkDestination($("#homepage-announcement-link-choice"));
     renderAnnouncementBarPreview();
 }
 
@@ -263,8 +322,17 @@ async function optimizeHeroImage(file) {
 
 function syncHomepageHeroUrlFields(images) {
     [...document.querySelectorAll(".homepage-hero-url-input")].forEach((field, index) => {
+        const slot = index + 1;
+        const row = field.closest(".field");
         const item = images.find(image => image.slot === index + 1);
         const filledByPhoto = Boolean(item && (item.source === "upload" || item.key));
+        const filledByUrl = Boolean(item && !filledByPhoto);
+        if (row) {
+            row.dataset.heroUrlSlot = String(slot);
+            row.draggable = filledByUrl;
+            row.classList.toggle("hero-url-row-filled", filledByUrl);
+            row.classList.toggle("hero-url-row-locked", filledByPhoto);
+        }
         field.disabled = filledByPhoto;
         field.value = filledByPhoto ? "" : (item?.url || "");
         field.placeholder = filledByPhoto ? "Image slot is already filled" : "Paste image URL here";
@@ -284,7 +352,8 @@ function normalizeHomepageHero(value = {}) {
         buttonLink: normalizeStorefrontLink(cleanHeroText(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140), DEFAULT_HOMEPAGE_HERO.buttonLink),
         image: images[0]?.url || "",
         imageKey: images[0]?.key || "",
-        images
+        images,
+        categoryOrder: normalizeHeroCategoryOrder(value.categoryOrder)
     };
 }
 
@@ -301,9 +370,205 @@ function readHomepageHeroForm() {
         buttonLink: $("#homepage-hero-button-link").value,
         image: $("#homepage-hero-image").value,
         imageKey: $("#homepage-hero-image-key").value,
-        images
+        images,
+        categoryOrder: heroCategoryOrder
     });
+    heroCategoryOrder = [...homepageHero.categoryOrder];
     return homepageHero;
+}
+
+function heroCategoryVisibilityLabel(index) {
+    if (index < HOMEPAGE_HERO_SMALL_MOBILE_CATEGORY_LIMIT) return "All screens";
+    if (index < HOMEPAGE_HERO_MOBILE_CATEGORY_LIMIT) return "Wide phones + desktop";
+    if (index < HOMEPAGE_HERO_DESKTOP_CATEGORY_LIMIT) return "Desktop only";
+    return "All page only";
+}
+
+function orderedHeroCategories() {
+    const bySlug = new Map(categories.map(category => [category.slug, category]));
+    return normalizeHeroCategoryOrder(heroCategoryOrder).map(slug => bySlug.get(slug)).filter(Boolean);
+}
+
+function renderHeroCategoryPreview() {
+    const nav = $("#homepage-hero-preview .management-storefront-hero-categories");
+    if (!nav) return;
+    const ordered = orderedHeroCategories();
+    const visible = ordered.slice(0, HOMEPAGE_HERO_DESKTOP_CATEGORY_LIMIT);
+    const categoryMarkup = visible.map((category, index) => {
+        const responsiveClass = index >= HOMEPAGE_HERO_MOBILE_CATEGORY_LIMIT
+            ? " hero-category-desktop-only"
+            : index >= HOMEPAGE_HERO_SMALL_MOBILE_CATEGORY_LIMIT
+                ? " hero-category-wide-mobile-only"
+                : "";
+        return `<span class="${index === 0 ? "is-featured" : ""}${responsiveClass}">${escapeHtml(category.label)}</span>`;
+    }).join("");
+    const allMarkup = ordered.length > HOMEPAGE_HERO_SMALL_MOBILE_CATEGORY_LIMIT
+        ? `<span class="hero-category-all${ordered.length > HOMEPAGE_HERO_DESKTOP_CATEGORY_LIMIT ? " is-desktop-visible" : ""}${ordered.length > HOMEPAGE_HERO_MOBILE_CATEGORY_LIMIT ? " is-mobile-visible" : ""}${ordered.length > HOMEPAGE_HERO_SMALL_MOBILE_CATEGORY_LIMIT ? " is-small-mobile-visible" : ""}">All</span>`
+        : "";
+    nav.innerHTML = categoryMarkup + allMarkup;
+}
+
+function renderHeroCategoryOrder() {
+    const list = $("#hero-category-order-list");
+    if (!list) return;
+    heroCategoryOrder = normalizeHeroCategoryOrder(heroCategoryOrder);
+    const ordered = orderedHeroCategories();
+    $("#hero-category-count").textContent = `${ordered.length} categor${ordered.length === 1 ? "y" : "ies"}`;
+    list.innerHTML = ordered.map((category, index) => `
+        <article class="hero-category-order-item" draggable="true" tabindex="0" data-slug="${escapeHtml(category.slug)}" aria-label="${escapeHtml(category.label)}, ${heroCategoryVisibilityLabel(index)}. Drag or use the left and right arrow keys to reorder.">
+            <span class="hero-category-order-drag${index < HOMEPAGE_HERO_DESKTOP_CATEGORY_LIMIT ? " is-position" : ""}" aria-hidden="true">${index < HOMEPAGE_HERO_DESKTOP_CATEGORY_LIMIT ? index + 1 : '<img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt="">'}</span>
+            <div class="hero-category-order-copy"><strong title="${escapeHtml(category.label)}">${escapeHtml(category.label)}</strong><small title="${heroCategoryVisibilityLabel(index)}">${heroCategoryVisibilityLabel(index)}</small></div>
+        </article>
+    `).join("");
+    renderHeroCategoryPreview();
+}
+
+function moveHeroCategory(slug, direction) {
+    const index = heroCategoryOrder.indexOf(slug);
+    const nextIndex = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || nextIndex < 0 || nextIndex >= heroCategoryOrder.length) return;
+    const next = [...heroCategoryOrder];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    heroCategoryOrder = next;
+    renderHeroCategoryOrder();
+}
+
+function reorderHeroCategory(dragSlug, targetSlug, placeAfter = false) {
+    if (!dragSlug || !targetSlug || dragSlug === targetSlug) return;
+    const withoutDragged = heroCategoryOrder.filter(slug => slug !== dragSlug);
+    const targetIndex = withoutDragged.indexOf(targetSlug);
+    if (targetIndex < 0) return;
+    withoutDragged.splice(targetIndex + (placeAfter ? 1 : 0), 0, dragSlug);
+    heroCategoryOrder = withoutDragged;
+    renderHeroCategoryOrder();
+}
+
+function initializeHeroCategoryReorder() {
+    const list = $("#hero-category-order-list");
+    const items = () => [...list.querySelectorAll(".hero-category-order-item")];
+    const animateLayout = mutate => {
+        const before = new Map(items().map(item => [item, item.getBoundingClientRect()]));
+        mutate();
+        items().forEach(item => {
+            const start = before.get(item);
+            if (!start) return;
+            const end = item.getBoundingClientRect();
+            const dx = start.left - end.left;
+            const dy = start.top - end.top;
+            if (!dx && !dy) return;
+            item.animate([
+                { transform: `translate(${dx}px, ${dy}px)` },
+                { transform: "translate(0, 0)" }
+            ], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
+        });
+    };
+    let draggedSlug = "";
+    let dropTarget = null;
+    let dropTargets = [];
+    let previewKey = "";
+    const captureDropTargets = () => {
+        dropTargets = items().map(item => {
+            const rect = item.getBoundingClientRect();
+            return {
+                slug: item.dataset.slug,
+                left: rect.left,
+                centerX: rect.left + rect.width / 2,
+                centerY: rect.top + rect.height / 2
+            };
+        });
+    };
+    const nearestDropTarget = event => {
+        if (!dropTargets.length) captureDropTargets();
+        let nearest = null;
+        let nearestDistance = Infinity;
+        dropTargets.forEach(target => {
+            const distance = Math.hypot(event.clientX - target.centerX, event.clientY - target.centerY);
+            if (distance >= nearestDistance) return;
+            nearestDistance = distance;
+            nearest = target;
+        });
+        return nearest ? { slug: nearest.slug, placeAfter: event.clientX > nearest.centerX } : null;
+    };
+    const resetPreview = () => {
+        previewKey = "";
+        items().forEach(item => {
+            item.style.removeProperty("order");
+            item.classList.remove("is-making-space");
+        });
+    };
+    const previewSpace = target => {
+        if (!target || !draggedSlug) return;
+        if (target.slug === draggedSlug) {
+            if (previewKey) animateLayout(resetPreview);
+            return;
+        }
+        const key = `${target.slug}:${target.placeAfter}`;
+        if (previewKey === key) return;
+        previewKey = key;
+        const nextOrder = heroCategoryOrder.filter(slug => slug !== draggedSlug);
+        const targetIndex = nextOrder.indexOf(target.slug);
+        if (targetIndex < 0) return;
+        nextOrder.splice(targetIndex + (target.placeAfter ? 1 : 0), 0, draggedSlug);
+        animateLayout(() => {
+            items().forEach(item => {
+                item.style.order = String(nextOrder.indexOf(item.dataset.slug));
+                item.classList.toggle("is-making-space", item.dataset.slug !== draggedSlug);
+            });
+        });
+    };
+    const clearDragState = (committed = false) => {
+        if (!draggedSlug && !dropTargets.length) return;
+        draggedSlug = "";
+        dropTarget = null;
+        dropTargets = [];
+        list.classList.remove("is-reordering");
+        if (committed) resetPreview();
+        else animateLayout(resetPreview);
+        items().forEach(item => item.classList.remove("dragging", "is-drop-target", "is-making-space"));
+    };
+
+    list.addEventListener("keydown", event => {
+        const item = event.target.closest(".hero-category-order-item");
+        if (!item || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        event.preventDefault();
+        moveHeroCategory(item.dataset.slug, event.key === "ArrowLeft" ? "up" : "down");
+        list.querySelector(`[data-slug="${CSS.escape(item.dataset.slug)}"]`)?.focus();
+    });
+    list.addEventListener("dragstart", event => {
+        const item = event.target.closest(".hero-category-order-item");
+        if (!item) return event.preventDefault();
+        draggedSlug = item.dataset.slug || "";
+        captureDropTargets();
+        item.classList.add("dragging");
+        list.classList.add("is-reordering");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", draggedSlug);
+        event.dataTransfer.setDragImage(item, item.offsetWidth / 2, item.offsetHeight / 2);
+    });
+    list.addEventListener("dragover", event => {
+        if (!draggedSlug) return;
+        const target = nearestDropTarget(event);
+        if (!target) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        dropTarget = target;
+        items().forEach(item => item.classList.toggle("is-drop-target", item.dataset.slug === target.slug && target.slug !== draggedSlug));
+        previewSpace(target);
+    });
+    list.addEventListener("dragleave", event => {
+        if (list.contains(event.relatedTarget)) return;
+        items().forEach(item => item.classList.remove("is-drop-target"));
+    });
+    list.addEventListener("drop", event => {
+        if (!draggedSlug) return;
+        const target = nearestDropTarget(event) || dropTarget;
+        if (!target) return clearDragState();
+        event.preventDefault();
+        const sourceSlug = draggedSlug;
+        reorderHeroCategory(sourceSlug, target.slug, target.placeAfter);
+        clearDragState(true);
+    });
+    list.addEventListener("dragend", () => clearDragState());
 }
 
 function renderHomepageHeroPreview({ syncMedia = true } = {}) {
@@ -481,6 +746,7 @@ function startHomepageHeroPreview() {
 }
 
 function syncHomepageHeroForm() {
+    heroCategoryOrder = normalizeHeroCategoryOrder(homepageHero.categoryOrder);
     $("#homepage-hero-enabled").checked = homepageHero.enabled !== false;
     $("#homepage-hero-eyebrow").value = homepageHero.eyebrow;
     $("#homepage-hero-heading").value = homepageHero.heading;
@@ -489,10 +755,12 @@ function syncHomepageHeroForm() {
     window.MPWRAutoGrowTextareas?.prepare(bodyField);
     $("#homepage-hero-button-label").value = homepageHero.buttonLabel;
     $("#homepage-hero-button-link").value = homepageHero.buttonLink;
+    syncHomepageLinkDestination($("#homepage-hero-button-link-choice"));
     syncHomepageHeroUrlFields(homepageHero.images);
     $("#homepage-hero-image").value = homepageHero.image;
     $("#homepage-hero-image-key").value = homepageHero.imageKey || "";
     $("#homepage-hero-images").value = JSON.stringify(homepageHero.images);
+    renderHeroCategoryOrder();
     renderHomepageHeroPreview();
 }
 
@@ -507,7 +775,7 @@ function normalizeCampaignBanner(value = {}) {
         heading: cleanHeroText(value.heading, DEFAULT_CAMPAIGN_BANNER.heading, 80),
         body: cleanHeroText(value.body, DEFAULT_CAMPAIGN_BANNER.body, 180),
         buttonLabel: cleanHeroText(value.buttonLabel, DEFAULT_CAMPAIGN_BANNER.buttonLabel, 32),
-        buttonLink: cleanHeroText(value.buttonLink, DEFAULT_CAMPAIGN_BANNER.buttonLink, 140),
+        buttonLink: normalizeStorefrontLink(cleanHeroText(value.buttonLink, DEFAULT_CAMPAIGN_BANNER.buttonLink, 140), DEFAULT_CAMPAIGN_BANNER.buttonLink),
         image: cleanHeroText(value.image, DEFAULT_CAMPAIGN_BANNER.image, 500),
         imageKey: cleanHeroText(value.imageKey, "", 500)
     };
@@ -567,6 +835,7 @@ function syncLinkedCampaignControls({ refreshContent = false } = {}) {
         window.MPWRAutoGrowTextareas?.prepare(bodyField);
         $("#homepage-campaign-button-label").value = preset.buttonLabel;
         $("#homepage-campaign-button-link").value = preset.buttonLink;
+        syncHomepageLinkDestination($("#homepage-campaign-button-link-choice"));
         $("#homepage-campaign-image").value = preset.image;
         $("#homepage-campaign-image-key").value = "";
     }
@@ -601,6 +870,7 @@ function syncCampaignBannerForm() {
     window.MPWRAutoGrowTextareas?.prepare(bodyField);
     $("#homepage-campaign-button-label").value = campaignBanner.buttonLabel;
     $("#homepage-campaign-button-link").value = campaignBanner.buttonLink;
+    syncHomepageLinkDestination($("#homepage-campaign-button-link-choice"));
     $("#homepage-campaign-image").value = campaignBanner.image;
     $("#homepage-campaign-image-key").value = campaignBanner.imageKey || "";
     syncLinkedCampaignControls();
@@ -641,9 +911,9 @@ function syncHeroMediaControl(images, statusText = "") {
         const slot = index + 1;
         const imageIndex = images.findIndex(item => item.slot === slot);
         const item = images[imageIndex];
-        if (!item) return `<span class="banner-media-empty" data-slot="${slot}" aria-label="Empty hero image slot ${slot}"></span>`;
-        if (item.source !== "upload" && !item.key) return `<span class="banner-media-empty is-filled-by-url" data-slot="Filled" aria-label="Hero image slot ${slot} is filled by an image URL"></span>`;
-        return `<div class="banner-media-preview${item.url === homepageHeroPreviewImage ? " is-previewing" : ""}"><button class="hero-media-preview-button" type="button" data-hero-image-preview="${imageIndex}" aria-label="Show hero slide ${slot} in the preview"><img class="banner-media-thumbnail" src="${escapeHtml(item.url)}" alt="Hero slide ${slot}"></button><button class="banner-media-reset" type="button" data-hero-image-remove="${imageIndex}" aria-label="Remove hero slide ${slot}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`;
+        if (!item) return `<label class="banner-media-empty banner-media-empty-add" for="homepage-hero-image-file" data-hero-slot="${slot}" aria-label="Add hero image to slot ${slot}"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></label>`;
+        if (item.source !== "upload" && !item.key) return `<span class="banner-media-empty is-filled-by-url" data-slot="Filled" data-hero-slot="${slot}" aria-label="Hero image slot ${slot} is filled by an image URL"></span>`;
+        return `<div class="banner-media-preview${item.url === homepageHeroPreviewImage ? " is-previewing" : ""}" draggable="true" data-hero-slot="${slot}"><button class="hero-media-preview-button" type="button" data-hero-image-preview="${imageIndex}" aria-label="Show hero slide ${slot} in the preview"><img class="banner-media-thumbnail" src="${escapeHtml(item.url)}" alt="Hero slide ${slot}"></button><button class="banner-media-reset" type="button" data-hero-image-remove="${imageIndex}" aria-label="Remove hero slide ${slot}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`;
     }).join("");
     const dropzone = container.querySelector(".banner-media-dropzone");
     const full = images.length >= HOMEPAGE_HERO_IMAGE_LIMIT;
@@ -691,6 +961,112 @@ function initializeHeroMediaUploader() {
         keyInput.value = normalized[0]?.key || "";
         renderHomepageHeroPreview();
         if (message) syncHeroMediaControl(normalized, message);
+    };
+    const imageBySlot = (images, slot) => images.find(item => Number(item.slot) === Number(slot));
+    const isUploadedHeroImage = item => Boolean(item && (item.source === "upload" || item.key));
+    const isUrlHeroImage = item => Boolean(item && !isUploadedHeroImage(item));
+    const heroImageReorderSlots = images => Array.from({ length: HOMEPAGE_HERO_IMAGE_LIMIT }, (_item, index) => index + 1)
+        .filter(slot => !isUrlHeroImage(imageBySlot(images, slot)));
+    const heroMediaItems = () => [...previews.querySelectorAll("[data-hero-slot]")];
+    const animateHeroMediaLayout = mutate => {
+        const before = new Map(heroMediaItems().map(item => [item, item.getBoundingClientRect()]));
+        mutate();
+        heroMediaItems().forEach(item => {
+            const start = before.get(item);
+            if (!start) return;
+            const end = item.getBoundingClientRect();
+            const dx = start.left - end.left;
+            const dy = start.top - end.top;
+            if (!dx && !dy) return;
+            item.animate([
+                { transform: `translate(${dx}px, ${dy}px)` },
+                { transform: "translate(0, 0)" }
+            ], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
+        });
+    };
+    let heroImagePreviewTargetSlot = "";
+    const resetHeroImagePreviewOrder = () => {
+        heroImagePreviewTargetSlot = "";
+        heroMediaItems().forEach(item => {
+            item.style.removeProperty("order");
+            item.classList.remove("is-making-space");
+        });
+    };
+    const previewHeroImageSpace = (fromSlot, toSlot) => {
+        if (heroImagePreviewTargetSlot === String(toSlot)) return;
+        heroImagePreviewTargetSlot = String(toSlot);
+        const images = currentImages();
+        const slots = heroImageReorderSlots(images);
+        const fromIndex = slots.indexOf(Number(fromSlot));
+        const toIndex = slots.indexOf(Number(toSlot));
+        if (fromIndex < 0 || toIndex < 0) return;
+        const orderedSlots = [...slots];
+        const [movedSlot] = orderedSlots.splice(fromIndex, 1);
+        orderedSlots.splice(toIndex, 0, movedSlot);
+        animateHeroMediaLayout(() => {
+            heroMediaItems().forEach(item => {
+                const slot = Number(item.dataset.heroSlot);
+                const visualIndex = orderedSlots.indexOf(slot);
+                item.style.order = String((visualIndex >= 0 ? slots[visualIndex] : slot) * 10);
+                item.classList.toggle("is-making-space", visualIndex >= 0 && slot !== Number(fromSlot));
+            });
+        });
+    };
+    let heroImageDropTargets = [];
+    const captureHeroImageDropTargets = () => {
+        const validSlots = new Set(heroImageReorderSlots(currentImages()).map(String));
+        heroImageDropTargets = heroMediaItems().flatMap(item => {
+            const slot = item.dataset.heroSlot || "";
+            if (!validSlots.has(slot) || item.classList.contains("is-filled-by-url")) return [];
+            const rect = item.getBoundingClientRect();
+            return [{ slot, centerX: rect.left + rect.width / 2, centerY: rect.top + rect.height / 2 }];
+        });
+    };
+    const nearestHeroImageDropSlot = event => {
+        if (!heroImageDropTargets.length) captureHeroImageDropTargets();
+        let bestSlot = "";
+        let bestDistance = Infinity;
+        heroImageDropTargets.forEach(target => {
+            const distance = Math.hypot(event.clientX - target.centerX, event.clientY - target.centerY);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestSlot = target.slot;
+            }
+        });
+        return bestSlot;
+    };
+    const moveHeroImageSlot = (fromSlot, toSlot) => {
+        if (!fromSlot || !toSlot || fromSlot === toSlot) return;
+        const images = currentImages();
+        const dragged = imageBySlot(images, fromSlot);
+        const target = imageBySlot(images, toSlot);
+        if (!isUploadedHeroImage(dragged) || isUrlHeroImage(target)) return;
+        const slots = heroImageReorderSlots(images);
+        const fromIndex = slots.indexOf(Number(fromSlot));
+        const toIndex = slots.indexOf(Number(toSlot));
+        if (fromIndex < 0 || toIndex < 0) return;
+        const next = images.map(item => ({ ...item }));
+        const movableBySlot = new Map(slots.map(slot => [slot, isUploadedHeroImage(imageBySlot(next, slot)) ? imageBySlot(next, slot) : null]));
+        const ordered = slots.map(slot => movableBySlot.get(slot));
+        const [draggedItem] = ordered.splice(fromIndex, 1);
+        ordered.splice(toIndex, 0, draggedItem);
+        slots.forEach((slot, index) => {
+            if (ordered[index]) ordered[index].slot = slot;
+        });
+        setImages(next, "Hero photo order updated · Save homepage to publish");
+    };
+    const moveHeroUrlSlot = (fromSlot, toSlot) => {
+        if (!fromSlot || !toSlot || fromSlot === toSlot) return;
+        const images = currentImages();
+        const dragged = imageBySlot(images, fromSlot);
+        const target = imageBySlot(images, toSlot);
+        if (!isUrlHeroImage(dragged) || isUploadedHeroImage(target)) return;
+        const next = images.map(item => ({ ...item }));
+        const draggedItem = imageBySlot(next, fromSlot);
+        const targetItem = imageBySlot(next, toSlot);
+        draggedItem.slot = Number(toSlot);
+        if (isUrlHeroImage(targetItem)) targetItem.slot = Number(fromSlot);
+        setImages(next, "Hero URL order updated · Save homepage to publish");
     };
 
     async function uploadHeroFiles(files) {
@@ -745,6 +1121,57 @@ function initializeHeroMediaUploader() {
         dropzone.classList.remove("is-dragging");
     }));
     dropzone.addEventListener("drop", event => uploadHeroFiles(event.dataTransfer?.files || []));
+    let draggedHeroImageSlot = "";
+    let heroImageDropSlot = "";
+    const clearHeroImageDragState = (committed = false) => {
+        draggedHeroImageSlot = "";
+        heroImageDropSlot = "";
+        heroImageDropTargets = [];
+        previews.classList.remove("is-reordering");
+        if (committed) resetHeroImagePreviewOrder();
+        else animateHeroMediaLayout(resetHeroImagePreviewOrder);
+        previews.querySelectorAll(".is-dragging,.is-drop-target,.is-making-space").forEach(item => {
+            item.classList.remove("is-dragging", "is-drop-target", "is-making-space");
+        });
+    };
+    previews.addEventListener("dragstart", event => {
+        if (event.target.closest("[data-hero-image-remove]")) return event.preventDefault();
+        const tile = event.target.closest(".banner-media-preview[draggable='true']");
+        if (!tile) return;
+        draggedHeroImageSlot = tile.dataset.heroSlot || "";
+        captureHeroImageDropTargets();
+        tile.classList.add("is-dragging");
+        previews.classList.add("is-reordering");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", draggedHeroImageSlot);
+        event.dataTransfer.setDragImage(tile, tile.offsetWidth / 2, tile.offsetHeight / 2);
+    });
+    previews.addEventListener("dragover", event => {
+        if (!draggedHeroImageSlot) return;
+        const targetSlot = nearestHeroImageDropSlot(event);
+        if (!targetSlot) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        heroImageDropSlot = targetSlot;
+        const target = previews.querySelector(`[data-hero-slot="${targetSlot}"]`);
+        previews.querySelectorAll(".is-drop-target").forEach(item => item.classList.remove("is-drop-target"));
+        if (targetSlot !== draggedHeroImageSlot) target?.classList.add("is-drop-target");
+        previewHeroImageSpace(Number(draggedHeroImageSlot), Number(targetSlot));
+    });
+    previews.addEventListener("dragleave", event => {
+        if (previews.contains(event.relatedTarget)) return;
+        heroImageDropSlot = "";
+        previews.querySelectorAll(".is-drop-target").forEach(item => item.classList.remove("is-drop-target"));
+    });
+    previews.addEventListener("drop", event => {
+        if (!draggedHeroImageSlot) return;
+        const targetSlot = nearestHeroImageDropSlot(event) || heroImageDropSlot;
+        if (!targetSlot) return clearHeroImageDragState();
+        event.preventDefault();
+        moveHeroImageSlot(Number(draggedHeroImageSlot), Number(targetSlot));
+        clearHeroImageDragState(true);
+    });
+    previews.addEventListener("dragend", () => clearHeroImageDragState());
     previews.addEventListener("click", async event => {
         const button = event.target.closest("[data-hero-image-remove]");
         if (button) {
@@ -798,7 +1225,45 @@ function initializeHeroMediaUploader() {
         });
         input.addEventListener("input", stageUrlImages);
     });
-    container.querySelector(".hero-url-grid").addEventListener("click", event => {
+    const urlGrid = container.querySelector(".hero-url-grid");
+    let draggedHeroUrlSlot = "";
+    const clearHeroUrlDragState = () => {
+        draggedHeroUrlSlot = "";
+        urlGrid.classList.remove("is-reordering");
+        urlGrid.querySelectorAll(".is-dragging,.is-drop-target").forEach(item => item.classList.remove("is-dragging", "is-drop-target"));
+    };
+    urlGrid.addEventListener("dragstart", event => {
+        const row = event.target.closest("[data-hero-url-slot]");
+        if (!row || row.classList.contains("hero-url-row-locked") || !row.classList.contains("hero-url-row-filled")) return event.preventDefault();
+        draggedHeroUrlSlot = row.dataset.heroUrlSlot || "";
+        row.classList.add("is-dragging");
+        urlGrid.classList.add("is-reordering");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", draggedHeroUrlSlot);
+    });
+    urlGrid.addEventListener("dragover", event => {
+        if (!draggedHeroUrlSlot) return;
+        const row = event.target.closest("[data-hero-url-slot]");
+        if (!row || row.classList.contains("hero-url-row-locked") || row.dataset.heroUrlSlot === draggedHeroUrlSlot) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        urlGrid.querySelectorAll(".is-drop-target").forEach(item => item.classList.remove("is-drop-target"));
+        row.classList.add("is-drop-target");
+    });
+    urlGrid.addEventListener("dragleave", event => {
+        const row = event.target.closest("[data-hero-url-slot]");
+        if (row && !row.contains(event.relatedTarget)) row.classList.remove("is-drop-target");
+    });
+    urlGrid.addEventListener("drop", event => {
+        if (!draggedHeroUrlSlot) return;
+        const row = event.target.closest("[data-hero-url-slot]");
+        if (!row || row.classList.contains("hero-url-row-locked")) return clearHeroUrlDragState();
+        event.preventDefault();
+        moveHeroUrlSlot(Number(draggedHeroUrlSlot), Number(row.dataset.heroUrlSlot));
+        clearHeroUrlDragState();
+    });
+    urlGrid.addEventListener("dragend", clearHeroUrlDragState);
+    urlGrid.addEventListener("click", event => {
         const previewButton = event.target.closest("[data-hero-url-preview]");
         if (!previewButton) return;
         const index = Number(previewButton.dataset.heroUrlPreview);
@@ -1132,6 +1597,27 @@ function categorySlug(value) {
         .slice(0, 60);
 }
 
+function normalizeHeroCategoryOrder(value, categoryItems = categories) {
+    const available = (Array.isArray(categoryItems) ? categoryItems : [])
+        .map(category => String(category?.slug || "").trim())
+        .filter(Boolean);
+    const availableSet = new Set(available);
+    const ordered = [];
+    const known = new Set();
+    (Array.isArray(value) ? value : []).forEach(slug => {
+        const normalized = String(slug || "").trim();
+        if (!availableSet.has(normalized) || known.has(normalized)) return;
+        known.add(normalized);
+        ordered.push(normalized);
+    });
+    available.forEach(slug => {
+        if (known.has(slug)) return;
+        known.add(slug);
+        ordered.push(slug);
+    });
+    return ordered;
+}
+
 function normalizeCategories(items) {
     const defaults = new Map(DEFAULT_CATEGORIES.map(category => [category.slug, category]));
     const normalized = [];
@@ -1144,6 +1630,8 @@ function normalizeCategories(items) {
         normalized.push({
             slug,
             label,
+            image: String(item?.image || defaults.get(slug)?.image || "").trim(),
+            imageKey: String(item?.imageKey || "").trim(),
             productIds: Array.isArray(item?.productIds) ? item.productIds.map(String).filter(Boolean) : []
         });
     });
@@ -1157,6 +1645,7 @@ function normalizeCategories(items) {
 }
 
 function syncCategoryControls(preferredProductCategory = "") {
+    heroCategoryOrder = normalizeHeroCategoryOrder(heroCategoryOrder);
     Object.keys(categoryLabels).forEach(key => delete categoryLabels[key]);
     categories.forEach(category => { categoryLabels[category.slug] = category.label; });
     categoryLabels[UNCATEGORIZED_CATEGORY] = "No Category";
@@ -1180,6 +1669,7 @@ function syncCategoryControls(preferredProductCategory = "") {
     productDropdownSync.get(filter)?.refresh?.();
     productDropdownSync.get(productSelect)?.refresh?.();
     renderCategoryOrder();
+    renderHeroCategoryOrder();
 }
 
 function renderCategoryOrder() {
@@ -1222,7 +1712,30 @@ function reorderCategoryBefore(dragSlug, targetSlug) {
 function syncCategoryProductSelection() {
     const count = categoryProductIds.size;
     $("#category-product-selection-count").textContent = `${count} product${count === 1 ? "" : "s"} selected`;
-    $("#save-category").disabled = count === 0;
+    $("#save-category").disabled = count === 0 || !categoryImageFile;
+}
+
+function setCategoryImage(file = null) {
+    if (categoryImagePreviewUrl) URL.revokeObjectURL(categoryImagePreviewUrl);
+    categoryImagePreviewUrl = "";
+    categoryImageFile = file;
+    const preview = $("#category-image-preview");
+    const placeholder = $(".category-image-placeholder");
+    if (file) {
+        categoryImagePreviewUrl = URL.createObjectURL(file);
+        preview.src = categoryImagePreviewUrl;
+        preview.alt = `Preview of ${file.name}`;
+        preview.hidden = false;
+        placeholder.hidden = true;
+        $("#category-image-status").textContent = file.name;
+    } else {
+        preview.removeAttribute("src");
+        preview.alt = "";
+        preview.hidden = true;
+        placeholder.hidden = false;
+        $("#category-image-status").textContent = "Choose a JPEG, PNG, WebP, or GIF image up to 5 MB.";
+    }
+    syncCategoryProductSelection();
 }
 
 function renderCategoryProductPicker() {
@@ -1259,6 +1772,7 @@ function resetCategoryEditor() {
     categoryProductIds = new Set();
     categoryReassignmentIds = new Set();
     categoryReassignmentTarget = null;
+    setCategoryImage();
     renderCategoryProductPicker();
 }
 
@@ -1401,6 +1915,7 @@ async function loadData() {
     discountMode = discountSetting.mode === "automatic" ? "automatic" : "manual";
     discountSectionEnabled = discountSetting.enabled !== false;
     announcementBar = normalizeAnnouncementBar(announcementSetting);
+    heroCategoryOrder = normalizeHeroCategoryOrder(heroSetting.categoryOrder);
     homepageHero = normalizeHomepageHero(heroSetting);
     savedHomepageHeroImageKeys = new Set(homepageHero.images.map(image => image.key).filter(Boolean));
     campaignBanner = normalizeCampaignBanner(campaignSetting);
@@ -2161,6 +2676,7 @@ async function handleCategorySubmit(event) {
     const label = $("#category-name").value.trim().replace(/\s+/g, " ").slice(0, 60);
     const slug = categorySlug($("#category-slug").value || label);
     if (!label || !slug) return showToast("Enter a category name and valid handle.", "error");
+    if (!categoryImageFile) return showToast("Choose an image for this category.", "error");
     if (categoryProductIds.size === 0) return showToast("Select at least one product before saving the category.", "error");
     if (categories.some(category => category.slug === slug || category.label.toLowerCase() === label.toLowerCase())) {
         return showToast("That category already exists.", "error");
@@ -2176,10 +2692,19 @@ async function handleCategorySubmit(event) {
     if (unconfirmedProduct) return showToast(`Confirm the category change for ${unconfirmedProduct.title}.`, "error");
     const previousCategories = categories.map(category => ({ ...category }));
     const previousMetadata = new Map(selectedProducts.map(product => [String(product.id), { ...(product.metadata || {}) }]));
+    let uploadedImage = null;
     button.disabled = true;
-    button.textContent = "Saving category…";
+    button.textContent = "Uploading image…";
     try {
-        categories = [...categories, { slug, label, productIds: selectedProducts.map(product => String(product.id)) }];
+        uploadedImage = await uploadImage(categoryImageFile, "category");
+        button.textContent = "Saving category…";
+        categories = [...categories, {
+            slug,
+            label,
+            image: uploadedImage.url,
+            imageKey: uploadedImage.key || "",
+            productIds: selectedProducts.map(product => String(product.id))
+        }];
         await setDoc(doc(db, "storefront", "categories"), { items: categories });
         await Promise.all(selectedProducts.map(product => updateDoc(
             doc(db, "products", product.apiId || product.id),
@@ -2193,6 +2718,7 @@ async function handleCategorySubmit(event) {
         showToast(`${label} added with ${selectedProducts.length} product${selectedProducts.length === 1 ? "" : "s"}.`);
     } catch (error) {
         categories = previousCategories;
+        if (uploadedImage?.key) await deleteImage(uploadedImage.key).catch(() => {});
         await Promise.allSettled([
             setDoc(doc(db, "storefront", "categories"), { items: previousCategories }),
             ...selectedProducts.map(product => updateDoc(
@@ -2203,7 +2729,7 @@ async function handleCategorySubmit(event) {
         await loadData().catch(() => syncCategoryControls());
         showToast(error?.message || "Unable to save the category.", "error");
     } finally {
-        button.disabled = categoryProductIds.size === 0;
+        button.disabled = categoryProductIds.size === 0 || !categoryImageFile;
         button.textContent = "Save Category";
     }
 }
@@ -2353,6 +2879,90 @@ function enhanceManagementSelect(select) {
     sync();
 }
 
+function enhanceHomepageDestinationPicker(select) {
+    if (!select) return;
+    select.classList.add("homepage-destination-native");
+    const picker = document.createElement("div");
+    picker.className = "homepage-destination-picker";
+    picker.setAttribute("role", "radiogroup");
+    picker.setAttribute("aria-label", select.closest("label")?.querySelector(":scope > span")?.textContent || "Button destination");
+    const optionText = value => [...select.options].find(option => option.value === value)?.textContent || "Select destination";
+
+    const groups = HOMEPAGE_DESTINATION_GROUPS
+        .map(group => ({
+            ...group,
+            values: group.values.filter(value => value === "custom" || [...select.options].some(option => option.value === value))
+        }))
+        .filter(group => group.values.length);
+
+    groups.forEach(group => {
+        const card = document.createElement("article");
+        card.className = "homepage-destination-card";
+        card.dataset.destinationType = group.type;
+        card.innerHTML = `
+            <button class="homepage-destination-choice" type="button" role="radio" aria-checked="false">
+                <span class="homepage-destination-radio" aria-hidden="true"></span>
+                <span class="homepage-destination-icon"><img src="${group.icon}" alt=""></span>
+                <span class="homepage-destination-copy">
+                    <strong>${group.label}</strong>
+                    <small>${group.description}</small>
+                </span>
+                <img class="homepage-destination-arrow" src="images/Icon Folder/Back Icon Down_Gray.PNG" alt="">
+            </button>
+        `;
+        if (group.values.length > 1) {
+            const selectLabel = document.createElement("label");
+            selectLabel.className = "homepage-destination-select";
+            const destinationSelect = document.createElement("select");
+            destinationSelect.setAttribute("aria-label", group.label);
+            destinationSelect.dataset.destinationType = group.type;
+            group.values.forEach(value => destinationSelect.append(new Option(optionText(value), value)));
+            selectLabel.append(destinationSelect);
+            card.append(selectLabel);
+            enhanceProductDropdown(destinationSelect);
+            destinationSelect.addEventListener("click", event => event.stopPropagation());
+            destinationSelect.addEventListener("change", () => {
+                select.value = destinationSelect.value;
+                select.dispatchEvent(new Event("change", { bubbles: true }));
+            });
+        }
+        if (group.type === "advanced") {
+            const customField = document.querySelector(`[data-link-custom-field="${select.dataset.linkInput}"]`);
+            if (customField) {
+                customField.classList.add("homepage-destination-custom");
+                card.append(customField);
+            }
+        }
+        card.querySelector(".homepage-destination-choice").addEventListener("click", () => {
+            const nestedSelect = card.querySelector("select");
+            select.value = nestedSelect?.value || group.values[0];
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        picker.append(card);
+    });
+
+    const sync = () => {
+        const custom = select.value === "custom";
+        picker.querySelectorAll(".homepage-destination-card").forEach(card => {
+            const group = groups.find(item => item.type === card.dataset.destinationType);
+            const active = group?.values.includes(select.value) || (custom && group?.type === "advanced");
+            card.classList.toggle("selected", Boolean(active));
+            const button = card.querySelector(".homepage-destination-choice");
+            button.setAttribute("aria-checked", String(Boolean(active)));
+            card.querySelector(".homepage-destination-arrow")?.classList.toggle("hidden", !card.querySelector("select"));
+            const nestedSelect = card.querySelector("select");
+            if (nestedSelect) {
+                if (group.values.includes(select.value)) nestedSelect.value = select.value;
+                productDropdownSync.get(nestedSelect)?.();
+            }
+        });
+    };
+
+    select.homepageDestinationSync = sync;
+    select.insertAdjacentElement("afterend", picker);
+    sync();
+}
+
 function bindEvents() {
     enhanceManagementSelect($("#search-default-sort"));
     enhanceManagementSelect($("#search-empty-fallback"));
@@ -2458,6 +3068,21 @@ function bindEvents() {
         categorySlugEdited = Boolean(event.target.value);
         const normalized = categorySlug(event.target.value);
         event.target.setCustomValidity(event.target.value && normalized !== event.target.value ? "Use lowercase letters, numbers, and hyphens only." : "");
+    });
+    $("#category-image").addEventListener("change", event => {
+        const file = event.target.files?.[0] || null;
+        if (!file) return setCategoryImage();
+        if (!/^image\/(?:jpeg|png|webp|gif)$/.test(file.type)) {
+            event.target.value = "";
+            setCategoryImage();
+            return showToast("Use a JPEG, PNG, WebP, or GIF category image.", "error");
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            event.target.value = "";
+            setCategoryImage();
+            return showToast("Category images must be 5 MB or smaller.", "error");
+        }
+        setCategoryImage(file);
     });
     $("#category-product-search").addEventListener("input", renderCategoryProductPicker);
     $("#category-product-picker").addEventListener("click", event => {
@@ -2661,6 +3286,7 @@ function bindEvents() {
     });
     ["#product-search", "#category-filter", "#status-filter"].forEach(selector => $(selector).addEventListener(selector === "#product-search" ? "input" : "change", renderProducts));
     ["#category-filter", "#status-filter", "#product-category", "#product-status", "#product-shipping", "#discount-campaign-label", "#homepage-campaign-source"].forEach(selector => enhanceProductDropdown($(selector)));
+    HOMEPAGE_DESTINATION_SELECTORS.forEach(selector => enhanceHomepageDestinationPicker($(selector)));
     document.addEventListener("click", () => {
         document.querySelectorAll(".product-dropdown-menu:not([hidden])").forEach(menu => {
             menu.hidden = true;
@@ -2673,6 +3299,7 @@ function bindEvents() {
     });
     $("#homepage-search").addEventListener("input", renderHomepageProducts);
     $("#discount-search").addEventListener("input", renderDiscountProducts);
+    initializeHeroCategoryReorder();
     $("#category-order-list").addEventListener("click", event => {
         const button = event.target.closest("[data-category-move]");
         const item = event.target.closest(".category-order-item");
@@ -2705,6 +3332,10 @@ function bindEvents() {
         const field = $(selector);
         field.addEventListener(field.type === "checkbox" ? "change" : "input", renderAnnouncementBarPreview);
     });
+    $("#homepage-announcement-link-choice").addEventListener("change", event => {
+        syncHomepageLinkDestination(event.target, { writePreset: true });
+        renderAnnouncementBarPreview();
+    });
     initializeHeroMediaUploader();
     $("#homepage-hero-preview-play").addEventListener("click", () => {
         if (homepageHeroPreviewPlaying) stopHomepageHeroPreview();
@@ -2715,9 +3346,17 @@ function bindEvents() {
         const field = $(selector);
         field.addEventListener(field.type === "checkbox" ? "change" : "input", () => renderHomepageHeroPreview({ syncMedia: false }));
     });
+    $("#homepage-hero-button-link-choice").addEventListener("change", event => {
+        syncHomepageLinkDestination(event.target, { writePreset: true });
+        renderHomepageHeroPreview({ syncMedia: false });
+    });
     ["#homepage-campaign-enabled", "#homepage-campaign-eyebrow", "#homepage-campaign-heading", "#homepage-campaign-body", "#homepage-campaign-button-label", "#homepage-campaign-button-link", "#homepage-campaign-image"].forEach(selector => {
         const field = $(selector);
         field.addEventListener(field.type === "checkbox" ? "change" : "input", renderCampaignBannerPreview);
+    });
+    $("#homepage-campaign-button-link-choice").addEventListener("change", event => {
+        syncHomepageLinkDestination(event.target, { writePreset: true });
+        renderCampaignBannerPreview();
     });
     $("#homepage-campaign-source").addEventListener("change", event => {
         productDropdownSync.get(event.target)?.();
@@ -3103,7 +3742,7 @@ window.addEventListener("pagehide", () => {
     pendingHomepageHeroImageKeys.clear();
 });
 
-onAuthStateChanged(auth, async user => {
+if (!redirectingToDashboard) onAuthStateChanged(auth, async user => {
     if (!user) return void (window.location.href = "admin-login.html");
     try {
         if (user.role !== "admin") {

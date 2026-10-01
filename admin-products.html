@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPWR Management</title>
-    <link rel="stylesheet" href="css/admin-products.css?v=20260930-58">
+    <link rel="stylesheet" href="css/admin-products.css?v=20261001-16">
     <link rel="stylesheet" href="css/review-lightbox.css?v=20260923-2">
     <link rel="stylesheet" href="css/Larke.css">
     <link rel="stylesheet" href="css/touch-interactions.css?v=20260929-3">
@@ -57,7 +57,8 @@
                 <article class="announcement-bar-fields">
                     <label class="field field-wide"><span>Announcement message</span><input id="homepage-announcement-message" maxlength="120" placeholder="Free delivery on selected orders this week."></label>
                     <label class="field"><span>Link text</span><input id="homepage-announcement-link-label" maxlength="32" placeholder="Shop now"></label>
-                    <label class="field"><span>Link URL</span><input id="homepage-announcement-link" maxlength="140" placeholder="#products"></label>
+                    <label class="field field-wide"><span>Link destination</span><select id="homepage-announcement-link-choice" data-link-input="homepage-announcement-link" data-link-context="announcement"><option value="#products">Products section</option><option value="#discounts">Current discount campaign section</option><option value="Campaign.html">Current discount campaign page</option><option value="Discounts.html">Discounts page</option><option value="Nails.html">Press-ons page</option><option value="Wigs.html">Wigs page</option><option value="Lashes.html">Lashes page</option><option value="ProductsPage.html">Self-care page</option><option value="search.html">Search page</option><option value="custom">Custom destination URL</option></select></label>
+                    <label class="field link-custom-field" data-link-custom-field="homepage-announcement-link" hidden><span>Custom destination URL</span><input id="homepage-announcement-link" maxlength="140" placeholder="https://... or page.html"></label>
                 </article>
                 <article class="announcement-bar-preview" id="homepage-announcement-preview" aria-live="polite">
                     <span></span><a></a>
@@ -72,7 +73,12 @@
                     <label class="field field-wide"><span>Main heading</span><input id="homepage-hero-heading" maxlength="80" placeholder="e.g. Beauty finds, made easy"></label>
                     <label class="field field-wide"><span>Short description</span><textarea id="homepage-hero-body" maxlength="180" rows="1" placeholder="Tell shoppers what this collection is about…"></textarea></label>
                     <label class="field"><span>Button text</span><input id="homepage-hero-button-label" maxlength="32" placeholder="Shop now"></label>
-                    <label class="field"><span>Button link</span><input id="homepage-hero-button-link" maxlength="140" placeholder="#products"></label>
+                    <label class="field field-wide"><span>Button destination</span><select id="homepage-hero-button-link-choice" data-link-input="homepage-hero-button-link" data-link-context="hero"><option value="#products">Products section</option><option value="#discounts">Current discount campaign section</option><option value="Campaign.html">Current discount campaign page</option><option value="Discounts.html">Discounts page</option><option value="Nails.html">Press-ons page</option><option value="Wigs.html">Wigs page</option><option value="Lashes.html">Lashes page</option><option value="ProductsPage.html">Self-care page</option><option value="search.html">Search page</option><option value="custom">Custom destination URL</option></select></label>
+                    <label class="field link-custom-field" data-link-custom-field="homepage-hero-button-link" hidden><span>Custom destination URL</span><input id="homepage-hero-button-link" maxlength="140" placeholder="https://... or page.html"></label>
+                    <div class="hero-category-field field-wide">
+                        <div class="hero-category-field-heading"><span>Hero categories</span><span id="hero-category-count"></span></div>
+                        <div id="hero-category-order-list" class="hero-category-order-list" aria-label="Hero category order"></div>
+                    </div>
                     <div class="banner-media-field field-wide" data-banner-media="hero">
                         <span class="banner-upload-heading">Photos <span>(optional, up to 10)</span></span>
                         <div class="banner-media-row">
@@ -103,7 +109,7 @@
                     <div class="management-storefront-hero-media"><img alt=""></div>
                     <button class="management-storefront-hero-play" id="homepage-hero-preview-play" type="button" aria-pressed="false"><span class="management-storefront-hero-play-icon" aria-hidden="true">▶</span><span class="management-storefront-hero-play-label">Play Preview</span></button>
                     <span class="management-storefront-hero-count" aria-live="polite"></span>
-                    <nav class="management-storefront-hero-categories" aria-label="Hero category preview"><span class="is-featured">Press-ons</span><span>Wigs</span><span>Lashes</span><span>Self-care</span></nav>
+                    <nav class="management-storefront-hero-categories" aria-label="Hero category preview"></nav>
                 </article>
             </div>
             <div class="section-heading homepage-heading campaign-banner-heading">
@@ -121,7 +127,8 @@
                     <label class="field field-wide"><span>Main heading</span><input id="homepage-campaign-heading" maxlength="80" placeholder="e.g. 15% off selected favourites"></label>
                     <label class="field field-wide"><span>Short description</span><textarea id="homepage-campaign-body" maxlength="180" rows="1" placeholder="Tell shoppers what the campaign is about…"></textarea></label>
                     <label class="field"><span>Button text</span><input id="homepage-campaign-button-label" maxlength="32" placeholder="Shop offers"></label>
-                    <label class="field"><span>Button link</span><input id="homepage-campaign-button-link" maxlength="140" placeholder="#discounts"></label>
+                    <label class="field field-wide"><span>Button destination</span><select id="homepage-campaign-button-link-choice" data-link-input="homepage-campaign-button-link" data-link-context="campaign"><option value="Campaign.html">Current discount campaign page</option><option value="#discounts">Current discount campaign section</option><option value="Discounts.html">Discounts page</option><option value="#products">Products section</option><option value="Nails.html">Press-ons page</option><option value="Wigs.html">Wigs page</option><option value="Lashes.html">Lashes page</option><option value="ProductsPage.html">Self-care page</option><option value="search.html">Search page</option><option value="custom">Custom destination URL</option></select></label>
+                    <label class="field link-custom-field" data-link-custom-field="homepage-campaign-button-link" hidden><span>Custom destination URL</span><input id="homepage-campaign-button-link" maxlength="140" placeholder="https://... or page.html"></label>
                     <div class="banner-media-field field-wide" data-banner-media="campaign">
                         <span class="banner-upload-heading">Photo <span>(optional, maximum 1)</span></span>
                         <div class="banner-media-row">
@@ -236,6 +243,15 @@
                             <label class="field field-wide"><span>Category name</span><input type="text" id="category-name" placeholder="e.g. Hair Accessories" maxlength="60" required></label>
                             <label class="field field-wide"><span>Category handle</span><input type="text" id="category-slug" placeholder="hair-accessories" maxlength="60" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required><small>Used internally to organise and filter products.</small></label>
                         </div>
+                        <label class="category-image-upload" for="category-image">
+                            <span class="category-image-preview">
+                                <img id="category-image-preview" alt="" hidden>
+                                <img class="category-image-placeholder" src="images/Icon Folder/Plus Icon_Gray.PNG" alt="">
+                            </span>
+                            <span class="category-image-copy"><strong>Category image</strong><small id="category-image-status">Choose a JPEG, PNG, WebP, or GIF image up to 5 MB.</small></span>
+                            <span class="category-image-action">Choose image</span>
+                            <input type="file" id="category-image" accept="image/jpeg,image/png,image/webp,image/gif" required>
+                        </label>
                     </section>
                     <section class="form-section category-products-section">
                         <div class="form-section-heading"><span>2</span><div><h3>Select products</h3><p>Choose at least one product that will belong to this category.</p></div></div>
@@ -305,6 +321,6 @@
 <div class="confirm-modal hidden" id="image-delete-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="image-delete-confirm-title" aria-describedby="image-delete-confirm-message"><div class="confirm-card"><h2 id="image-delete-confirm-title">Delete image?</h2><p id="image-delete-confirm-message">This image will be removed from the product when you save your changes.</p><div><button class="secondary-button" id="cancel-image-delete" type="button">Cancel</button><button class="danger-button" id="confirm-image-delete" type="button">Delete Image</button></div></div></div>
 <div class="admin-products-toast" role="status" aria-live="polite"></div>
 <script type="module" src="js/firebase.js"></script>
-    <script type="module" src="js/admin-products.js?v=20260930-34"></script>
+    <script type="module" src="js/admin-products.js?v=20261001-8"></script>
  </body>
 </html>

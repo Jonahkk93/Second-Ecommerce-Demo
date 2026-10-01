@@ -643,6 +643,7 @@ function apiProduct(row) {
             ? metadata.gallery
             : image ? [image] : [],
         description: row.description || "Product description coming soon.",
+        createdAt: row.createdAt || row.created_at || metadata.createdAt || null,
         shippingClass: row.class || row.shippingClass || "small",
         category: metadata.category || "",
         colors: Array.isArray(metadata.colors) ? metadata.colors : [],
@@ -741,7 +742,8 @@ const DEFAULT_HOMEPAGE_HERO = {
     body: "Shop press-ons, wigs, lashes and self-care favourites curated for effortless everyday glam.",
     buttonLabel: "Shop now",
     buttonLink: "#products",
-    image: "images/PressOn Nails_Pink.JPG"
+    image: "images/PressOn Nails_Pink.JPG",
+    categoryOrder: []
 };
 const HOMEPAGE_HERO_IMAGE_LIMIT = 10;
 const DEFAULT_ANNOUNCEMENT_BAR = {
@@ -760,11 +762,22 @@ const DEFAULT_CAMPAIGN_BANNER = {
     image: "images/Icon Folder/Discount Icon_E5A484.PNG"
 };
 const DEFAULT_CATALOGUE_CATEGORIES = [
-    { slug: "press-ons", label: "Press-ons" },
-    { slug: "wigs", label: "Wigs" },
-    { slug: "products", label: "Products" },
-    { slug: "lashes", label: "Lashes" }
+    { slug: "press-ons", label: "Press-ons", image: "images/optimized/nails-icon.png" },
+    { slug: "wigs", label: "Wigs", image: "images/optimized/wigs-icon.png" },
+    { slug: "products", label: "Products", image: "images/Icon Folder/Products 2 Icon_333.PNG" },
+    { slug: "lashes", label: "Lashes", image: "images/optimized/lashes-icon.png" }
 ];
+const HOMEPAGE_HERO_DESKTOP_CATEGORY_LIMIT = 6;
+const HOMEPAGE_HERO_MOBILE_CATEGORY_LIMIT = 4;
+const HOMEPAGE_HERO_SMALL_MOBILE_CATEGORY_LIMIT = 3;
+const STOREFRONT_CATEGORY_PAGES = {
+    "press-ons": "Nails.html",
+    wigs: "Wigs.html",
+    lashes: "Lashes.html",
+    products: "ProductsPage.html"
+};
+let storefrontHomepageHero = null;
+let storefrontCategories = DEFAULT_CATALOGUE_CATEGORIES.map(category => ({ ...category }));
 
 function normalizeHomepageHero(value = {}) {
     const text = (input, fallback, maxLength) => {
@@ -786,8 +799,61 @@ function normalizeHomepageHero(value = {}) {
         buttonLabel: text(value.buttonLabel, DEFAULT_HOMEPAGE_HERO.buttonLabel, 32),
         buttonLink: safeStorefrontLink(text(value.buttonLink, DEFAULT_HOMEPAGE_HERO.buttonLink, 140), DEFAULT_HOMEPAGE_HERO.buttonLink),
         image: images[0] || "",
-        images
+        images,
+        categoryOrder: Array.isArray(value.categoryOrder)
+            ? value.categoryOrder.map(slug => String(slug || "").trim()).filter(Boolean)
+            : []
     };
+}
+
+function orderedStorefrontHeroCategories() {
+    const bySlug = new Map(storefrontCategories.map(category => [category.slug, category]));
+    const known = new Set();
+    const ordered = [];
+    (storefrontHomepageHero?.categoryOrder || []).forEach(slug => {
+        if (!bySlug.has(slug) || known.has(slug)) return;
+        known.add(slug);
+        ordered.push(bySlug.get(slug));
+    });
+    storefrontCategories.forEach(category => {
+        if (known.has(category.slug)) return;
+        known.add(category.slug);
+        ordered.push(category);
+    });
+    return ordered;
+}
+
+function renderStorefrontHeroCategories(section = document.querySelector(".homepage-hero")) {
+    const nav = section?.querySelector(".homepage-hero-categories");
+    if (!nav) return;
+    const ordered = orderedStorefrontHeroCategories();
+    const fragment = document.createDocumentFragment();
+    ordered.slice(0, HOMEPAGE_HERO_DESKTOP_CATEGORY_LIMIT).forEach((category, index) => {
+        const link = document.createElement("a");
+        link.href = categoryStorefrontHref(category);
+        link.textContent = category.label;
+        link.dataset.heroCategoryPosition = String(index + 1);
+        if (index === 0) link.classList.add("is-featured");
+        if (index >= HOMEPAGE_HERO_MOBILE_CATEGORY_LIMIT) link.classList.add("hero-category-desktop-only");
+        else if (index >= HOMEPAGE_HERO_SMALL_MOBILE_CATEGORY_LIMIT) link.classList.add("hero-category-wide-mobile-only");
+        fragment.appendChild(link);
+    });
+    if (ordered.length > HOMEPAGE_HERO_SMALL_MOBILE_CATEGORY_LIMIT) {
+        const allLink = document.createElement("a");
+        allLink.href = "ProductsPage.html?category=all";
+        allLink.textContent = "All";
+        allLink.className = "hero-category-all";
+        if (ordered.length > HOMEPAGE_HERO_DESKTOP_CATEGORY_LIMIT) allLink.classList.add("is-desktop-visible");
+        if (ordered.length > HOMEPAGE_HERO_MOBILE_CATEGORY_LIMIT) allLink.classList.add("is-mobile-visible");
+        allLink.classList.add("is-small-mobile-visible");
+        fragment.appendChild(allLink);
+    }
+    nav.replaceChildren(fragment);
+    nav.querySelectorAll("a").forEach(link => {
+        const selectCategory = () => nav.querySelectorAll("a").forEach(item => item.classList.toggle("is-featured", item === link));
+        link.onpointerdown = selectCategory;
+        link.onclick = selectCategory;
+    });
 }
 
 function safeStorefrontLink(value, fallback) {
@@ -804,6 +870,7 @@ function applyHomepageHero(value) {
     const isHomepage = /(?:^\/$|\/index\.html$)/i.test(window.location.pathname);
     if (!isHomepage) return;
     const hero = normalizeHomepageHero(value);
+    storefrontHomepageHero = hero;
     const productsSection = document.querySelector("#products");
     if (!productsSection) return;
     document.body.classList.toggle("has-homepage-hero", hero.enabled);
@@ -829,24 +896,12 @@ function applyHomepageHero(value) {
                 <button type="button" data-hero-control="pause" aria-label="Pause hero slideshow" aria-pressed="false">Ⅱ</button>
                 <button type="button" data-hero-control="next" aria-label="Next hero image">›</button>
             </div>
-            <nav class="homepage-hero-categories" aria-label="Shop by category">
-                <a class="is-featured" href="Nails.html">Press-ons</a>
-                <a href="Wigs.html">Wigs</a>
-                <a href="Lashes.html">Lashes</a>
-                <a href="ProductsPage.html">Self-care</a>
-            </nav>
+            <nav class="homepage-hero-categories" aria-label="Shop by category"></nav>
         `;
         productsSection.parentNode.insertBefore(section, productsSection);
     }
     section.heroCleanup?.();
-    const categoryLinks = section.querySelectorAll(".homepage-hero-categories a");
-    const selectCategory = selectedLink => {
-        categoryLinks.forEach(link => link.classList.toggle("is-featured", link === selectedLink));
-    };
-    categoryLinks.forEach(link => {
-        link.onpointerdown = () => selectCategory(link);
-        link.onclick = () => selectCategory(link);
-    });
+    renderStorefrontHeroCategories(section);
     section.querySelector(".homepage-hero-eyebrow").textContent = hero.eyebrow;
     section.querySelector("h1").textContent = hero.heading;
     section.querySelector(".homepage-hero-body").textContent = hero.body;
@@ -1065,9 +1120,7 @@ function applyCampaignBanner(value) {
     section.querySelector(".homepage-campaign-body").textContent = banner.body;
     const button = section.querySelector(".homepage-campaign-button");
     button.textContent = banner.buttonLabel;
-    button.href = banner.source === "discounts" && (!banner.buttonLink || banner.buttonLink === "#discounts")
-        ? "Campaign.html"
-        : (banner.buttonLink || DEFAULT_CAMPAIGN_BANNER.buttonLink);
+    button.href = banner.buttonLink || DEFAULT_CAMPAIGN_BANNER.buttonLink;
     const image = section.querySelector(".homepage-campaign-image");
     image.src = banner.image;
     image.alt = banner.heading;
@@ -1082,7 +1135,12 @@ function normalizeCatalogueCategories(items) {
         const label = String(item?.label || defaults.get(slug)?.label || "").trim();
         if (!slug || !label || known.has(slug)) return;
         known.add(slug);
-        normalized.push({ slug, label });
+        normalized.push({
+            slug,
+            label,
+            image: String(item?.image || defaults.get(slug)?.image || "").trim(),
+            imageKey: String(item?.imageKey || "").trim()
+        });
     });
     DEFAULT_CATALOGUE_CATEGORIES.forEach(category => {
         if (!known.has(category.slug)) {
@@ -1093,9 +1151,45 @@ function normalizeCatalogueCategories(items) {
     return normalized;
 }
 
+function categoryStorefrontHref(category) {
+    return STOREFRONT_CATEGORY_PAGES[category.slug]
+        || `ProductsPage.html?category=${encodeURIComponent(category.slug)}`;
+}
+
+function renderStorefrontSidebarCategories(categories) {
+    const list = document.querySelector(".menu2 > ul");
+    if (!list) return;
+    list.querySelectorAll(":scope > li[data-storefront-category]").forEach(item => item.remove());
+    const insertionPoint = list.querySelector(":scope > .sidebar-discounts-item");
+    const page = window.location.pathname.split("/").pop().toLowerCase();
+    const requestedCategory = String(new URLSearchParams(window.location.search).get("category") || "").trim();
+    categories.forEach(category => {
+        const item = document.createElement("li");
+        item.dataset.storefrontCategory = category.slug;
+        const link = document.createElement("a");
+        link.href = categoryStorefrontHref(category);
+        const isCurrent = requestedCategory
+            ? page === "productspage.html" && requestedCategory === category.slug
+            : link.getAttribute("href").toLowerCase() === page;
+        if (isCurrent) link.setAttribute("aria-current", "page");
+        const image = document.createElement("img");
+        image.className = `sidebar-item-icon${STOREFRONT_CATEGORY_PAGES[category.slug] ? "" : " custom-category-image"}`;
+        image.src = category.image || "images/Icon Folder/Products 2 Icon_333.PNG";
+        image.alt = "";
+        const label = document.createElement("span");
+        label.textContent = category.label;
+        link.append(image, label);
+        item.appendChild(link);
+        list.insertBefore(item, insertionPoint);
+    });
+}
+
 function applyCategoryOrder(items) {
     const categories = normalizeCatalogueCategories(items);
+    storefrontCategories = categories;
     window.MPWRCategoryOrder = categories;
+    renderStorefrontHeroCategories();
+    renderStorefrontSidebarCategories(categories);
     const filterBar = document.querySelector(".filter-bar");
     if (!filterBar) return;
     const activeFilter = filterBar.querySelector(".filter-btn.active")?.dataset.filter || "all";

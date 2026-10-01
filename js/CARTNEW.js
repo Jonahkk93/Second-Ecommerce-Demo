@@ -224,6 +224,7 @@ let selectedModalProduct = null;
 let selectedModalOptions = {};
 let selectedModalPrice = "0";
 let selectedModalRegularPrice = "0";
+let shopAllResultCount = null;
 const productsById = Object.fromEntries(
     products.map(product => [product.id, product])
 );
@@ -1712,6 +1713,59 @@ const matchesSearch =
             ? "block"
             : "none";
 
+    if (shopAllResultCount) {
+        shopAllResultCount.textContent = `${visibleProducts} ${visibleProducts === 1 ? "product" : "products"}`;
+    }
+
+}
+
+function initializeShopAllControls() {
+    const shop = document.querySelector("#products");
+    const sectionTitle = shop?.querySelector(":scope > .section-title");
+    const productGrid = shop?.querySelector(":scope > .product-content");
+    if (!shop || !sectionTitle || !productGrid || !filterBar) return;
+
+    filterBar.classList.remove("active");
+    filterBar.classList.add("shop-all-category-filter");
+    filterBar.setAttribute("aria-label", "Filter Shop All by category");
+    sectionTitle.insertAdjacentElement("afterend", filterBar);
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "shop-all-toolbar";
+    toolbar.innerHTML = `
+        <p class="shop-all-result-count" aria-live="polite"></p>
+        <label class="shop-all-sort">
+            <span>Sort by</span>
+            <select aria-label="Sort Shop All products">
+                <option value="recommended">Recommended</option>
+                <option value="newest">Newest</option>
+                <option value="price-low">Price: Low to high</option>
+                <option value="price-high">Price: High to low</option>
+                <option value="name">Name: A to Z</option>
+            </select>
+        </label>
+    `;
+    filterBar.insertAdjacentElement("afterend", toolbar);
+    shopAllResultCount = toolbar.querySelector(".shop-all-result-count");
+
+    const cards = [...productBoxes];
+    const recommendedOrder = new Map(cards.map((card, index) => [card, index]));
+    const productFor = card => productsById[card.dataset.id] || {};
+    toolbar.querySelector("select").addEventListener("change", event => {
+        const mode = event.currentTarget.value;
+        cards.sort((a, b) => {
+            if (mode === "price-low") return Number(productFor(a).price || 0) - Number(productFor(b).price || 0);
+            if (mode === "price-high") return Number(productFor(b).price || 0) - Number(productFor(a).price || 0);
+            if (mode === "name") return String(productFor(a).title || "").localeCompare(String(productFor(b).title || ""));
+            if (mode === "newest") {
+                const aDate = new Date(productFor(a).createdAt || 0).getTime() || 0;
+                const bDate = new Date(productFor(b).createdAt || 0).getTime() || 0;
+                return bDate - aDate || recommendedOrder.get(a) - recommendedOrder.get(b);
+            }
+            return recommendedOrder.get(a) - recommendedOrder.get(b);
+        });
+        cards.forEach(card => productGrid.appendChild(card));
+    });
 }
 
 
@@ -2613,8 +2667,16 @@ function initializeApp() {
         "/wigs.html": { filter: "wigs", title: "Wigs" }
     };
     const pageName = `/${window.location.pathname.split("/").pop().toLowerCase()}`;
-    const categoryPage = categoryPages[pageName];
     const params = new URLSearchParams(window.location.search);
+    const requestedCategory = String(params.get("category") || "").trim();
+    const requestedCategoryButton = [...filterButtons].find(button => button.dataset.filter === requestedCategory);
+    const categoryPage = requestedCategoryButton
+        ? { filter: requestedCategory, title: requestedCategory === "all" ? "Shop All" : requestedCategoryButton.textContent.trim() }
+        : categoryPages[pageName];
+
+    if (pageName === "/productspage.html" && requestedCategory === "all") {
+        initializeShopAllControls();
+    }
 const search = params.get("search");
 
 if (search) {
