@@ -6,7 +6,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const outputRoot = path.join(projectRoot, "dist");
 const assetDirectories = ["css", "data", "fonts", "images", "js"];
 const deploymentVersion = (process.env.CF_PAGES_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || Date.now().toString()).slice(0,12);
-const apiRoot = String(process.env.MPWR_API_URL || "/api/v1").replace(/\/$/, "");
+const configuredApiRoot = String(process.env.MPWR_API_URL || "").trim().replace(/\/$/, "");
 
 if (outputRoot === projectRoot || path.dirname(outputRoot) !== projectRoot) {
     throw new Error("Refusing to build outside the project dist directory.");
@@ -29,7 +29,17 @@ await Promise.all([
     ...deploymentFiles.map(file => cp(path.join(projectRoot,file), path.join(outputRoot,file)))
 ]);
 
-await writeFile(path.join(outputRoot, "js", "runtime-config.js"), `window.MPWR_API_URL=${JSON.stringify(apiRoot)};\n`);
+const runtimeConfig = configuredApiRoot
+    ? `window.MPWR_API_URL=${JSON.stringify(configuredApiRoot)};\n`
+    : `(() => {
+    const host = window.location.hostname;
+    const localHost = /^(?:localhost|0\\.0\\.0\\.0|127(?:\\.\\d{1,3}){3}|10(?:\\.\\d{1,3}){3}|192\\.168(?:\\.\\d{1,3}){2}|172\\.(?:1[6-9]|2\\d|3[01])(?:\\.\\d{1,3}){2}|\\[::1\\])$/i.test(host);
+    window.MPWR_API_URL = localHost
+        ? \`http://\${host === "0.0.0.0" ? "127.0.0.1" : host}:3000/v1\`
+        : "/api/v1";
+})();
+`;
+await writeFile(path.join(outputRoot, "js", "runtime-config.js"), runtimeConfig);
 
 await Promise.all(htmlFiles.map(async file => {
     const target = path.join(outputRoot, file);
