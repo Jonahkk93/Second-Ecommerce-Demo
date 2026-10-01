@@ -1,4 +1,4 @@
-import { createAuth, startSessionMonitor } from "./auth-api.js?v=20260928-2";
+import { createAuth, startSessionMonitor } from "./auth-api.js?v=20261001-1";
 
 const auth = createAuth();
 

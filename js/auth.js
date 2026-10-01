@@ -4,7 +4,7 @@ import {
     onAuthStateChanged,
     signOut,
     sendPasswordResetEmail
-} from "./auth-api.js?v=20260927-1";
+} from "./auth-api.js?v=20261001-1";
 
 import {
     doc,

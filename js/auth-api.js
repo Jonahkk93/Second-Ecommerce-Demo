@@ -1,4 +1,6 @@
-const localHost = /^(?:localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname);
+const localHost = /^(?:localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname)
+    || /(?:^|\.)local$/i.test(window.location.hostname)
+    || (window.location.protocol === "http:" && Boolean(window.location.port) && window.location.port !== "80");
 const LOCAL_API_ROOT = localHost ? `http://${window.location.hostname === "0.0.0.0" ? "127.0.0.1" : window.location.hostname}:3000/v1` : "";
 const API_ROOT = window.MPWR_API_URL || LOCAL_API_ROOT || "/api/v1";
 
