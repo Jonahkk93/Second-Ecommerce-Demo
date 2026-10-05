@@ -761,6 +761,8 @@ const DEFAULT_CAMPAIGN_BANNER = {
     buttonLink: "Campaign.html",
     image: "images/Icon Folder/Discount Icon_E5A484.PNG"
 };
+const HOMEPAGE_SECTION_ORDER_DEFAULT = ["announcement", "hero", "campaign", "popular", "discounts"];
+const HOMEPAGE_SECTION_LOCKED = new Set(["announcement", "hero"]);
 const DEFAULT_CATALOGUE_CATEGORIES = [
     { slug: "press-ons", label: "Press-ons", image: "images/optimized/nails-icon.png" },
     { slug: "wigs", label: "Wigs", image: "images/optimized/wigs-icon.png" },
@@ -777,6 +779,7 @@ const STOREFRONT_CATEGORY_PAGES = {
     products: "ProductsPage.html"
 };
 let storefrontHomepageHero = null;
+let storefrontHomepageSectionOrder = [...HOMEPAGE_SECTION_ORDER_DEFAULT];
 let storefrontCategories = DEFAULT_CATALOGUE_CATEGORIES.map(category => ({ ...category }));
 
 function normalizeHomepageHero(value = {}) {
@@ -878,6 +881,7 @@ function applyHomepageHero(value) {
     if (!hero.enabled) {
         section?.heroCleanup?.();
         section?.remove();
+        applyHomepageSectionOrder();
         return;
     }
     if (!section) {
@@ -1024,6 +1028,7 @@ function applyHomepageHero(value) {
     if (slides.length > 1) {
         start();
     }
+    applyHomepageSectionOrder();
 }
 
 function normalizeAnnouncementBar(value = {}) {
@@ -1059,6 +1064,43 @@ function applyAnnouncementBar(value) {
     const link = bar.querySelector("a");
     link.textContent = announcement.linkLabel;
     link.href = announcement.link || "#products";
+}
+
+function normalizeHomepageSectionOrder(value) {
+    const incoming = Array.isArray(value?.items) ? value.items : value;
+    const valid = new Set(HOMEPAGE_SECTION_ORDER_DEFAULT);
+    const movable = [];
+    (Array.isArray(incoming) ? incoming : []).forEach(item => {
+        const key = String(item || "").trim();
+        if (!valid.has(key) || HOMEPAGE_SECTION_LOCKED.has(key) || movable.includes(key)) return;
+        movable.push(key);
+    });
+    HOMEPAGE_SECTION_ORDER_DEFAULT.forEach(key => {
+        if (!HOMEPAGE_SECTION_LOCKED.has(key) && !movable.includes(key)) movable.push(key);
+    });
+    return HOMEPAGE_SECTION_ORDER_DEFAULT.filter(key => HOMEPAGE_SECTION_LOCKED.has(key)).concat(movable);
+}
+
+function applyHomepageSectionOrder(value = storefrontHomepageSectionOrder) {
+    const isHomepage = /(?:^\/$|\/index\.html$)/i.test(window.location.pathname);
+    if (!isHomepage) return;
+    storefrontHomepageSectionOrder = normalizeHomepageSectionOrder(value);
+    const productsSection = document.querySelector("#products");
+    if (!productsSection?.parentNode) return;
+    let anchor = document.querySelector(".homepage-hero");
+    const sectionNodes = {
+        campaign: document.querySelector(".homepage-campaign-banner"),
+        popular: productsSection,
+        discounts: document.querySelector("#discounts")
+    };
+    storefrontHomepageSectionOrder.forEach(key => {
+        if (HOMEPAGE_SECTION_LOCKED.has(key)) return;
+        const section = sectionNodes[key];
+        if (!section) return;
+        if (anchor?.parentNode === productsSection.parentNode) anchor.after(section);
+        else productsSection.parentNode.insertBefore(section, productsSection);
+        anchor = section;
+    });
 }
 
 function normalizeCampaignBanner(value = {}) {
@@ -1097,6 +1139,7 @@ function applyCampaignBanner(value) {
     let section = document.querySelector(".homepage-campaign-banner");
     if (!banner.enabled) {
         section?.remove();
+        applyHomepageSectionOrder();
         return;
     }
     if (!section) {
@@ -1124,6 +1167,7 @@ function applyCampaignBanner(value) {
     const image = section.querySelector(".homepage-campaign-image");
     image.src = banner.image;
     image.alt = banner.heading;
+    applyHomepageSectionOrder();
 }
 
 function normalizeCatalogueCategories(items) {
@@ -1160,9 +1204,13 @@ function renderStorefrontSidebarCategories(categories) {
     const list = document.querySelector(".menu2 > ul");
     if (!list) return;
     list.querySelectorAll(":scope > li[data-storefront-category]").forEach(item => item.remove());
-    const insertionPoint = list.querySelector(":scope > .sidebar-discounts-item");
     const page = window.location.pathname.split("/").pop().toLowerCase();
     const requestedCategory = String(new URLSearchParams(window.location.search).get("category") || "").trim();
+    const allLink = list.querySelector(":scope > .sidebar-all-item > a");
+    if (allLink) {
+        if (page === "productspage.html" && requestedCategory === "all") allLink.setAttribute("aria-current", "page");
+        else allLink.removeAttribute("aria-current");
+    }
     categories.forEach(category => {
         const item = document.createElement("li");
         item.dataset.storefrontCategory = category.slug;
@@ -1180,7 +1228,7 @@ function renderStorefrontSidebarCategories(categories) {
         label.textContent = category.label;
         link.append(image, label);
         item.appendChild(link);
-        list.insertBefore(item, insertionPoint);
+        list.appendChild(item);
     });
 }
 
@@ -1302,15 +1350,21 @@ window.MPWRCatalogueReady = fetch(`${catalogueHost}/products`, { credentials: "i
                     applyHomepageHero(remoteHero);
                     localStorage.setItem("mpwrHomepageHero", JSON.stringify(normalizeHomepageHero(remoteHero)));
                 }
-                const [campaignSnapshot, discountSnapshot] = await Promise.all([
+                const [campaignSnapshot, discountSnapshot, sectionOrderSnapshot] = await Promise.all([
                     getDoc(doc(window.db, "storefront", "campaignBanner")),
-                    getDoc(doc(window.db, "storefront", "discounts"))
+                    getDoc(doc(window.db, "storefront", "discounts")),
+                    getDoc(doc(window.db, "storefront", "homepageSectionOrder"))
                 ]);
                 const remoteCampaign = campaignSnapshot.data();
                 const remoteDiscountSetting = discountSnapshot.data();
+                const remoteSectionOrder = sectionOrderSnapshot.data();
                 if (remoteCampaign) {
                     applyCampaignBanner(resolveCampaignBanner(remoteCampaign, remoteDiscountSetting));
                     localStorage.setItem("mpwrCampaignBanner", JSON.stringify(normalizeCampaignBanner(remoteCampaign)));
+                }
+                if (remoteSectionOrder) {
+                    applyHomepageSectionOrder(remoteSectionOrder.items || remoteSectionOrder);
+                    localStorage.setItem("mpwrHomepageSectionOrder", JSON.stringify(normalizeHomepageSectionOrder(remoteSectionOrder.items || remoteSectionOrder)));
                 }
                 const categorySnapshot = await getDoc(doc(window.db, "storefront", "categories"));
                 const remoteCategories = categorySnapshot.data()?.items;

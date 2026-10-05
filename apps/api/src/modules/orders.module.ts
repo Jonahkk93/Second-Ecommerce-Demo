@@ -1,21 +1,30 @@
 import { BadRequestException, Body, Controller, Get, Inject, Injectable, Logger, Module, NotFoundException, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from "class-validator";
-import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { AuthGuard, AuthUser, CurrentUser, OrdersGuard } from "../common/auth";
 import { DB, Database } from "../database/database.module";
-import { deliveryQuotes, orderItems, orders, paymentEvents, payments, products, storefrontSettings, users } from "../database/schema";
+import { deliveryQuotes, orderItems, orders, paymentEvents, payments, products, searchDailyAnalytics, searchEvents, storefrontSettings, users } from "../database/schema";
 
 class CreateOrderDto { @IsUUID() quoteId!: string; @IsString() firstName!: string; @IsString() lastName!: string; @IsEmail() email!: string; @IsString() phone!: string; @IsOptional() @IsString() notes?: string; }
-class UpdateStatusDto { @IsIn(["pending", "processing", "shipped", "delivered", "cancelled"]) status!: "pending" | "processing" | "shipped" | "delivered" | "cancelled"; }
+class UpdateStatusDto { @IsIn(["pending", "processing", "shipped", "delivered", "cancelled", "returned"]) status!: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "returned"; }
 class UpdateTrackingDto {
   @IsString() @MaxLength(120) trackingNumber!: string;
   @IsOptional() @IsString() @MaxLength(120) shippingCarrier?: string;
   @IsOptional() @IsString() @MaxLength(1000) trackingUrl?: string;
 }
 class UpdateCancellationSeenDto { @IsBoolean() seen!: boolean; }
+class ReviewCancellationDto { @IsIn(["approve", "reject"]) decision!: "approve" | "reject"; }
 class UpdateRefundDto { @IsIn(["pending", "initiated", "processing", "refunded", "failed"]) status!: "pending" | "initiated" | "processing" | "refunded" | "failed"; @IsOptional() @IsString() reference?: string; @IsOptional() @IsString() note?: string; }
 class LegacyOrderDto { @IsArray() items!: unknown[]; @IsObject() customer!: Record<string, unknown>; @IsObject() delivery!: Record<string, unknown>; @IsOptional() @IsObject() payment?: Record<string, unknown>; @IsInt() @Min(0) deliveryFee!: number; }
 type QuotedOrderItem = { productId: string; variantId?: string; title: string; sku?: string; quantity: number; unitPrice: number; options?: Record<string, unknown> };
+
+function normalizeSearchAnalyticsQuery(value: string) {
+  return value.trim().replace(/\s+/g, " ").slice(0, 120);
+}
+
+function searchAnalyticsDay(value = new Date()) {
+  return value.toISOString().slice(0, 10);
+}
 
 @Injectable()
 export class OrdersService {
@@ -59,6 +68,52 @@ export class OrdersService {
     };
   }
 
+  private async recordSearchPurchase(
+    db: any,
+    item: { productId: string; quantity: number; unitPrice: number; options?: Record<string, any> },
+    orderId: string
+  ) {
+    const attribution = item.options?.legacySnapshot?.searchAttribution || item.options?.searchAttribution;
+    const query = normalizeSearchAnalyticsQuery(String(attribution?.query || ""));
+    if (!query) return;
+    const normalizedQuery = query.toLowerCase();
+    const day = searchAnalyticsDay();
+    const revenue = Math.max(0, Number(item.unitPrice) || 0) * Math.max(1, Number(item.quantity) || 1);
+    const productId = String(item.productId);
+    await db.insert(searchEvents).values({
+      anonymousId: "order",
+      query,
+      kind: "purchase",
+      resultCount: null,
+      productId,
+      correctedQuery: attribution?.originalQuery ? String(attribution.originalQuery).slice(0, 120) : null,
+      revenue,
+      metadata: { orderId, quantity: item.quantity }
+    });
+    await db.insert(searchDailyAnalytics).values({
+      day,
+      query,
+      normalizedQuery,
+      searches: 0,
+      clicks: 0,
+      purchases: 1,
+      revenue,
+      zeroResults: 0,
+      resultImpressions: 0,
+      clickedProducts: {},
+      purchasedProducts: { [productId]: 1 }
+    }).onConflictDoUpdate({
+      target: [searchDailyAnalytics.day, searchDailyAnalytics.normalizedQuery],
+      set: {
+        query,
+        purchases: sql`${searchDailyAnalytics.purchases} + 1`,
+        revenue: sql`${searchDailyAnalytics.revenue} + ${revenue}`,
+        purchasedProducts: sql`${searchDailyAnalytics.purchasedProducts} || jsonb_build_object(${productId}, (coalesce((${searchDailyAnalytics.purchasedProducts}->>${productId})::int, 0) + 1))`,
+        updatedAt: new Date()
+      }
+    });
+  }
+
   async refreshBestsellers() {
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const rows = await this.db.select({ id: products.legacyId, quantity: orderItems.quantity })
@@ -83,6 +138,9 @@ export class OrdersService {
     const [existing] = await this.db.select().from(orders).where(eq(orders.id, id)).limit(1);
     if (!existing) throw new NotFoundException("Order not found");
     const delivery = { ...((existing.delivery || {}) as Record<string, unknown>) };
+    if ((delivery as Record<string, any>).cancellationRequest?.status === "pending") {
+      throw new BadRequestException("Review the pending customer cancellation request before changing this order status");
+    }
     if (existing.status === "cancelled" && delivery.cancellationSource === "customer") {
       throw new BadRequestException("Customer-cancelled orders have a locked status");
     }
@@ -115,7 +173,7 @@ export class OrdersService {
   async updateTracking(id: string, dto: UpdateTrackingDto) {
     const [existing] = await this.db.select().from(orders).where(eq(orders.id, id)).limit(1);
     if (!existing) throw new NotFoundException("Order not found");
-    if (existing.status === "cancelled") throw new BadRequestException("Tracking cannot be added to a cancelled order");
+    if (["cancelled", "returned"].includes(existing.status)) throw new BadRequestException("Tracking cannot be added to a cancelled or returned order");
     const trackingNumber = dto.trackingNumber.trim();
     if (!trackingNumber) throw new BadRequestException("Tracking number is required");
     const trackingUrl = dto.trackingUrl?.trim() || null;
@@ -131,15 +189,43 @@ export class OrdersService {
   async cancelByCustomer(userId: string, id: string) {
     const [existing] = await this.db.select().from(orders).where(and(eq(orders.id, id), eq(orders.userId, userId))).limit(1);
     if (!existing) throw new NotFoundException("Order not found");
-    if (existing.status !== "pending") throw new BadRequestException("Only pending orders can be cancelled");
+    if (existing.status !== "pending") throw new BadRequestException("Only pending orders can be sent for cancellation approval");
+    const currentDelivery = { ...((existing.delivery || {}) as Record<string, any>) };
+    if (currentDelivery.cancellationRequest?.status === "pending") throw new BadRequestException("This cancellation request is already awaiting approval");
+    if (["approved", "rejected"].includes(String(currentDelivery.cancellationRequest?.status || ""))) throw new BadRequestException("This cancellation request has already been reviewed");
     const delivery = {
-      ...((existing.delivery || {}) as Record<string, unknown>),
-      cancellationSource: "customer",
-      cancelledAt: new Date().toISOString(),
-      refund: await this.refundForCancellation(existing, "customer")
+      ...currentDelivery,
+      cancellationRequest: {
+        status: "pending",
+        source: "customer",
+        requestedAt: new Date().toISOString()
+      }
     };
-    const [order] = await this.db.update(orders).set({ status: "cancelled", delivery, updatedAt: new Date() }).where(and(eq(orders.id, id), eq(orders.userId, userId), eq(orders.status, "pending"))).returning();
-    if (!order) throw new BadRequestException("This order can no longer be cancelled");
+    const [order] = await this.db.update(orders).set({ delivery, updatedAt: new Date() }).where(and(eq(orders.id, id), eq(orders.userId, userId), eq(orders.status, "pending"))).returning();
+    if (!order) throw new BadRequestException("This order can no longer be sent for cancellation approval");
+    return order;
+  }
+  async reviewCustomerCancellation(id: string, decision: ReviewCancellationDto["decision"]) {
+    const [existing] = await this.db.select().from(orders).where(eq(orders.id, id)).limit(1);
+    if (!existing) throw new NotFoundException("Order not found");
+    const delivery = { ...((existing.delivery || {}) as Record<string, any>) };
+    const request = delivery.cancellationRequest as Record<string, any> | undefined;
+    if (!request || request.status !== "pending" || request.source !== "customer") {
+      throw new BadRequestException("This order does not have a pending customer cancellation request");
+    }
+    if (existing.status !== "pending") throw new BadRequestException("Only pending orders can be approved for customer cancellation");
+    const now = new Date();
+    delivery.cancellationRequest = { ...request, status: decision === "approve" ? "approved" : "rejected", reviewedAt: now.toISOString() };
+    if (decision === "reject") {
+      delivery.cancellationRejectedAt = now.toISOString();
+      const [order] = await this.db.update(orders).set({ delivery, updatedAt: now }).where(eq(orders.id, id)).returning();
+      return order;
+    }
+    delivery.cancellationSource = "customer";
+    delivery.cancelledAt = now.toISOString();
+    delivery.cancellationSeenAt = now.toISOString();
+    delivery.refund = await this.refundForCancellation(existing, "customer");
+    const [order] = await this.db.update(orders).set({ status: "cancelled", delivery, updatedAt: now }).where(eq(orders.id, id)).returning();
     return order;
   }
   async markCustomerCancellationSeen(id: string, seen: boolean) {
@@ -206,6 +292,7 @@ export class OrdersService {
       const destination = quote.destination as { items?: QuotedOrderItem[]; [key: string]: unknown }; const { items: quotedItems = [], ...deliveryDestination } = destination;
       const [order] = await tx.insert(orders).values({ userId, quoteId: quote.id, subtotal: quote.subtotal, deliveryFee: quote.fee, total: quote.total, customer: { firstName: dto.firstName.trim(), lastName: dto.lastName.trim(), email: dto.email.toLowerCase(), phone: dto.phone.trim() }, delivery: { ...deliveryDestination, notes: dto.notes || "", distanceKm: quote.distanceKm, durationMinutes: quote.durationMinutes, shippingClass: quote.class, fee: quote.fee, pricingVersion: quote.pricingVersion } }).returning();
       await tx.insert(orderItems).values(quotedItems.map(item => ({ orderId: order.id, productId: item.productId, variantId: item.variantId || null, title: item.title, sku: item.sku || null, quantity: item.quantity, unitPrice: item.unitPrice, options: item.options || {} })));
+      await Promise.all(quotedItems.map(item => this.recordSearchPurchase(tx, { productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice, options: item.options || {} }, order.id)));
       return order;
     });
   }
@@ -222,6 +309,7 @@ export class OrdersService {
       const snapshots = rawItems.map(item => { const product = productMap.get(String(item.id))!; const quantity = Math.max(1, Math.min(20, Number(item.quantity) || 1)); const metadata = product.metadata as Record<string, any>; const selectedSize = item.selectedOptions?.length || item.selectedOptions?.size || item.size; const optionPrice = selectedSize ? Number(metadata.sizePrices?.[selectedSize]) : NaN; const regularPrice = Number.isFinite(optionPrice) ? optionPrice : product.price; const discount = discountMap.get(String(product.legacyId)) as number | undefined; const unitPrice = discount ? Math.round(regularPrice * (1 - discount / 100)) : regularPrice; subtotal += unitPrice * quantity; const selectedOptions = item.selectedOptions || { ...(item.color ? { color: item.color } : {}), ...(item.size ? { size: item.size } : {}) }; return { productId: product.id, title: product.title, quantity, unitPrice, options: { ...selectedOptions, legacySnapshot: item } }; });
       const [order] = await tx.insert(orders).values({ userId, subtotal, deliveryFee: dto.deliveryFee, total: subtotal + dto.deliveryFee, customer: dto.customer, delivery: { ...dto.delivery, payment: dto.payment || {} } }).returning();
       await tx.insert(orderItems).values(snapshots.map(item => ({ orderId: order.id, ...item })));
+      await Promise.all(snapshots.map(item => this.recordSearchPurchase(tx, item, order.id)));
       return { ...order, items: snapshots };
     });
   }
@@ -240,6 +328,7 @@ class OrdersController {
   @UseGuards(OrdersGuard) @Get("admin/all") adminList() { return this.service.adminList(); }
   @UseGuards(AuthGuard) @Get(":id") one(@CurrentUser() user: AuthUser, @Param("id") id: string) { return this.service.one(user.sub, id); }
   @UseGuards(AuthGuard) @Patch(":id/cancel") cancel(@CurrentUser() user: AuthUser, @Param("id") id: string) { return this.service.cancelByCustomer(user.sub, id); }
+  @UseGuards(OrdersGuard) @Patch(":id/cancellation-review") cancellationReview(@Param("id") id: string, @Body() dto: ReviewCancellationDto) { return this.service.reviewCustomerCancellation(id, dto.decision); }
   @UseGuards(OrdersGuard) @Patch(":id/cancellation-seen") cancellationSeen(@Param("id") id: string, @Body() dto: UpdateCancellationSeenDto) { return this.service.markCustomerCancellationSeen(id, dto.seen); }
   @UseGuards(OrdersGuard) @Patch(":id/refund") refund(@Param("id") id: string, @Body() dto: UpdateRefundDto) { return this.service.updateRefund(id, dto); }
   @UseGuards(OrdersGuard) @Patch(":id/tracking") tracking(@Param("id") id: string, @Body() dto: UpdateTrackingDto) { return this.service.updateTracking(id, dto); }

@@ -13,6 +13,7 @@ import {
     orderBy,
     getManagementBootstrap,
     markCustomerCancellationSeen,
+    reviewCustomerCancellation,
     updateOrderRefund,
     updateOrderTracking,
     updateDoc,
@@ -132,6 +133,27 @@ function confirmCustomerCancellationSeen(nextSeen) {
     });
 }
 
+function confirmCustomerCancellationReview(decision) {
+    const approving = decision === "approve";
+    statusConfirmTitle.textContent = approving ? "Approve Cancellation?" : "Reject Cancellation?";
+    statusConfirmMessage.replaceChildren(
+        approving
+            ? "Approve this customer cancellation request? The order will move to "
+            : "Reject this customer cancellation request? The order will stay active.",
+        approving ? statusConfirmName : "",
+        approving ? "." : ""
+    );
+    statusConfirmName.textContent = "Cancelled";
+    statusConfirmName.className = "cancelled";
+    statusConfirmApprove.className = `admin-status-approve ${approving ? "cancelled" : ""}`;
+    statusConfirmApprove.textContent = approving ? "Approve Cancellation" : "Reject Request";
+    statusConfirm.hidden = false;
+
+    return new Promise(resolve => {
+        resolveStatusConfirmation = resolve;
+    });
+}
+
 function refundAction(status) {
     const labels = {
         pending: ["Retry Refund?", "Return this refund to the pending queue?", "Retry Refund"],
@@ -215,7 +237,7 @@ function orderCreatedAt(order) {
     return value && !Number.isNaN(value.getTime()) ? value : null;
 }
 
-const ORDER_STATUSES = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+const ORDER_STATUSES = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Returned"];
 
 function normalizedOrderStatus(value) {
     const match = ORDER_STATUSES.find(status => status.toLowerCase() === String(value || "").toLowerCase());
@@ -227,7 +249,8 @@ function safeOrderItems(order) {
 }
 
 function renderDashboard(orders, products) {
-    const activeOrders = orders.filter(order => String(order.status).toLowerCase() !== "cancelled");
+    const inactiveRevenueStatuses = new Set(["cancelled", "returned"]);
+    const activeOrders = orders.filter(order => !inactiveRevenueStatuses.has(String(order.status).toLowerCase()));
     const totalRevenue = activeOrders.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
     const customers = new Set(orders.map(order => order.userId || order.customer?.email).filter(Boolean));
     const sevenDaysAgo = new Date();
@@ -256,7 +279,7 @@ function renderDashboard(orders, products) {
     document.getElementById("week-revenue").textContent = dashboardMoney(weekRevenue);
     document.getElementById("sales-chart").innerHTML = daily.map(day => `<div class="sales-day"><div class="sales-bar-track"><i style="height:${Math.max(day.revenue ? 10 : 3, (day.revenue / maxRevenue) * 100)}%" title="${dashboardMoney(day.revenue)}"></i></div><span>${day.date.toLocaleDateString("en-UG", { weekday: "short" })}</span></div>`).join("");
 
-    const statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    const statuses = ORDER_STATUSES;
     document.getElementById("order-pipeline").innerHTML = statuses.map(status => {
         const count = orders.filter(order => String(order.status).toLowerCase() === status.toLowerCase()).length;
         const share = orders.length ? Math.round((count / orders.length) * 100) : 0;
@@ -347,7 +370,9 @@ document.getElementById("total-orders")?.replaceChildren("...");
 document.getElementById("pending-orders")?.replaceChildren("...");
 document.getElementById("processing-orders")?.replaceChildren("...");
 document.getElementById("shipped-orders")?.replaceChildren("...");
+document.getElementById("delivered-orders")?.replaceChildren("...");
 document.getElementById("cancelled-orders")?.replaceChildren("...");
+document.getElementById("returned-orders")?.replaceChildren("...");
 document.getElementById("total-revenue")?.replaceChildren("Loading...");
 document.getElementById("total-customers")?.replaceChildren("...");
 
@@ -398,7 +423,9 @@ ordersList.innerHTML = `
     const portalStatusCounts = {
         Processing: 0,
         Shipped: 0,
-        Cancelled: 0
+        Delivered: 0,
+        Cancelled: 0,
+        Returned: 0
     };
     let totalRevenue = 0;
     const customers = new Set();
@@ -418,6 +445,9 @@ for (const orderDoc of snapshot.docs) {
             order.cancellationSource === "customer" ||
             order.delivery?.cancellationSource === "customer"
         );
+        const cancellationRequest = order.delivery?.cancellationRequest;
+        const cancellationPending = status !== "Cancelled" && cancellationRequest?.status === "pending" && cancellationRequest?.source === "customer";
+        const cancellationReviewed = ["approved", "rejected"].includes(String(cancellationRequest?.status || ""));
         const customerCancellationSeen = Boolean(order.delivery?.cancellationSeenAt);
         const refund = order.delivery?.refund || null;
         const itemsHTML = items.length ? items.map(item => {
@@ -456,7 +486,9 @@ if (status === "Pending") {
     pendingOrders++;
 }
 
-if (status === "Cancelled") {
+if (cancellationPending) {
+    portalStatusCounts.Cancelled++;
+} else if (status === "Cancelled") {
     if (cancelledByCustomer && !customerCancellationSeen) portalStatusCounts.Cancelled++;
 } else if (Object.hasOwn(portalStatusCounts, status)) {
     portalStatusCounts[status]++;
@@ -509,18 +541,19 @@ orderCard.innerHTML = `
     ${statusBadge}
 
     <div class="status-picker${cancelledByCustomer ? " is-customer-cancelled" : ""}">
-        <button class="status-picker-trigger" type="button" data-status="${status}" aria-expanded="false"${cancelledByCustomer ? ' aria-label="Customer-cancelled order status options are locked"' : ""}>
+        <button class="status-picker-trigger" type="button" data-status="${status}" aria-expanded="false"${cancelledByCustomer ? ' aria-label="Customer-cancelled order status options are locked"' : ""}${cancellationPending ? " disabled" : ""}>
             ${status}<span aria-hidden="true">⌄</span>
         </button>
         <div class="status-picker-menu" hidden>
             ${ORDER_STATUSES.map(optionStatus => `
-                <button type="button" data-status="${optionStatus}" class="${status === optionStatus ? "selected" : ""}"${cancelledByCustomer ? " disabled aria-disabled=\"true\"" : ""}>
+                <button type="button" data-status="${optionStatus}" class="${status === optionStatus ? "selected" : ""}"${cancelledByCustomer || cancellationPending ? " disabled aria-disabled=\"true\"" : ""}>
                     ${optionStatus}
                 </button>
             `).join("")}
         </div>
     </div>
-    ${cancelledByCustomer ? `<button class="customer-cancellation-seen" type="button" data-seen="${customerCancellationSeen}" aria-label="${customerCancellationSeen ? "Mark as unseen" : "Mark as seen"}"><span>${customerCancellationSeen ? "Mark as unseen" : "Mark as seen"}</span><img src="images/Icon Folder/${customerCancellationSeen ? "Password Hidden Icon_333.PNG" : "Password Visible Icon_333 .PNG"}" alt=""></button>` : ""}
+    ${cancelledByCustomer && !cancellationReviewed ? `<button class="customer-cancellation-seen" type="button" data-seen="${customerCancellationSeen}" aria-label="${customerCancellationSeen ? "Mark as unseen" : "Mark as seen"}"><span>${customerCancellationSeen ? "Mark as unseen" : "Mark as seen"}</span><img src="images/Icon Folder/${customerCancellationSeen ? "Password Hidden Icon_333.PNG" : "Password Visible Icon_333 .PNG"}" alt=""></button>` : ""}
+    ${cancellationPending ? `<div class="customer-cancellation-review"><small>Cancellation requested</small><div><button type="button" data-cancellation-review="approve">Approve</button><button type="button" data-cancellation-review="reject">Reject</button></div></div>` : ""}
 
             </div>
 
@@ -579,6 +612,7 @@ ${refundPanel(refund)}
         const statusTrigger = statusPicker.querySelector(".status-picker-trigger");
         const statusMenu = statusPicker.querySelector(".status-picker-menu");
         const cancellationSeenButton = orderCard.querySelector(".customer-cancellation-seen");
+        const cancellationReviewButtons = orderCard.querySelectorAll("[data-cancellation-review]");
         const trackingForm = orderCard.querySelector(".admin-tracking-panel");
         trackingForm.addEventListener("submit", async event => {
             event.preventDefault();
@@ -642,6 +676,23 @@ if (cancellationSeenButton) {
     });
 }
 
+cancellationReviewButtons.forEach(button => {
+    button.addEventListener("click", async () => {
+        const decision = button.dataset.cancellationReview;
+        if (!await confirmCustomerCancellationReview(decision)) return;
+        cancellationReviewButtons.forEach(item => { item.disabled = true; });
+        try {
+            await reviewCustomerCancellation(apiOrderId, decision, db);
+            showAdminToast(decision === "approve" ? "Cancellation approved" : "Cancellation request rejected");
+            await loadOrdersWithFeedback();
+        } catch (error) {
+            console.error("Unable to review cancellation request:", error);
+            showAdminToast(error.message || "Could not update the cancellation request", "error");
+            cancellationReviewButtons.forEach(item => { item.disabled = false; });
+        }
+    });
+});
+
 statusTrigger.addEventListener("click", event => {
     event.stopPropagation();
     document.querySelectorAll(".status-picker-menu:not([hidden])").forEach(menu => {
@@ -654,7 +705,7 @@ statusTrigger.addEventListener("click", event => {
 statusMenu.querySelectorAll("button").forEach(option => {
 option.addEventListener("click", async event => {
     event.stopPropagation();
-    if (cancelledByCustomer) return;
+    if (cancelledByCustomer || cancellationPending) return;
     const nextStatus = option.dataset.status;
     const previousStatus = order.status;
 
@@ -669,7 +720,7 @@ option.addEventListener("click", async event => {
     try {
         await updateDoc(doc(db, "orders", apiOrderId), { status: nextStatus });
         order.status = nextStatus;
-        if (nextStatus === "Cancelled") {
+    if (nextStatus === "Cancelled") {
             showAdminToast("Order cancelled. Any completed payment is now in the refund queue.");
             await loadOrdersWithFeedback();
             return;
@@ -733,7 +784,9 @@ showAdminToast("Order status updated successfully");
     document.getElementById("pending-orders")?.replaceChildren(String(pendingOrders));
     document.getElementById("processing-orders")?.replaceChildren(String(portalStatusCounts.Processing));
     document.getElementById("shipped-orders")?.replaceChildren(String(portalStatusCounts.Shipped));
+    document.getElementById("delivered-orders")?.replaceChildren(String(portalStatusCounts.Delivered));
     document.getElementById("cancelled-orders")?.replaceChildren(String(portalStatusCounts.Cancelled));
+    document.getElementById("returned-orders")?.replaceChildren(String(portalStatusCounts.Returned));
     document.getElementById("total-revenue")?.replaceChildren(`UGX ${totalRevenue.toLocaleString()}`);
     document.getElementById("total-customers")?.replaceChildren(String(customers.size));
 

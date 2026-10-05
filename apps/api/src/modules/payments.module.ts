@@ -144,7 +144,8 @@ class PaymentsService {
   async initialize(user: AuthUser, orderId: string, method: PaymentMethod) {
     const [order] = await this.db.select().from(orders).where(and(eq(orders.id, orderId), eq(orders.userId, user.sub))).limit(1);
     if (!order) throw new BadRequestException("Order not found");
-    if (order.status === "cancelled") throw new BadRequestException("A cancelled order cannot be paid");
+    if (["cancelled", "returned"].includes(order.status)) throw new BadRequestException("A cancelled or returned order cannot be paid");
+    if (((order.delivery || {}) as Record<string, any>).cancellationRequest?.status === "pending") throw new BadRequestException("This order has a cancellation request awaiting approval");
     const [existing] = await this.db.select().from(payments).where(eq(payments.orderId, order.id)).limit(1);
     const previousMetadata = (existing?.metadata || {}) as Record<string, unknown>;
     const attempt = Math.max(1, Number(previousMetadata.attempt || 0) + 1);
@@ -241,7 +242,11 @@ class PaymentsService {
             await tx.update(orders).set({ delivery, updatedAt: now }).where(eq(orders.id, payment.orderId));
           }
         } else {
-          await tx.update(orders).set({ status: "processing", updatedAt: now }).where(and(eq(orders.id, payment.orderId), eq(orders.status, "pending")));
+          const [pendingOrder] = await tx.select().from(orders).where(and(eq(orders.id, payment.orderId), eq(orders.status, "pending"))).limit(1);
+          const cancellationRequest = ((pendingOrder?.delivery || {}) as Record<string, any>).cancellationRequest;
+          if (pendingOrder && cancellationRequest?.status !== "pending") {
+            await tx.update(orders).set({ status: "processing", updatedAt: now }).where(eq(orders.id, pendingOrder.id));
+          }
         }
       });
       return { ...payment, status: "successful" as const, metadata: { ...((payment.metadata || {}) as Record<string, unknown>), ...status } };

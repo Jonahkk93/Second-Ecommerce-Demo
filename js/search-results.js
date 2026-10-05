@@ -45,10 +45,10 @@ const sizeFilter = document.querySelector("#size-filter");
 const resultsToolbar = document.querySelector(".results-toolbar");
 let searchResultSettings = {};
 let resultSearchSynonyms = [];
+const localHost = /^(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname);
+const searchApiRoot = window.MPWR_API_URL || (localHost ? `http://${window.location.hostname}:3000/v1` : "/api/v1");
 try {
-    const localHost = /^(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname);
-    const apiRoot = window.MPWR_API_URL || (localHost ? `http://${window.location.hostname}:3000/v1` : "/api/v1");
-    const response = await fetch(`${apiRoot}/storefront/search`, { credentials:"include", cache:"no-store" });
+    const response = await fetch(`${searchApiRoot}/storefront/search`, { credentials:"include", cache:"no-store" });
     searchResultSettings = response.ok ? await response.json() : {};
     if (["relevance", "popular", "newest", "low", "high"].includes(searchResultSettings.defaultSort)) sortResults.value = searchResultSettings.defaultSort;
     if (Array.isArray(searchResultSettings.synonyms)) resultSearchSynonyms = searchResultSettings.synonyms;
@@ -56,6 +56,7 @@ try {
     console.warn("Using the default result sorting", error);
 }
 const query = new URLSearchParams(location.search).get("q")?.trim() || "";
+const correctionNotice = document.querySelector("#search-correction");
 const productModalOverlay = document.querySelector(".product-modal-overlay");
 const productModalImage = document.querySelector(".product-modal-image");
 const productModalImageLink = document.querySelector(".product-modal-image-link");
@@ -481,7 +482,7 @@ function productSearchFields(product) {
     return {
         title: normalizeSearchText(product.title),
         description: normalizeSearchText(product.description),
-        attributes: normalizeSearchText([...(product.colors || []),...(product.sizes || []),...optionLabels].join(" "))
+        attributes: normalizeSearchText([product.category, ...(product.colors || []),...(product.sizes || []),...optionLabels].join(" "))
     };
 }
 
@@ -507,7 +508,7 @@ function searchScore(product, searchQuery) {
     const descriptionTokens = searchTokens(fields.description);
     const attributeTokens = searchTokens(fields.attributes);
     const allTokens = new Set([...titleTokens,...descriptionTokens,...attributeTokens]);
-    const tokenMatches = (tokens,queryToken) => tokens.some(token => token === queryToken || (queryToken.length > 3 && (token.startsWith(queryToken) || queryToken.startsWith(token))));
+    const tokenMatches = (tokens,queryToken) => tokens.some(token => token === queryToken || (queryToken.length > 3 && token.length > 3 && (token.startsWith(queryToken) || queryToken.startsWith(token))));
     let score = 0;
 
     if (fields.title === normalizedQuery) score += 10000;
@@ -536,6 +537,97 @@ function expandedSearchScore(product, searchQuery) {
     const terms = expandedSearchTerms(searchQuery);
     if (!terms.length) return 1;
     return Math.max(0,...terms.map(term => searchScore(product, term)));
+}
+
+function editDistance(left, right) {
+    const a = normalizeSearchText(left);
+    const b = normalizeSearchText(right);
+    const row = Array.from({ length: b.length + 1 }, (_, index) => index);
+    for (let i = 1; i <= a.length; i += 1) {
+        let previous = row[0];
+        row[0] = i;
+        for (let j = 1; j <= b.length; j += 1) {
+            const stored = row[j];
+            row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + Number(a[i - 1] !== b[j - 1]));
+            previous = stored;
+        }
+    }
+    return row[b.length];
+}
+
+function correctedSearchQuery(searchQuery) {
+    if (searchResultSettings.typoEnabled === false) return "";
+    const normalized = normalizeSearchText(searchQuery);
+    if (normalized.length < 3) return "";
+    const candidates = new Set([
+        ...configuredList("suggestions"),
+        ...configuredList("trendingSearches"),
+        ...normalizeSearchSynonyms(resultSearchSynonyms).flatMap(rule => [rule.term, ...rule.synonyms]),
+        ...products.flatMap(product => [product.title, product.category, ...searchTokens(product.title)])
+    ].map(String).filter(Boolean));
+    const maxDistance = searchResultSettings.typoStrength === "strict" || normalized.length < 5 ? 1 : 2;
+    return [...candidates].map(candidate => ({ candidate, distance: editDistance(normalized, candidate) }))
+        .filter(item => item.distance > 0 && item.distance <= maxDistance)
+        .sort((a, b) => a.distance - b.distance || a.candidate.length - b.candidate.length)[0]?.candidate || "";
+}
+
+function applySearchRules(matches, searchQuery) {
+    const rules = Array.isArray(searchResultSettings.searchRules) ? searchResultSettings.searchRules : [];
+    const active = rules.filter(rule => normalizeSearchText(rule.query) === normalizeSearchText(searchQuery));
+    if (!active.length) return matches;
+    const promoted = [];
+    active.forEach(rule => {
+        if (rule.targetType === "category") promoted.push(...products.filter(product => String(product.category) === String(rule.targetId)));
+        else {
+            const product = products.find(item => String(item.id) === String(rule.targetId));
+            if (product) promoted.push(product);
+        }
+    });
+    return [...new Map([...promoted, ...matches].map(product => [String(product.id), product])).values()];
+}
+
+function searchVisitorId() {
+    const key = "mpwrSearchVisitor";
+    try {
+        const existing = localStorage.getItem(key);
+        if (existing) return existing;
+        const value = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem(key, value);
+        return value;
+    } catch { return "anonymous"; }
+}
+
+function recordSearchEvent(kind, details = {}) {
+    if (!query) return;
+    fetch(`${searchApiRoot}/storefront/search-events`, {
+        method:"POST", credentials:"include", keepalive:true,
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ anonymousId:searchVisitorId(), query, kind, ...details })
+    }).catch(() => {});
+}
+
+function rememberSearchAttribution(productId) {
+    try {
+        sessionStorage.setItem("mpwrSearchAttribution", JSON.stringify({
+            query: correctedQuery || query,
+            originalQuery: query,
+            productId:String(productId),
+            clickedAt:new Date().toISOString()
+        }));
+    } catch {}
+}
+
+function searchAttributionForCart(productId) {
+    try {
+        const attribution = JSON.parse(sessionStorage.getItem("mpwrSearchAttribution") || "{}");
+        const clickedAt = Date.parse(attribution.clickedAt);
+        if (String(attribution.productId) !== String(productId) || !clickedAt || Date.now() - clickedAt > 24 * 60 * 60 * 1000) return null;
+        return {
+            query:String(attribution.query || "").slice(0, 120),
+            originalQuery:String(attribution.originalQuery || "").slice(0, 120),
+            clickedAt:attribution.clickedAt
+        };
+    } catch { return null; }
 }
 
 function closeProductModal() {
@@ -759,7 +851,11 @@ function resultCard(product) {
             <span class="price">${window.MPWRPricing.markup(product, undefined, "is-card-price")}</span>
             <i><img src="images/Plus.PNG" class="addie" alt="View product"></i>
         </div>`;
-    const open = () => location.href = `product.html?id=${encodeURIComponent(product.id)}`;
+    const open = () => {
+        rememberSearchAttribution(product.id);
+        recordSearchEvent("click", { productId:String(product.id), correctedQuery:correctedQuery || undefined });
+        location.href = `product.html?id=${encodeURIComponent(product.id)}`;
+    };
     card.addEventListener("click",open);
     card.addEventListener("keydown",event => { if (event.key === "Enter" && !event.target.closest("button")) open(); });
     card.querySelector(".wishlist-btn").addEventListener("click",event => {
@@ -773,14 +869,16 @@ function resultCard(product) {
     });
     card.querySelector(".addie").addEventListener("click",event => {
         event.stopPropagation();
+        rememberSearchAttribution(product.id);
+        recordSearchEvent("click", { productId:String(product.id), correctedQuery:correctedQuery || undefined });
         openProductModal(product,card);
     });
     return card;
 }
 
-function matchingProducts() {
+function matchingProducts(searchQuery) {
     return products
-        .map((product,index) => ({product,index,score:expandedSearchScore(product,query)}))
+        .map((product,index) => ({product,index,score:expandedSearchScore(product,searchQuery)}))
         .filter(match => match.score > 0)
         .sort((a,b) => b.score - a.score || a.index - b.index)
         .map(match => match.product);
@@ -799,7 +897,10 @@ function noResultsChip(label) {
 
 function configuredList(key) {
     const value = searchResultSettings[key];
-    return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+    const items = Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+    if (key !== "trendingSearches") return items;
+    const hidden = new Set((Array.isArray(searchResultSettings.trendingHiddenSearches) ? searchResultSettings.trendingHiddenSearches : []).map(item => String(item).toLowerCase()));
+    return items.filter(label => !hidden.has(label.toLowerCase()));
 }
 
 function fallbackProducts() {
@@ -837,7 +938,10 @@ function renderNoResultsFallback() {
     fallback.hidden = labels.length === 0;
 }
 
-const relevanceMatches = matchingProducts();
+const directMatches = matchingProducts(query);
+const correctedQuery = directMatches.length ? "" : correctedSearchQuery(query);
+const effectiveQuery = correctedQuery || query;
+const relevanceMatches = applySearchRules(directMatches.length ? directMatches : matchingProducts(effectiveQuery), effectiveQuery);
 const baseMatches = window.MPWRDiscovery
     ? window.MPWRDiscovery.rank(relevanceMatches, {
         context: `search-results-${query.toLowerCase()}`,
@@ -846,6 +950,14 @@ const baseMatches = window.MPWRDiscovery
         personalizationWeight: 0.04
     })
     : relevanceMatches;
+
+if (correctedQuery) {
+    correctionNotice.hidden = false;
+    correctionNotice.querySelector("button").textContent = correctedQuery;
+    correctionNotice.querySelector("span span").textContent = query;
+    correctionNotice.querySelector("button").addEventListener("click", () => { location.href = `search-results.html?q=${encodeURIComponent(correctedQuery)}`; });
+}
+recordSearchEvent("search", { resultCount:baseMatches.length, correctedQuery:correctedQuery || undefined });
 
 function render() {
     let matches = baseMatches.filter(product => {
@@ -966,7 +1078,8 @@ productModalCart.addEventListener("click",() => {
         selectedOptions:{...selectedModalOptions},
         color:selectedModalOptions.color || "",
         size:selectedModalOptions.size || selectedModalOptions.length || "",
-        quantity:1
+        quantity:1,
+        searchAttribution:searchAttributionForCart(selectedModalProduct.id)
     };
     const alreadyInCart = cart.some(item => itemIdentity(item) === itemIdentity(cartItem));
     if (alreadyInCart) {

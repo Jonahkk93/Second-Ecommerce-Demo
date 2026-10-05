@@ -351,6 +351,7 @@ body{
 .order-refund-note{display:block;margin-top:12px;color:#887d77;font-size:11px;line-height:1.45}
 .order-refund-reference{display:block;margin-top:9px;color:#716761;font-size:11px;font-weight:650;overflow-wrap:anywhere}
 .order-tracking{display:grid;gap:11px;margin:18px 0;padding:18px;border:1px solid #e3d8d2;border-radius:14px;background:#fffaf7}.order-tracking small{color:#b46f4d;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.order-tracking h3{margin-top:3px;color:#333;font-size:17px}.order-tracking p{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0;font-size:13px}.order-tracking p span{color:#766d68}.order-tracking p strong{color:#333;overflow-wrap:anywhere;text-align:right}.order-tracking a{justify-self:start;padding:9px 14px;border-radius:999px;background:#333;color:#fff;font-size:12px;font-weight:650;text-decoration:none}.order-tracking a:hover{background:#111}
+.order-cancellation-note{display:grid;gap:7px;margin:18px 0;padding:16px;border:1px solid #ead8cf;border-radius:14px;background:#fff9f6}.order-cancellation-note h3{margin:0;color:#333;font-size:16px}.order-cancellation-note p{margin:0;color:#625852;font-size:13px;line-height:1.45}.order-cancellation-note.is-rejected{border-color:#e3ddd8;background:#faf8f7}
 
 .status-pending{
 
@@ -379,6 +380,12 @@ body{
 .status-cancelled{
 
     background:#e74c3c;
+
+}
+
+.status-returned{
+
+    background:#8a6f5a;
 
 }
 .toggle-order-btn{
@@ -508,6 +515,12 @@ body{
     background:#c93d31;
     color:white;
 
+}
+
+.cancel-order-btn:disabled{
+    cursor:not-allowed;
+    opacity:.6;
+    transform:none;
 }
 
 .orders-confirm-open{

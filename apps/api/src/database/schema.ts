@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const userRole = pgEnum("user_role", ["customer", "orders", "admin"]);
 export const shippingClass = pgEnum("shipping_class", ["small", "medium", "large"]);
-export const orderStatus = pgEnum("order_status", ["pending", "processing", "shipped", "delivered", "cancelled"]);
+export const orderStatus = pgEnum("order_status", ["pending", "processing", "shipped", "delivered", "cancelled", "returned"]);
 export const paymentStatus = pgEnum("payment_status", ["pending", "successful", "failed", "refunded"]);
 
 const timestamps = {
@@ -85,6 +85,35 @@ export const reviews = pgTable("reviews", {
 export const storefrontSettings = pgTable("storefront_settings", {
   key: text("key").primaryKey(), value: jsonb("value").default({}).notNull(), updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 });
+
+export const searchEvents = pgTable("search_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  anonymousId: text("anonymous_id").notNull(),
+  query: text("query").notNull(),
+  kind: text("kind").$type<"search" | "click" | "purchase">().notNull(),
+  resultCount: integer("result_count"),
+  productId: text("product_id"),
+  correctedQuery: text("corrected_query"),
+  revenue: integer("revenue").default(0).notNull(),
+  metadata: jsonb("metadata").default({}).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+}, t => [index("search_events_created_idx").on(t.createdAt), index("search_events_query_idx").on(t.query)]);
+
+export const searchDailyAnalytics = pgTable("search_daily_analytics", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  day: date("day").notNull(),
+  query: text("query").notNull(),
+  normalizedQuery: text("normalized_query").notNull(),
+  searches: integer("searches").default(0).notNull(),
+  clicks: integer("clicks").default(0).notNull(),
+  purchases: integer("purchases").default(0).notNull(),
+  revenue: integer("revenue").default(0).notNull(),
+  zeroResults: integer("zero_results").default(0).notNull(),
+  resultImpressions: integer("result_impressions").default(0).notNull(),
+  clickedProducts: jsonb("clicked_products").default({}).notNull(),
+  purchasedProducts: jsonb("purchased_products").default({}).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+}, t => [uniqueIndex("search_daily_query_unique").on(t.day, t.normalizedQuery), index("search_daily_day_idx").on(t.day), index("search_daily_query_idx").on(t.normalizedQuery)]);
 
 export const accountAppeals = pgTable("account_appeals", {
   id: uuid("id").defaultRandom().primaryKey(),

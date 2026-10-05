@@ -32,9 +32,9 @@
             </header>
 
             <div class="dashboard-kpis" aria-label="Store performance summary">
-                <article><div class="dashboard-kpi-heading"><span>Revenue</span><i class="dashboard-icon revenue" aria-hidden="true">↗</i></div><strong id="total-revenue">UGX 0</strong><small id="revenue-note">Across all non-cancelled orders</small></article>
+                <article><div class="dashboard-kpi-heading"><span>Revenue</span><i class="dashboard-icon revenue" aria-hidden="true">↗</i></div><strong id="total-revenue">UGX 0</strong><small id="revenue-note">Across active orders</small></article>
                 <article><div class="dashboard-kpi-heading"><span>Orders</span><i class="dashboard-icon orders" aria-hidden="true">▤</i></div><strong id="total-orders">0</strong><small id="orders-note">0 placed in the last 7 days</small></article>
-                <article><div class="dashboard-kpi-heading"><span>Average order</span><i class="dashboard-icon average" aria-hidden="true">◎</i></div><strong id="average-order-value">UGX 0</strong><small>Average non-cancelled basket</small></article>
+                <article><div class="dashboard-kpi-heading"><span>Average order</span><i class="dashboard-icon average" aria-hidden="true">◎</i></div><strong id="average-order-value">UGX 0</strong><small>Average active basket</small></article>
                 <article><div class="dashboard-kpi-heading"><span>Customers</span><i class="dashboard-icon customers" aria-hidden="true">♙</i></div><strong id="total-customers">0</strong><small id="customer-note">Unique shoppers</small></article>
             </div>
 
@@ -90,6 +90,8 @@
         <button class="filter-btn" data-status="Delivered">Delivered</button>
 
         <button class="filter-btn" data-status="Cancelled">Cancelled</button>
+
+        <button class="filter-btn" data-status="Returned">Returned</button>
 
     </div>
 

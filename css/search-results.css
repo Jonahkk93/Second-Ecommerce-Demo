@@ -243,6 +243,23 @@ button,select{
     padding:151px 5% 70px
 }
 
+.search-correction{
+    margin:0 0 22px;
+    color:#777;
+    font-size:14px
+}
+
+.search-correction button{
+    margin:0 4px;
+    padding:0;
+    border:0;
+    background:transparent;
+    color:#333;
+    font-weight:700;
+    text-decoration:underline;
+    text-underline-offset:3px
+}
+
 .results-toolbar{
     display:flex;
     width:auto;

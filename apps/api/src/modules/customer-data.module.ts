@@ -1,11 +1,11 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Inject, Module, NotFoundException, Param, Patch, Put, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Inject, Module, NotFoundException, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { IsArray, IsBoolean, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
-import { and, desc, eq, inArray, isNotNull, ne, not, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, ne, not, or, sql } from "drizzle-orm";
 import { AdminGuard, AuthGuard, AuthUser, CurrentUser } from "../common/auth";
 import { normalizePhone } from "../common/phone";
 import { DB, Database } from "../database/database.module";
-import { carts, favorites, orderItems, orders, products, reviews, storefrontSettings, users } from "../database/schema";
+import { carts, favorites, orderItems, orders, products, reviews, searchDailyAnalytics, searchEvents, storefrontSettings, users } from "../database/schema";
 
 class ItemsDto { @IsArray() items!: unknown[]; }
 class ProfileDto {
@@ -27,6 +27,16 @@ class ReviewAttachmentDto { @IsObject() attachment!: Record<string, unknown>; }
 class ReviewReplyDto { @IsString() @MaxLength(1200) reply!: string; }
 class ReviewSeenDto { @IsBoolean() seen!: boolean; }
 class SettingDto { @IsObject() value!: Record<string, unknown>; }
+class SearchEventDto {
+  @IsString() @MaxLength(80) anonymousId!: string;
+  @IsString() @MaxLength(120) query!: string;
+  @IsString() kind!: "search" | "click" | "purchase";
+  @IsOptional() @IsInt() @Min(0) resultCount?: number;
+  @IsOptional() @IsString() @MaxLength(100) productId?: string;
+  @IsOptional() @IsString() @MaxLength(120) correctedQuery?: string;
+  @IsOptional() @IsInt() @Min(0) revenue?: number;
+  @IsOptional() @IsObject() metadata?: Record<string, unknown>;
+}
 class UserBlockDto { @IsBoolean() blocked!: boolean; @IsOptional() @IsString() @MaxLength(500) reason?: string; }
 type StoredReviewAttachment =
   | { key: string; url: string; type: string; name: string }
@@ -85,6 +95,78 @@ function normalizeHomepageHeroSetting(value: Record<string, unknown>, publicMedi
   };
 }
 
+function normalizeSearchAnalyticsQuery(value: string) {
+  return value.trim().replace(/\s+/g, " ").slice(0, 120);
+}
+
+function searchAnalyticsDay(value = new Date()) {
+  return value.toISOString().slice(0, 10);
+}
+
+async function recordSearchAnalytics(
+  db: Database,
+  event: {
+    anonymousId: string;
+    query: string;
+    kind: "search" | "click" | "purchase";
+    resultCount?: number | null;
+    productId?: string | null;
+    correctedQuery?: string | null;
+    revenue?: number;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  const query = normalizeSearchAnalyticsQuery(event.query);
+  if (!query) return;
+  const normalizedQuery = query.toLowerCase();
+  const day = searchAnalyticsDay();
+  const resultCount = Math.max(0, Number(event.resultCount) || 0);
+  const revenue = Math.max(0, Number(event.revenue) || 0);
+  const productId = event.productId?.trim().slice(0, 100) || "";
+  const productJson = productId ? { [productId]: 1 } : {};
+  await db.insert(searchEvents).values({
+    anonymousId: event.anonymousId.trim().slice(0, 80) || "anonymous",
+    query,
+    kind: event.kind,
+    resultCount: event.kind === "search" ? resultCount : null,
+    productId: ["click", "purchase"].includes(event.kind) ? productId || null : null,
+    correctedQuery: event.correctedQuery?.trim().slice(0, 120) || null,
+    revenue: event.kind === "purchase" ? revenue : 0,
+    metadata: event.metadata || {}
+  });
+  await db.insert(searchDailyAnalytics).values({
+    day,
+    query,
+    normalizedQuery,
+    searches: event.kind === "search" ? 1 : 0,
+    clicks: event.kind === "click" ? 1 : 0,
+    purchases: event.kind === "purchase" ? 1 : 0,
+    revenue: event.kind === "purchase" ? revenue : 0,
+    zeroResults: event.kind === "search" && resultCount === 0 ? 1 : 0,
+    resultImpressions: event.kind === "search" ? resultCount : 0,
+    clickedProducts: event.kind === "click" ? productJson : {},
+    purchasedProducts: event.kind === "purchase" ? productJson : {}
+  }).onConflictDoUpdate({
+    target: [searchDailyAnalytics.day, searchDailyAnalytics.normalizedQuery],
+    set: {
+      query,
+      searches: sql`${searchDailyAnalytics.searches} + ${event.kind === "search" ? 1 : 0}`,
+      clicks: sql`${searchDailyAnalytics.clicks} + ${event.kind === "click" ? 1 : 0}`,
+      purchases: sql`${searchDailyAnalytics.purchases} + ${event.kind === "purchase" ? 1 : 0}`,
+      revenue: sql`${searchDailyAnalytics.revenue} + ${event.kind === "purchase" ? revenue : 0}`,
+      zeroResults: sql`${searchDailyAnalytics.zeroResults} + ${event.kind === "search" && resultCount === 0 ? 1 : 0}`,
+      resultImpressions: sql`${searchDailyAnalytics.resultImpressions} + ${event.kind === "search" ? resultCount : 0}`,
+      clickedProducts: productId && event.kind === "click"
+        ? sql`${searchDailyAnalytics.clickedProducts} || jsonb_build_object(${productId}, (coalesce((${searchDailyAnalytics.clickedProducts}->>${productId})::int, 0) + 1))`
+        : sql`${searchDailyAnalytics.clickedProducts}`,
+      purchasedProducts: productId && event.kind === "purchase"
+        ? sql`${searchDailyAnalytics.purchasedProducts} || jsonb_build_object(${productId}, (coalesce((${searchDailyAnalytics.purchasedProducts}->>${productId})::int, 0) + 1))`
+        : sql`${searchDailyAnalytics.purchasedProducts}`,
+      updatedAt: new Date()
+    }
+  });
+}
+
 async function resolveProduct(db: Database, identifier: string) {
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
   const [product] = await db.select().from(products).where(isUuid ? or(eq(products.id, identifier), eq(products.legacyId, identifier)) : eq(products.legacyId, identifier)).limit(1);
@@ -141,7 +223,7 @@ class ReviewsController {
   @Get() async list(@Query("productId") productId: string) { const product = await resolveProduct(this.db, productId); return this.db.select(this.selection).from(reviews).innerJoin(products, eq(reviews.productId, products.id)).where(eq(reviews.productId, product.id)).orderBy(desc(reviews.createdAt)); }
   @UseGuards(AuthGuard) @Get("mine") listMine(@CurrentUser() user: AuthUser) { return this.db.select(this.selection).from(reviews).innerJoin(products, eq(reviews.productId, products.id)).where(eq(reviews.userId, user.sub)).orderBy(desc(reviews.createdAt)); }
   @UseGuards(AuthGuard) @Get("mine/:productId") async mine(@CurrentUser() user: AuthUser, @Param("productId") productId: string) { const product = await resolveProduct(this.db, productId); const [review] = await this.db.select().from(reviews).where(and(eq(reviews.userId, user.sub), eq(reviews.productId, product.id))).limit(1); return review || null; }
-  @UseGuards(AuthGuard) @Put(":productId") async save(@CurrentUser() user: AuthUser, @Param("productId") productId: string, @Body() dto: ReviewDto) { const product = await resolveProduct(this.db, productId); const [purchase] = await this.db.select({ id: orderItems.id }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id)).where(and(eq(orders.userId, user.sub), eq(orderItems.productId, product.id), ne(orders.status, "cancelled"))).limit(1); if (!purchase) throw new ForbiddenException("Only customers who purchased this product can review it"); const [account] = await this.db.select().from(users).where(eq(users.id, user.sub)).limit(1); const values = { userId: user.sub, productId: product.id, customerName: dto.customerName || `${account.firstName} ${account.lastName}`.trim(), rating: dto.rating, text: dto.text, purchasedOptions: dto.purchasedOptions || {}, ...(dto.attachment ? { attachment: this.reviewAttachment(user, dto.attachment) } : {}), verifiedPurchase: true }; const [review] = await this.db.insert(reviews).values(values).onConflictDoUpdate({ target: [reviews.userId, reviews.productId], set: { ...values, updatedAt: new Date() } }).returning(); return review; }
+  @UseGuards(AuthGuard) @Put(":productId") async save(@CurrentUser() user: AuthUser, @Param("productId") productId: string, @Body() dto: ReviewDto) { const product = await resolveProduct(this.db, productId); const [purchase] = await this.db.select({ id: orderItems.id }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id)).where(and(eq(orders.userId, user.sub), eq(orderItems.productId, product.id), not(inArray(orders.status, ["cancelled", "returned"])))).limit(1); if (!purchase) throw new ForbiddenException("Only customers who purchased this product can review it"); const [account] = await this.db.select().from(users).where(eq(users.id, user.sub)).limit(1); const values = { userId: user.sub, productId: product.id, customerName: dto.customerName || `${account.firstName} ${account.lastName}`.trim(), rating: dto.rating, text: dto.text, purchasedOptions: dto.purchasedOptions || {}, ...(dto.attachment ? { attachment: this.reviewAttachment(user, dto.attachment) } : {}), verifiedPurchase: true }; const [review] = await this.db.insert(reviews).values(values).onConflictDoUpdate({ target: [reviews.userId, reviews.productId], set: { ...values, updatedAt: new Date() } }).returning(); return review; }
   @UseGuards(AuthGuard) @Patch(":productId/attachment") async attachment(@CurrentUser() user: AuthUser, @Param("productId") productId: string, @Body() dto: ReviewAttachmentDto) { const product = await resolveProduct(this.db, productId); const [review] = await this.db.update(reviews).set({ attachment: this.reviewAttachment(user, dto.attachment), updatedAt: new Date() }).where(and(eq(reviews.userId, user.sub), eq(reviews.productId, product.id))).returning(); if (!review) throw new NotFoundException("Review not found"); return review; }
   @UseGuards(AuthGuard) @Delete(":productId") async remove(@CurrentUser() user: AuthUser, @Param("productId") productId: string) { const product = await resolveProduct(this.db, productId); const [review] = await this.db.delete(reviews).where(and(eq(reviews.userId, user.sub), eq(reviews.productId, product.id))).returning({ attachment: reviews.attachment }); if (!review) throw new NotFoundException("Review not found"); return review; }
 }
@@ -182,6 +264,115 @@ class StorefrontController {
   }
 }
 
+@Controller("storefront/search-events")
+class SearchEventsController {
+  constructor(@Inject(DB) private db: Database) {}
+  @Post() async create(@Body() dto: SearchEventDto) {
+    const query = normalizeSearchAnalyticsQuery(dto.query);
+    if (!query || !["search", "click", "purchase"].includes(dto.kind)) throw new BadRequestException("Invalid search event");
+    await recordSearchAnalytics(this.db, {
+      anonymousId: dto.anonymousId,
+      query,
+      kind: dto.kind,
+      resultCount: dto.resultCount,
+      productId: dto.productId,
+      correctedQuery: dto.correctedQuery,
+      revenue: dto.revenue,
+      metadata: dto.metadata
+    });
+    return { recorded: true };
+  }
+}
+
+@UseGuards(AdminGuard)
+@Controller("admin/search-insights")
+class AdminSearchInsightsController {
+  constructor(@Inject(DB) private db: Database) {}
+  @Get() async report() {
+    const now = Date.now();
+    const rangeDays = 30;
+    const periodMs = rangeDays * 24 * 60 * 60 * 1000;
+    const sinceDay = searchAnalyticsDay(new Date(now - periodMs));
+    const previousSinceDay = searchAnalyticsDay(new Date(now - (periodMs * 2)));
+    const [rows, productRows] = await Promise.all([
+      this.db.select().from(searchDailyAnalytics).where(gte(searchDailyAnalytics.day, previousSinceDay)).orderBy(desc(searchDailyAnalytics.day)).limit(20000),
+      this.db.select().from(products).where(ne(products.visibility, "draft"))
+    ]);
+    const productLookup = new Map<string, typeof productRows[number]>();
+    productRows.forEach(product => {
+      productLookup.set(String(product.id), product);
+      if (product.legacyId) productLookup.set(String(product.legacyId), product);
+    });
+    const currentRows = rows.filter(row => String(row.day) >= sinceDay);
+    const previousRows = rows.filter(row => String(row.day) < sinceDay);
+    const grouped = new Map<string, { query: string; searches: number; previousSearches: number; clicks: number; purchases: number; revenue: number; zeroResults: number; resultImpressions: number; clickedProducts: Map<string, number>; purchasedProducts: Map<string, number> }>();
+    const ensure = (query: string) => {
+      const key = query.toLowerCase();
+      const item = grouped.get(key) || { query, searches: 0, previousSearches: 0, clicks: 0, purchases: 0, revenue: 0, zeroResults: 0, resultImpressions: 0, clickedProducts: new Map<string, number>(), purchasedProducts: new Map<string, number>() };
+      grouped.set(key, item);
+      return item;
+    };
+    const mergeProducts = (target: Map<string, number>, value: unknown) => {
+      Object.entries((value || {}) as Record<string, unknown>).forEach(([id, count]) => {
+        target.set(id, (target.get(id) || 0) + Math.max(0, Number(count) || 0));
+      });
+    };
+    currentRows.forEach(row => {
+      const item = ensure(row.query);
+      item.searches += Number(row.searches) || 0;
+      item.clicks += Number(row.clicks) || 0;
+      item.purchases += Number(row.purchases) || 0;
+      item.revenue += Number(row.revenue) || 0;
+      item.zeroResults += Number(row.zeroResults) || 0;
+      item.resultImpressions += Number(row.resultImpressions) || 0;
+      mergeProducts(item.clickedProducts, row.clickedProducts);
+      mergeProducts(item.purchasedProducts, row.purchasedProducts);
+    });
+    previousRows.forEach(row => { ensure(row.query).previousSearches += Number(row.searches) || 0; });
+    const categoryLabel = (slug: string) => ({ "press-ons": "Press-On Nails", wigs: "Wigs", lashes: "Lashes", products: "Products" })[slug] || slug.replace(/-/g, " ").replace(/\b\w/g, letter => letter.toUpperCase()) || "Products";
+    const queries = [...grouped.values()].map(item => {
+      const trendPercent = item.previousSearches
+        ? Number((((item.searches - item.previousSearches) / item.previousSearches) * 100).toFixed(1))
+        : item.searches ? null : 0;
+      const topClickedProductId = [...item.clickedProducts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+      const topPurchasedProductId = [...item.purchasedProducts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+      const product = topPurchasedProductId ? productLookup.get(topPurchasedProductId) : topClickedProductId ? productLookup.get(topClickedProductId) : undefined;
+      const metadata = (product?.metadata || {}) as Record<string, unknown>;
+      const category = typeof metadata.category === "string" ? metadata.category : "products";
+      const clickRate = item.searches ? Number(((item.clicks / item.searches) * 100).toFixed(1)) : 0;
+      const purchaseRate = item.searches ? Number(((item.purchases / item.searches) * 100).toFixed(1)) : 0;
+      const zeroResultRate = item.searches ? Number(((item.zeroResults / item.searches) * 100).toFixed(1)) : 0;
+      return {
+        query: item.query,
+        searches: item.searches,
+        previousSearches: item.previousSearches,
+        clicks: item.clicks,
+        clickRate,
+        purchases: item.purchases,
+        purchaseRate,
+        revenue: item.revenue,
+        zeroResults: item.zeroResults,
+        zeroResultRate,
+        resultImpressions: item.resultImpressions,
+        trendPercent,
+        suggestedLink: product ? { type: "category", id: category, label: categoryLabel(category), source: topPurchasedProductId ? "purchases" : "clicks", productId: product.id } : null
+      };
+    });
+    return {
+      rangeDays,
+      totalSearches: currentRows.reduce((sum, row) => sum + (Number(row.searches) || 0), 0),
+      zeroResultSearches: currentRows.reduce((sum, row) => sum + (Number(row.zeroResults) || 0), 0),
+      clickRate: currentRows.reduce((sum, row) => sum + (Number(row.searches) || 0), 0) ? Number(((currentRows.reduce((sum, row) => sum + (Number(row.clicks) || 0), 0) / currentRows.reduce((sum, row) => sum + (Number(row.searches) || 0), 0)) * 100).toFixed(1)) : 0,
+      totalPurchases: currentRows.reduce((sum, row) => sum + (Number(row.purchases) || 0), 0),
+      attributedRevenue: currentRows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0),
+      uniqueQueries: grouped.size,
+      queries: queries.sort((a, b) => b.searches - a.searches || b.clicks - a.clicks),
+      topQueries: queries.filter(item => item.searches).sort((a, b) => b.searches - a.searches || b.clicks - a.clicks).slice(0, 20),
+      zeroResultQueries: queries.filter(item => item.zeroResults).sort((a, b) => b.zeroResults - a.zeroResults).slice(0, 8)
+    };
+  }
+}
+
 @UseGuards(AdminGuard)
 @Controller("admin/users")
 class AdminUsersController {
@@ -203,5 +394,5 @@ class AdminUsersController {
   }
 }
 
-@Module({ controllers: [ProfileController, CartController, FavoritesController, ReviewsController, AdminReviewsController, StorefrontController, AdminUsersController] })
+@Module({ controllers: [ProfileController, CartController, FavoritesController, ReviewsController, AdminReviewsController, SearchEventsController, AdminSearchInsightsController, StorefrontController, AdminUsersController] })
 export class CustomerDataModule {}

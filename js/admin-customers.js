@@ -60,7 +60,7 @@ function buildCustomers(orders, userRows = []) {
         customer.email ||= detail.email || order.email || "";
         customer.phone ||= detail.phone || order.phone || order.delivery?.phone || "";
         customer.orders.push(order);
-        if (String(order.status || "").toLowerCase() !== "cancelled") customer.spend += Number(order.total || order.grandTotal || 0);
+        if (!["cancelled", "returned"].includes(String(order.status || "").toLowerCase())) customer.spend += Number(order.total || order.grandTotal || 0);
         if (placed && (!customer.firstOrder || placed < customer.firstOrder)) customer.firstOrder = placed;
         if (placed && (!customer.lastOrder || placed > customer.lastOrder)) customer.lastOrder = placed;
         grouped.set(key, customer);

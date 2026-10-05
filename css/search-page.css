@@ -20,6 +20,7 @@ button{cursor:pointer}
 .live-suggestion img{width:20px;height:20px;flex:0 0 20px;object-fit:contain;opacity:.82}
 .live-suggestion strong{font-weight:700}
 .live-suggestion:hover,.live-suggestion:focus-visible{color:#E5A484;outline:0}
+.live-suggestion-heading{padding:18px 0 5px;color:#8a817d;font-size:11px;font-weight:700;text-transform:uppercase}.live-suggestion-heading:first-child{padding-top:8px}.live-suggestion:is(a){text-decoration:none}.live-suggestion span{min-width:0}.live-suggestion small{display:block;margin-top:4px;color:#8a817d;font-size:11px;font-weight:400}.live-category-suggestion>img{width:30px;height:30px;flex-basis:30px;border-radius:8px;background:#f7f4f2;object-fit:cover}.live-product-suggestion>img{width:46px;height:52px;flex-basis:46px;border-radius:9px;object-fit:cover}.live-product-suggestion{padding:12px 0;font-size:15px}
 
 .search-page-main{width:min(1500px,100%);margin:0 auto;padding:30px 5% 70px}
 .search-section-heading,.results-heading{display:flex;align-items:center;justify-content:space-between;gap:18px}

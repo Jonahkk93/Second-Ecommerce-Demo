@@ -227,6 +227,7 @@ body{
 .account-status-grid [data-order-status="shipped"] strong{color:#7047c7}
 .account-status-grid [data-order-status="delivered"] strong{color:#07845d}
 .account-status-grid [data-order-status="cancelled"] strong{color:#c43d3d}
+.account-status-grid [data-order-status="returned"] strong{color:#8a6f5a}
 
 .account-purchases-title{
     margin-bottom:24px;
@@ -635,7 +636,7 @@ body.personal-delete-confirm-open{
 
 .account-tabs{
     display:grid;
-    grid-template-columns:repeat(6, minmax(0, 1fr));
+    grid-template-columns:repeat(auto-fit, minmax(128px, 1fr));
     margin-bottom:34px;
     border-bottom:1px solid var(--line);
 }

@@ -243,6 +243,10 @@ switch (order.status) {
         statusClass = "status-cancelled";
         break;
 
+    case "Returned":
+        statusClass = "status-returned";
+        break;
+
     default:
         statusClass = "status-pending";
 }
@@ -253,6 +257,9 @@ const orderSubtotal = Number(order.subtotal ?? Math.max(0, orderTotal - delivery
 const deliveryLabel = "Delivery";
 const deliveryDestination = [order.delivery?.city, order.delivery?.district].filter(Boolean).join(", ");
 const trackingUrl = /^https?:\/\/[^\s]+$/i.test(String(order.trackingUrl || "")) ? String(order.trackingUrl) : "";
+const cancellationRequest = order.delivery?.cancellationRequest;
+const cancellationPending = order.status !== "Cancelled" && cancellationRequest?.status === "pending";
+const cancellationRejected = order.status !== "Cancelled" && cancellationRequest?.status === "rejected";
 const trackingPanel = order.trackingNumber ? `
     <section class="order-tracking">
         <div><small>Shipment tracking</small><h3>${safeText(order.shippingCarrier || "MPWR delivery")}</h3></div>
@@ -289,6 +296,9 @@ orderCard.innerHTML = `
 
     ${trackingPanel}
 
+    ${cancellationPending ? `<section class="order-cancellation-note"><h3>Cancellation requested</h3><p>MPWR will review your request before cancelling this order.</p></section>` : ""}
+    ${cancellationRejected ? `<section class="order-cancellation-note is-rejected"><h3>Cancellation not approved</h3><p>This order is still active. Contact MPWR support if you need help.</p></section>` : ""}
+
     ${customerRefundPanel(order.delivery?.refund)}
 
 <div class="order-actions">
@@ -298,12 +308,16 @@ orderCard.innerHTML = `
     </button>
 
     ${
-        order.status === "Pending"
+        order.status === "Pending" && !cancellationPending && !cancellationRejected
             ? `
             <button class="cancel-order-btn">
-                Cancel Order
+                Request Cancellation
             </button>
             `
+            : cancellationPending
+                ? `<button class="cancel-order-btn" disabled>Cancellation Requested</button>`
+                : cancellationRejected
+                    ? `<button class="cancel-order-btn" disabled>Cancellation Not Approved</button>`
             : ""
     }
 
@@ -364,10 +378,10 @@ if (cancelButton) {
     cancelButton.addEventListener("click", async () => {
 
         const confirmed = await showOrderConfirmation({
-            title: "Cancel Order?",
-            message: "Are you sure you want to cancel this order? If payment was completed, a full refund will be opened automatically.",
+            title: "Request Cancellation?",
+            message: "Send this order to MPWR for cancellation approval?",
             dismissLabel: "Keep Order",
-            approveLabel: "Cancel Order"
+            approveLabel: "Request Cancellation"
         });
 
         if (!confirmed) return;
@@ -380,7 +394,7 @@ if (cancelButton) {
             }
         );
 
-        showOrdersToast("Order cancelled. Any completed payment is being refunded.");
+        showOrdersToast("Cancellation request sent for approval.");
 
         loadOrders();
 

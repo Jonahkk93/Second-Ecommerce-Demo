@@ -430,6 +430,7 @@ async function loadAccount(user) {
     const shipped = [];
     const delivered = [];
     const pending = [];
+    const processing = [];
     const returns = [];
     const review = [];
     const reviewed = [];
@@ -441,12 +442,13 @@ async function loadAccount(user) {
             const entry = { item, order };
             if (order.status === "Shipped") shipped.push(entry);
             if (order.status === "Delivered") delivered.push(entry);
-            if (["Pending", "Processing"].includes(order.status)) pending.push(entry);
+            if (order.status === "Pending") pending.push(entry);
+            if (order.status === "Processing") processing.push(entry);
             if (["Cancelled", "Returned", "Refunded"].includes(order.status)) returns.push(entry);
 
             const productId = String(item.id);
             if (
-                !["Cancelled", "Returned", "Refunded"].includes(order.status) &&
+                order.status === "Delivered" &&
                 !reviewedProducts.has(productId) &&
                 !reviewProductsAdded.has(productId)
             ) {
@@ -466,6 +468,7 @@ async function loadAccount(user) {
     renderCategory("shipped", shipped, "You have no shipped items.");
     renderCategory("delivered", delivered, "You have no delivered items.");
     renderCategory("pending", pending, "You have no pending items.");
+    renderCategory("processing", processing, "You have no processing items.");
     renderCategory("returns", returns, "You have no returns.");
     renderCategory("review", review, "You have reviewed all eligible purchases.");
     renderCategory("reviewed", reviewed, "You have not reviewed any purchases yet.");

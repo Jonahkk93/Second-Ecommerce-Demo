@@ -39,9 +39,10 @@ class AnalyticsController {
     const inWindow = (date: Date, start: Date, end: Date) => date >= start && date < end;
     const currentOrders = allOrders.filter(order => inWindow(order.createdAt, currentStart, now));
     const previousOrders = allOrders.filter(order => inWindow(order.createdAt, previousStart, currentStart));
-    const revenue = (rows: typeof allOrders) => rows.filter(order => order.status !== "cancelled").reduce((total, order) => total + order.total, 0);
+    const inactiveRevenueStatuses = new Set(["cancelled", "returned"]);
+    const revenue = (rows: typeof allOrders) => rows.filter(order => !inactiveRevenueStatuses.has(order.status)).reduce((total, order) => total + order.total, 0);
     const delivered = (rows: typeof allOrders) => rows.filter(order => order.status === "delivered").length;
-    const eligible = (rows: typeof allOrders) => rows.filter(order => order.status !== "cancelled").length;
+    const eligible = (rows: typeof allOrders) => rows.filter(order => !inactiveRevenueStatuses.has(order.status)).length;
     const currentRevenue = revenue(currentOrders);
     const previousRevenue = revenue(previousOrders);
     const currentCustomers = allUsers.filter(user => user.role === "customer" && inWindow(user.createdAt, currentStart, now)).length;
@@ -55,10 +56,10 @@ class AnalyticsController {
       const bucket = daily.get(dayKey(order.createdAt));
       if (!bucket) return;
       bucket.orders += 1;
-      if (order.status !== "cancelled") bucket.revenue += order.total;
+      if (!inactiveRevenueStatuses.has(order.status)) bucket.revenue += order.total;
     });
 
-    const currentOrderIds = new Set(currentOrders.filter(order => order.status !== "cancelled").map(order => order.id));
+    const currentOrderIds = new Set(currentOrders.filter(order => !inactiveRevenueStatuses.has(order.status)).map(order => order.id));
     const productById = new Map(allProducts.map(product => [product.id, product]));
     const productSales = new Map<string, { id: string; title: string; units: number; revenue: number; image: string; category: string }>();
     allItems.filter(item => currentOrderIds.has(item.orderId)).forEach(item => {
@@ -79,7 +80,7 @@ class AnalyticsController {
 
     const categoryMap = new Map<string, number>();
     productSales.forEach(product => categoryMap.set(product.category, (categoryMap.get(product.category) || 0) + product.revenue));
-    const statusOrder = ["pending", "processing", "shipped", "delivered", "cancelled"];
+    const statusOrder = ["pending", "processing", "shipped", "delivered", "cancelled", "returned"];
     const orderStatuses = statusOrder.map(status => ({ status, count: currentOrders.filter(order => order.status === status).length }));
 
     return {

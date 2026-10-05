@@ -874,6 +874,18 @@ productModalFavorite?.addEventListener("click", () => {
     const cardIcon = relatedProductsGrid?.querySelector(`.product-box[data-id="${selectedModalProduct.id}"] .wishlist-btn img`);
     if (cardIcon) cardIcon.src = isFavoriteProduct(selectedModalProduct) ? "images/Heart7.PNG" : "images/optimized/heart-outline.png";
 });
+function searchAttributionForCart(productId) {
+    try {
+        const attribution = JSON.parse(sessionStorage.getItem("mpwrSearchAttribution") || "{}");
+        const clickedAt = Date.parse(attribution.clickedAt);
+        if (String(attribution.productId) !== String(productId) || !clickedAt || Date.now() - clickedAt > 24 * 60 * 60 * 1000) return null;
+        return {
+            query:String(attribution.query || "").slice(0, 120),
+            originalQuery:String(attribution.originalQuery || "").slice(0, 120),
+            clickedAt:attribution.clickedAt
+        };
+    } catch { return null; }
+}
 productModalCart?.addEventListener("click", () => {
     if (!selectedModalProduct) return;
     const cartItem = {
@@ -886,7 +898,8 @@ productModalCart?.addEventListener("click", () => {
         selectedOptions: { ...selectedModalOptions },
         color: selectedModalOptions.color || "",
         size: selectedModalOptions.size || selectedModalOptions.length || "",
-        quantity: 1
+        quantity: 1,
+        searchAttribution: searchAttributionForCart(selectedModalProduct.id)
     };
     const cartItems = window.MPWRCartStorage?.current() || [];
     if (cartItems.some(item => item.id === cartItem.id && sameCartSelection(item, cartItem))) {
@@ -1306,7 +1319,7 @@ async function customerPurchasedProduct(user) {
 
     return snapshot.docs.some(orderDoc => {
         const order = orderDoc.data();
-        return order.status !== "Cancelled" &&
+        return order.status === "Delivered" &&
             Array.isArray(order.items) &&
             order.items.some(item => String(item.id) === String(product.id));
     });
@@ -2260,7 +2273,8 @@ addTocartIcon.addEventListener("click", () => {
         selectedOptions: { ...selectedOptions },
         color: selectedOptions.color || "",
         size: selectedOptions.size || selectedOptions.length || "",
-        quantity: quantity
+        quantity: quantity,
+        searchAttribution: searchAttributionForCart(product.id)
     };
 
     let cartItems = window.MPWRCartStorage?.current() || [];

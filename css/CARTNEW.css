@@ -1280,8 +1280,11 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 .menu2 a[aria-current="page"][href="Nails.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Nails Icon_E5A484.PNG")}
 .menu2 a[aria-current="page"][href="Wigs.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Wigs Icon_E5A484.PNG")}
 .menu2 a[aria-current="page"][href="ProductsPage.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Products 2 Icon_E5A484.PNG")}
+.menu2 a[aria-current="page"][href="ProductsPage.html?category=all"] .sidebar-item-icon{content:url("../images/Icon Folder/Products 2 Icon_E5A484.PNG")}
 .menu2 a[aria-current="page"][href="Lashes.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Lashes Icon_E5A484.PNG")}
-.menu2 a[aria-current="page"]:is([href="Discounts.html"],[href="Campaign.html"]) .sidebar-item-icon{content:url("../images/Icon Folder/Discount Icon_E5A484.PNG")}
+.menu2 :is(.sidebar-campaign-item,.sidebar-discounts-item) .sidebar-item-icon{
+    filter:none;
+}
 
 .social_media{
     display: flex;

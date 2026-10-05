@@ -30,6 +30,10 @@
                     <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Pending Icon_333.PNG" data-icon-default="images/Icon Folder/Pending Icon_Gray.PNG" data-icon-active="images/Icon Folder/Pending Icon_333.PNG" alt="">Pending</span>
                     <span data-count="pending">0</span>
                 </button>
+                <button class="account-tab" type="button" data-section="processing">
+                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Order status 2_Gray.PNG" data-icon-default="images/Icon Folder/Order status 2_Gray.PNG" data-icon-active="images/Icon Folder/Order status 2_333.PNG" alt="">Processing</span>
+                    <span data-count="processing">0</span>
+                </button>
                 <button class="account-tab" type="button" data-section="shipped">
                     <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Truck Icon_Gray.PNG" data-icon-default="images/Icon Folder/Truck Icon_Gray.PNG" data-icon-active="images/Icon Folder/Truck Icon_333.PNG" alt="">Shipped</span>
                     <span data-count="shipped">0</span>
@@ -43,7 +47,7 @@
                     <span data-count="returns">0</span>
                 </button>
                 <button class="account-tab" type="button" data-section="review">
-                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Reviews Icon_Gray.PNG" data-icon-default="images/Icon Folder/Reviews Icon_Gray.PNG" data-icon-active="images/Icon Folder/Reviews Icon_333.PNG" alt="">To Review</span>
+                    <span class="account-tab-label"><img class="account-tab-icon" src="images/Icon Folder/Reviews Icon_Gray.PNG" data-icon-default="images/Icon Folder/Reviews Icon_Gray.PNG" data-icon-active="images/Icon Folder/Reviews Icon_333.PNG" alt="">Review</span>
                     <span data-count="review">0</span>
                 </button>
                 <button class="account-tab" type="button" data-section="reviewed">
@@ -54,8 +58,12 @@
 
             <div class="account-sections">
                 <section class="account-order-section active" data-panel="pending">
-                    <div class="section-heading"><h2>Pending items</h2><p>Orders being confirmed or prepared.</p></div>
+                    <div class="section-heading"><h2>Pending items</h2><p>Orders waiting to be confirmed.</p></div>
                     <div class="account-items" data-items="pending"></div>
+                </section>
+                <section class="account-order-section" data-panel="processing">
+                    <div class="section-heading"><h2>Processing items</h2><p>Orders being prepared before shipment.</p></div>
+                    <div class="account-items" data-items="processing"></div>
                 </section>
                 <section class="account-order-section" data-panel="shipped">
                     <div class="section-heading"><h2>Shipped items</h2><p>Orders currently on their way to you.</p></div>

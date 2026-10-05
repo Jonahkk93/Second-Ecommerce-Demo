@@ -1,5 +1,5 @@
 import { onAuthStateChanged } from "./auth-api.js";
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getManagementBootstrap, setDoc, updateDoc } from "./firestore-api.js?v=20260928-2";
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getManagementBootstrap, getSearchInsights, setDoc, updateDoc } from "./firestore-api.js?v=20261001-1";
 import { deleteImage, importImage, uploadImage } from "./media-api.js?v=20260929-2";
 import { openReviewLightbox } from "./review-lightbox.js?v=20260923-3";
 
@@ -53,11 +53,15 @@ const DEFAULT_HOMEPAGE_HERO = {
 };
 const DEFAULT_CAMPAIGN_BANNER = {
     enabled: true,
-    eyebrow: "Limited Offers",
+    eyebrow: "Event",
     heading: "15% off selected favourites",
     body: "Bring your next beauty refresh home for less with limited-time campaign deals.",
     buttonLabel: "Shop offers",
     buttonLink: "Campaign.html",
+    image: "images/Icon Folder/Image Icon_White.PNG"
+};
+const LEGACY_CAMPAIGN_BANNER_DEFAULTS = {
+    eyebrow: "Limited Offers",
     image: "images/Icon Folder/Discount Icon_E5A484.PNG"
 };
 const DISCOUNT_CAMPAIGN_LABELS = ["Limited Offers", "Valentines Offers", "Christmas Offers", "Black Friday"];
@@ -99,10 +103,34 @@ const HOMEPAGE_DESTINATION_GROUPS = [
         values: ["custom"]
     }
 ];
+const HOMEPAGE_SECTION_ORDER_DEFAULT = ["announcement", "hero", "campaign", "popular", "discounts"];
+const HOMEPAGE_SECTION_LOCKED = new Set(["announcement", "hero"]);
+const HOMEPAGE_SECTION_DETAILS = {
+    announcement: { label: "Announcement Bar", description: "Fixed at the top of the storefront" },
+    hero: { label: "Hero Banner", description: "Fixed as the first visual banner" },
+    campaign: { label: "Campaign Banner", description: "Promotional banner below the hero" },
+    popular: { label: "Popular Products", description: "Main product section on the homepage" },
+    discounts: { label: "Discount Campaign", description: "Current discount campaign section" }
+};
 
 function normalizeDiscountCampaignLabel(label) {
     const normalizedLabel = LEGACY_DISCOUNT_CAMPAIGN_LABELS[label] || label;
     return DISCOUNT_CAMPAIGN_LABELS.includes(normalizedLabel) ? normalizedLabel : DISCOUNT_CAMPAIGN_LABELS[0];
+}
+
+function normalizeHomepageSectionOrder(value) {
+    const incoming = Array.isArray(value?.items) ? value.items : value;
+    const valid = new Set(HOMEPAGE_SECTION_ORDER_DEFAULT);
+    const movable = [];
+    (Array.isArray(incoming) ? incoming : []).forEach(item => {
+        const key = String(item || "").trim();
+        if (!valid.has(key) || HOMEPAGE_SECTION_LOCKED.has(key) || movable.includes(key)) return;
+        movable.push(key);
+    });
+    HOMEPAGE_SECTION_ORDER_DEFAULT.forEach(key => {
+        if (!HOMEPAGE_SECTION_LOCKED.has(key) && !movable.includes(key)) movable.push(key);
+    });
+    return HOMEPAGE_SECTION_ORDER_DEFAULT.filter(key => HOMEPAGE_SECTION_LOCKED.has(key)).concat(movable);
 }
 const legacyCategories = {
     "1": "press-ons", "2": "press-ons", "4": "press-ons", "5": "press-ons", "6": "press-ons", "8": "press-ons",
@@ -125,6 +153,7 @@ let discountMode = "manual";
 let discountSectionEnabled = true;
 let announcementBar = { ...DEFAULT_ANNOUNCEMENT_BAR };
 let homepageHero = { ...DEFAULT_HOMEPAGE_HERO };
+let homepageSectionOrder = [...HOMEPAGE_SECTION_ORDER_DEFAULT];
 let homepageHeroPreviewImage = "";
 let homepageHeroPreviewTimer = null;
 let homepageHeroPreviewFadeTimer = null;
@@ -133,8 +162,13 @@ let homepageHeroPreviewPlaying = false;
 let savedHomepageHeroImageKeys = new Set();
 const pendingHomepageHeroImageKeys = new Set();
 let campaignBanner = { ...DEFAULT_CAMPAIGN_BANNER };
-let searchSettings = { suggestions: [...DEFAULT_SEARCH_SUGGESTIONS], popularProducts: [], popularMode: "automatic", suggestionsEnabled: true, popularEnabled: true, suggestionsHeading: "Suggested searches", popularHeading: "Popular picks", defaultSort: "relevance", trendingEnabled: true, trendingHeading: "Trending searches", trendingSearches: [...DEFAULT_TRENDING_SEARCHES], synonyms: DEFAULT_SEARCH_SYNONYMS.map(item => ({ ...item, synonyms: [...item.synonyms] })), emptyFallback: "popular", emptyMessage: "Try a trending search or browse our popular picks." };
+let searchSettings = { suggestions: [...DEFAULT_SEARCH_SUGGESTIONS], popularProducts: [], popularMode: "automatic", suggestionsEnabled: true, popularEnabled: true, suggestionsHeading: "Suggested searches", popularHeading: "Popular picks", defaultSort: "relevance", trendingEnabled: true, trendingHeading: "Trending searches", trendingSearches: [...DEFAULT_TRENDING_SEARCHES], trendingHiddenSearches: [], trendingAutoRefresh: false, trendingLastAutoRefresh: "", synonyms: DEFAULT_SEARCH_SYNONYMS.map(item => ({ ...item, synonyms: [...item.synonyms] })), emptyFallback: "popular", emptyMessage: "Try a trending search or browse our popular picks.", searchRules: [], autocompleteEnabled: true, autocompleteCategories: true, autocompleteProducts: true, autocompleteProductLimit: 3, typoEnabled: true, typoStrength: "balanced" };
+let searchInsights = null;
+let activeSynonymAddIndex = null;
+let activeSearchSection = "filters";
+let searchTrendingExpanded = false;
 let editingProduct = null;
+let productEditorScrollY = 0;
 let pendingMediaPreviewUrls = [];
 let selectedMediaFiles = [];
 let removedExistingImageUrls = new Set();
@@ -150,6 +184,7 @@ let homepagePanelResizeObserver = null;
 let homepageAutosaveTimer = null;
 let homepageAutosaveQueue = Promise.resolve();
 let homepageAutosaveMessage = "";
+let activeHomepageSection = "announcement";
 let categorySlugEdited = false;
 let categoryProductIds = new Set();
 let categoryReassignmentIds = new Set();
@@ -224,11 +259,67 @@ function readAnnouncementBarForm() {
     return announcementBar;
 }
 
+function syncHomepageTabVisibility(input, enabled, sectionName) {
+    const control = input?.closest(".homepage-tab-visibility");
+    if (!control) return;
+    const action = enabled ? "Hide" : "Show";
+    control.classList.toggle("is-off", !enabled);
+    control.title = `${action} ${sectionName}`;
+    input.setAttribute("aria-label", `${action} ${sectionName}`);
+    const icon = control.querySelector("img");
+    if (icon) icon.src = `images/Icon Folder/Shutdown Icon_${enabled ? "E5A484" : "Gray"}.PNG?v=20261003-2`;
+}
+
+function syncSearchVisibilityIcon(input, enabled, sectionName) {
+    const control = input?.closest(".search-visibility-toggle");
+    if (!control) return;
+    const action = enabled ? "Hide" : "Show";
+    control.classList.toggle("is-off", !enabled);
+    control.title = `${action} ${sectionName}`;
+    input.setAttribute("aria-label", `${action} ${sectionName}`);
+    const icon = control.querySelector("img");
+    if (icon) icon.src = `images/Icon Folder/Shutdown Icon_${enabled ? "E5A484" : "Gray"}.PNG?v=20261003-2`;
+}
+
+function syncCampaignBannerTabIcon() {
+    const control = $("#homepage-campaign-enabled")?.closest(".homepage-tab-visibility");
+    const synced = Boolean($("#homepage-campaign-sync")?.checked);
+    control?.classList.toggle("is-synced", synced);
+    const icon = control?.querySelector("img");
+    if (icon && synced) icon.src = "images/Icon Folder/Link Icon_E5A484.PNG?v=20261003-2";
+}
+
+function syncCampaignSyncCard() {
+    const card = $("#campaign-sync-card");
+    if (!card) return;
+    const source = $("#homepage-campaign-source")?.value;
+    const syncToggle = $("#homepage-campaign-sync");
+    const linked = source === "discounts";
+    const synced = linked && Boolean(syncToggle?.checked);
+    const label = discountCampaignLabel;
+    const copy = DISCOUNT_CAMPAIGN_COPY[label] || DEFAULT_CAMPAIGN_BANNER.body;
+    const icon = card.querySelector(".campaign-sync-campaign-icon");
+    if (icon) icon.src = synced ? (DISCOUNT_CAMPAIGN_ICONS[label] || DEFAULT_CAMPAIGN_BANNER.image) : DEFAULT_CAMPAIGN_BANNER.image;
+    const labelNode = card.querySelector("[data-campaign-sync-label]");
+    if (labelNode) labelNode.textContent = linked ? label : "No campaign linked";
+    const copyNode = card.querySelector("[data-campaign-sync-copy]");
+    if (copyNode) copyNode.textContent = linked ? copy : "Choose the current discount campaign to sync banner content.";
+    const status = card.querySelector("[data-campaign-sync-status]");
+    if (status) status.textContent = synced ? "Synced" : linked ? "Ready to sync" : "Not linked";
+    const toggleLabel = card.querySelector(".campaign-sync-toggle span");
+    if (toggleLabel) toggleLabel.textContent = synced ? "Unsync" : "Sync";
+    card.classList.toggle("is-synced", synced);
+    card.classList.toggle("is-disabled", !linked);
+}
+
 function renderAnnouncementBarPreview() {
     const announcement = readAnnouncementBarForm();
     const preview = $("#homepage-announcement-preview");
+    const panel = $("#homepage-section-announcement");
+    panel.classList.toggle("section-disabled", !announcement.enabled);
+    panel.inert = !announcement.enabled;
     preview.classList.toggle("is-hidden", !announcement.enabled);
-    $(".homepage-announcement-toggle-label").textContent = announcement.enabled ? "Shown" : "Hidden";
+    syncHomepageTabVisibility($("#homepage-announcement-enabled"), announcement.enabled, "Announcement Bar");
     preview.querySelector("span").textContent = announcement.message;
     const link = preview.querySelector("a");
     link.textContent = announcement.linkLabel;
@@ -574,8 +665,11 @@ function initializeHeroCategoryReorder() {
 function renderHomepageHeroPreview({ syncMedia = true } = {}) {
     const hero = readHomepageHeroForm();
     const preview = $("#homepage-hero-preview");
+    const panel = $("#homepage-section-hero");
+    panel.classList.toggle("section-disabled", !hero.enabled);
+    panel.inert = !hero.enabled;
     preview.classList.toggle("is-hidden", !hero.enabled);
-    $(".homepage-hero-toggle-label").textContent = hero.enabled ? "Shown" : "Hidden";
+    syncHomepageTabVisibility($("#homepage-hero-enabled"), hero.enabled, "Hero Banner");
     preview.querySelector(".hero-preview-eyebrow").textContent = hero.eyebrow;
     preview.querySelector("h3").textContent = hero.heading;
     preview.querySelector(".hero-preview-body").textContent = hero.body;
@@ -653,7 +747,11 @@ function updateHomepageHeroPreviewPlayButton(images) {
     if (!canPlay && homepageHeroPreviewPlaying) stopHomepageHeroPreview();
     button.disabled = !canPlay;
     button.setAttribute("aria-pressed", String(homepageHeroPreviewPlaying));
-    button.querySelector(".management-storefront-hero-play-icon").textContent = homepageHeroPreviewPlaying ? "■" : "▶";
+    const icon = button.querySelector(".management-storefront-hero-play-icon");
+    if (icon) {
+        icon.classList.toggle("is-play", !homepageHeroPreviewPlaying);
+        icon.classList.toggle("is-stop", homepageHeroPreviewPlaying);
+    }
     button.querySelector(".management-storefront-hero-play-label").textContent = homepageHeroPreviewPlaying ? "Stop Preview" : "Play Preview";
 }
 
@@ -766,18 +864,27 @@ function syncHomepageHeroForm() {
 
 function normalizeCampaignBanner(value = {}) {
     const source = value.source === "discounts" ? "discounts" : "custom";
+    const synced = source === "discounts" && value.syncWithCampaign === true;
+    const campaignIconValues = Object.values(DISCOUNT_CAMPAIGN_ICONS);
+    const hasLinkedCampaignDefaults = !synced && (DISCOUNT_CAMPAIGN_LABELS.includes(value.eyebrow) || campaignIconValues.includes(value.image));
+    const eyebrowValue = hasLinkedCampaignDefaults ? DEFAULT_CAMPAIGN_BANNER.eyebrow : value.eyebrow;
+    const headingValue = hasLinkedCampaignDefaults ? DEFAULT_CAMPAIGN_BANNER.heading : value.heading;
+    const bodyValue = hasLinkedCampaignDefaults ? DEFAULT_CAMPAIGN_BANNER.body : value.body;
+    const buttonLabelValue = hasLinkedCampaignDefaults ? DEFAULT_CAMPAIGN_BANNER.buttonLabel : value.buttonLabel;
+    const buttonLinkValue = hasLinkedCampaignDefaults ? DEFAULT_CAMPAIGN_BANNER.buttonLink : value.buttonLink;
+    const imageValue = hasLinkedCampaignDefaults ? DEFAULT_CAMPAIGN_BANNER.image : value.image;
     return {
         enabled: value.enabled !== false,
         source,
-        syncWithCampaign: source === "discounts" && value.syncWithCampaign === true,
+        syncWithCampaign: synced,
         linkedCampaignLabel: source === "discounts" ? normalizeDiscountCampaignLabel(value.linkedCampaignLabel) : "",
-        eyebrow: cleanHeroText(value.eyebrow, DEFAULT_CAMPAIGN_BANNER.eyebrow, 40),
-        heading: cleanHeroText(value.heading, DEFAULT_CAMPAIGN_BANNER.heading, 80),
-        body: cleanHeroText(value.body, DEFAULT_CAMPAIGN_BANNER.body, 180),
-        buttonLabel: cleanHeroText(value.buttonLabel, DEFAULT_CAMPAIGN_BANNER.buttonLabel, 32),
-        buttonLink: normalizeStorefrontLink(cleanHeroText(value.buttonLink, DEFAULT_CAMPAIGN_BANNER.buttonLink, 140), DEFAULT_CAMPAIGN_BANNER.buttonLink),
-        image: cleanHeroText(value.image, DEFAULT_CAMPAIGN_BANNER.image, 500),
-        imageKey: cleanHeroText(value.imageKey, "", 500)
+        eyebrow: cleanHeroText(eyebrowValue, DEFAULT_CAMPAIGN_BANNER.eyebrow, 40),
+        heading: cleanHeroText(headingValue, DEFAULT_CAMPAIGN_BANNER.heading, 80),
+        body: cleanHeroText(bodyValue, DEFAULT_CAMPAIGN_BANNER.body, 180),
+        buttonLabel: cleanHeroText(buttonLabelValue, DEFAULT_CAMPAIGN_BANNER.buttonLabel, 32),
+        buttonLink: normalizeStorefrontLink(cleanHeroText(buttonLinkValue, DEFAULT_CAMPAIGN_BANNER.buttonLink, 140), DEFAULT_CAMPAIGN_BANNER.buttonLink),
+        image: cleanHeroText(imageValue, DEFAULT_CAMPAIGN_BANNER.image, 500),
+        imageKey: hasLinkedCampaignDefaults ? "" : cleanHeroText(value.imageKey, "", 500)
     };
 }
 
@@ -815,6 +922,19 @@ function linkedDiscountCampaignPreset() {
     };
 }
 
+function resetCampaignBannerDefaultFields() {
+    $("#homepage-campaign-eyebrow").value = DEFAULT_CAMPAIGN_BANNER.eyebrow;
+    $("#homepage-campaign-heading").value = DEFAULT_CAMPAIGN_BANNER.heading;
+    const bodyField = $("#homepage-campaign-body");
+    bodyField.value = DEFAULT_CAMPAIGN_BANNER.body;
+    window.MPWRAutoGrowTextareas?.prepare(bodyField);
+    $("#homepage-campaign-button-label").value = DEFAULT_CAMPAIGN_BANNER.buttonLabel;
+    $("#homepage-campaign-button-link").value = DEFAULT_CAMPAIGN_BANNER.buttonLink;
+    syncHomepageLinkDestination($("#homepage-campaign-button-link-choice"));
+    $("#homepage-campaign-image").value = DEFAULT_CAMPAIGN_BANNER.image;
+    $("#homepage-campaign-image-key").value = "";
+}
+
 function syncLinkedCampaignControls({ refreshContent = false } = {}) {
     const source = $("#homepage-campaign-source").value;
     const linkedOption = $("#homepage-campaign-source").querySelector('option[value="discounts"]');
@@ -822,10 +942,9 @@ function syncLinkedCampaignControls({ refreshContent = false } = {}) {
     const syncToggle = $("#homepage-campaign-sync");
     const linked = source === "discounts";
     const activelySynced = linked && syncToggle.checked;
-    syncToggle.disabled = !linked;
-    if (!linked) syncToggle.checked = false;
     $("#homepage-campaign-enabled").disabled = activelySynced;
     syncToggle.closest(".campaign-sync-settings")?.classList.toggle("is-disabled", !linked);
+    syncCampaignSyncCard();
     if (linked && refreshContent) {
         const preset = linkedDiscountCampaignPreset();
         $("#homepage-campaign-eyebrow").value = preset.eyebrow;
@@ -847,16 +966,24 @@ function syncLinkedCampaignControls({ refreshContent = false } = {}) {
 function renderCampaignBannerPreview() {
     const banner = readCampaignBannerForm();
     const preview = $("#homepage-campaign-preview");
+    const panel = $("#homepage-section-campaign");
+    panel.classList.toggle("section-disabled", !banner.enabled);
+    panel.inert = !banner.enabled;
     preview.classList.toggle("is-hidden", !banner.enabled);
-    $(".homepage-campaign-toggle-label").textContent = banner.enabled ? "Shown" : "Hidden";
-    preview.querySelector(".hero-preview-eyebrow").textContent = banner.eyebrow;
+    syncHomepageTabVisibility($("#homepage-campaign-enabled"), banner.enabled, "Campaign Banner");
+    syncCampaignBannerTabIcon();
+    syncCampaignSyncCard();
+    const synced = banner.source === "discounts" && banner.syncWithCampaign;
+    const eyebrow = !synced && banner.eyebrow === LEGACY_CAMPAIGN_BANNER_DEFAULTS.eyebrow ? DEFAULT_CAMPAIGN_BANNER.eyebrow : banner.eyebrow;
+    const displayImage = !synced && banner.image === LEGACY_CAMPAIGN_BANNER_DEFAULTS.image ? DEFAULT_CAMPAIGN_BANNER.image : banner.image;
+    preview.querySelector(".hero-preview-eyebrow").textContent = eyebrow;
     preview.querySelector("h3").textContent = banner.heading;
     preview.querySelector(".hero-preview-body").textContent = banner.body;
     preview.querySelector(".hero-preview-button").textContent = banner.buttonLabel;
     const image = preview.querySelector("img");
-    image.src = banner.image;
+    image.src = displayImage;
     image.alt = banner.heading;
-    syncBannerMediaControl("campaign", banner.image);
+    syncBannerMediaControl("campaign", !synced && displayImage === DEFAULT_CAMPAIGN_BANNER.image ? "" : displayImage);
 }
 
 function syncCampaignBannerForm() {
@@ -898,8 +1025,16 @@ function syncBannerUrlField(prefix) {
 function syncBannerMediaControl(prefix, imageUrl, statusText = "Current image") {
     const container = $(`[data-banner-media="${prefix}"]`);
     if (!container) return;
-    container.querySelector(".banner-media-thumbnail").src = imageUrl;
-    container.querySelector(".banner-media-status").textContent = statusText;
+    const preview = container.querySelector(".banner-media-preview");
+    const thumbnail = container.querySelector(".banner-media-thumbnail");
+    preview?.classList.toggle("is-empty", !imageUrl);
+    if (preview) preview.hidden = !imageUrl;
+    if (thumbnail) thumbnail.src = imageUrl || "";
+    const status = container.querySelector(".banner-media-status");
+    if (status) {
+        status.textContent = imageUrl ? statusText : "";
+        status.hidden = !imageUrl;
+    }
     syncBannerUrlField(prefix);
 }
 
@@ -1309,7 +1444,6 @@ function initializeBannerMediaUploader({ prefix, defaultImage, render }) {
             keyInput.value = uploaded.key || "";
             render();
             syncBannerMediaControl(prefix, uploaded.url, `${file.name} uploaded · Save homepage to publish`);
-            showToast("Banner image uploaded. Save homepage to publish it.");
         } catch (error) {
             urlInput.value = previousUrl;
             keyInput.value = previousKey;
@@ -1366,12 +1500,13 @@ function initializeBannerMediaUploader({ prefix, defaultImage, render }) {
         syncBannerMediaControl(prefix, imageUrl, "Previewing Image 1");
     });
     resetButton.addEventListener("click", () => {
-        urlInput.value = defaultImage;
+        const clearsToEmptyPreview = prefix === "campaign" && defaultImage === DEFAULT_CAMPAIGN_BANNER.image;
+        urlInput.value = clearsToEmptyPreview ? "" : defaultImage;
         delete urlInput.dataset.filledUrl;
         urlInput.disabled = false;
         keyInput.value = "";
         render();
-        syncBannerMediaControl(prefix, defaultImage, "Default image restored · Save homepage to publish");
+        syncBannerMediaControl(prefix, clearsToEmptyPreview ? "" : defaultImage, clearsToEmptyPreview ? "" : "Default image restored · Save homepage to publish");
     });
 }
 
@@ -1395,13 +1530,51 @@ function activateManagementPanel(panelName, updateHistory = false) {
     $$(".management-nav-item[data-panel]").forEach(item => item.classList.toggle("active", item.dataset.panel === panel));
     $$(".management-panel").forEach(section => section.classList.toggle("active", section.dataset.panelContent === panel));
     $("#add-product-btn").classList.toggle("hidden", panel !== "catalogue");
-    if (panel === "homepage") requestAnimationFrame(syncHomepagePanelHeights);
-    if (panel === "search") requestAnimationFrame(renderSearchSettings);
+    if (panel === "homepage") requestAnimationFrame(() => {
+        activateHomepageSection(activeHomepageSection);
+        syncHomepagePanelHeights();
+    });
+    if (panel === "search") requestAnimationFrame(() => {
+        activateSearchSection(activeSearchSection);
+        renderSearchSettings();
+    });
 
     if (updateHistory) {
         const nextHash = `#${panelHashes[panel]}`;
         if (window.location.hash !== nextHash) window.history.pushState({ managementPanel: panel }, "", nextHash);
     }
+}
+
+function activateHomepageSection(sectionName = "announcement") {
+    const validSections = new Set($$("[data-homepage-section-tab]").map(tab => tab.dataset.homepageSectionTab));
+    const section = validSections.has(sectionName) ? sectionName : "announcement";
+    activeHomepageSection = section;
+    $$("[data-homepage-section-tab]").forEach(tab => {
+        const active = tab.dataset.homepageSectionTab === section;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+        tab.tabIndex = active ? 0 : -1;
+    });
+    $$("[data-homepage-section-panel]").forEach(panel => {
+        panel.hidden = panel.dataset.homepageSectionPanel !== section;
+    });
+    requestAnimationFrame(syncHomepagePanelHeights);
+}
+
+function activateSearchSection(sectionName = "synonyms") {
+    if (sectionName === "merchandising") sectionName = "filters";
+    const validSections = new Set($$("[data-search-section-tab]").map(tab => tab.dataset.searchSectionTab));
+    const section = validSections.has(sectionName) ? sectionName : "synonyms";
+    activeSearchSection = section;
+    $$("[data-search-section-tab]").forEach(tab => {
+        const active = tab.dataset.searchSectionTab === section;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+        tab.tabIndex = active ? 0 : -1;
+    });
+    $$("[data-search-section-panel]").forEach(panel => {
+        panel.hidden = panel.dataset.searchSectionPanel !== section;
+    });
 }
 
 function setPermanentDeleteButtonState(button, confirming) {
@@ -1500,7 +1673,7 @@ function updateHomepageSelection(product, action, sourceCard = null) {
     if (action === "add") {
         if (!popularIds.includes(id)) popularIds.push(id);
     } else popularIds = popularIds.filter(value => value !== id);
-    renderPopularSelection();
+    updatePopularSelectionPreview(product, action);
     updateHomepageProductCard(id, action === "add");
     if (action === "add") animateProductToPopular(sourceCard, id);
     return true;
@@ -1551,10 +1724,10 @@ function updateDiscountSelection(product, action, sourceCard = null) {
     else if (!discountSelection(id)) discountSelections.push({ id, percent: 15 });
     if (action === "add" && popularMode === "manual" && popularIds.includes(id)) {
         popularIds = popularIds.filter(value => value !== id);
-        renderPopularSelection();
+        updatePopularSelectionPreview(product, "remove");
     }
     updateHomepageProductCard(id, action === "add");
-    renderDiscountSelection();
+    updateDiscountSelectionPreview(product, action);
     if ($("#homepage-campaign-source").value === "discounts" && $("#homepage-campaign-sync").checked) {
         syncLinkedCampaignControls({ refreshContent: true });
     }
@@ -1668,45 +1841,230 @@ function syncCategoryControls(preferredProductCategory = "") {
     productSelect.value = productValue === UNCATEGORIZED_CATEGORY || categories.some(category => category.slug === productValue) ? productValue : "products";
     productDropdownSync.get(filter)?.refresh?.();
     productDropdownSync.get(productSelect)?.refresh?.();
-    renderCategoryOrder();
+    renderHomepageSectionOrder();
     renderHeroCategoryOrder();
 }
 
-function renderCategoryOrder() {
+function renderHomepageSectionOrder() {
     const list = $("#category-order-list");
     if (!list) return;
-    list.innerHTML = categories.map((category, index) => `
-        <article class="category-order-item" draggable="true" data-slug="${escapeHtml(category.slug)}">
-            <span class="category-order-drag" aria-hidden="true">☰</span>
-            <div><strong>${escapeHtml(category.label)}</strong><small>${escapeHtml(category.slug)}</small></div>
-            <div class="category-order-actions">
-                <button type="button" data-category-move="up" ${index === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(category.label)} up">↑</button>
-                <button type="button" data-category-move="down" ${index === categories.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(category.label)} down">↓</button>
-            </div>
+    homepageSectionOrder = normalizeHomepageSectionOrder(homepageSectionOrder);
+    list.innerHTML = homepageSectionOrder.map((key, index) => {
+        const locked = HOMEPAGE_SECTION_LOCKED.has(key);
+        const detail = HOMEPAGE_SECTION_DETAILS[key] || { label: key, description: "Homepage section" };
+        const label = key === "discounts" ? discountCampaignLabel : detail.label;
+        const description = key === "discounts" ? "Current discount campaign section" : detail.description;
+        const control = locked
+            ? `<span class="homepage-order-status">Fixed</span>`
+            : `<span class="homepage-order-status is-movable">Drag</span>`;
+        return `
+        <article class="category-order-item homepage-order-item${locked ? " is-locked" : ""}" draggable="${locked ? "false" : "true"}" data-homepage-order-key="${escapeHtml(key)}" aria-label="${escapeHtml(label)}, position ${index + 1}${locked ? ", fixed" : ""}">
+            <span class="category-order-drag" aria-hidden="true">${locked ? index + 1 : '<img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt="">'}</span>
+            <div><strong>${escapeHtml(label)}</strong><small>${escapeHtml(description)}</small></div>
+            ${control}
         </article>
-    `).join("");
+    `;
+    }).join("");
 }
 
-function moveCategory(slug, direction) {
-    const index = categories.findIndex(category => category.slug === slug);
-    if (index < 0) return;
-    const nextIndex = direction === "up" ? index - 1 : index + 1;
-    if (nextIndex < 0 || nextIndex >= categories.length) return;
-    const nextCategories = [...categories];
-    [nextCategories[index], nextCategories[nextIndex]] = [nextCategories[nextIndex], nextCategories[index]];
-    categories = nextCategories;
-    syncCategoryControls();
-}
-
-function reorderCategoryBefore(dragSlug, targetSlug) {
-    if (!dragSlug || !targetSlug || dragSlug === targetSlug) return;
-    const dragged = categories.find(category => category.slug === dragSlug);
+function reorderHomepageSectionNear(dragKey, targetKey, placeAfter = false) {
+    homepageSectionOrder = normalizeHomepageSectionOrder(homepageSectionOrder);
+    if (!dragKey || !targetKey || dragKey === targetKey || HOMEPAGE_SECTION_LOCKED.has(dragKey) || HOMEPAGE_SECTION_LOCKED.has(targetKey)) return;
+    const movable = homepageSectionOrder.filter(key => !HOMEPAGE_SECTION_LOCKED.has(key));
+    const dragged = movable.find(key => key === dragKey);
     if (!dragged) return;
-    const withoutDragged = categories.filter(category => category.slug !== dragSlug);
-    const targetIndex = withoutDragged.findIndex(category => category.slug === targetSlug);
+    const withoutDragged = movable.filter(key => key !== dragKey);
+    const targetIndex = withoutDragged.findIndex(key => key === targetKey);
     if (targetIndex < 0) return;
-    categories = [...withoutDragged.slice(0, targetIndex), dragged, ...withoutDragged.slice(targetIndex)];
-    syncCategoryControls();
+    const insertIndex = targetIndex + (placeAfter ? 1 : 0);
+    homepageSectionOrder = normalizeHomepageSectionOrder([...HOMEPAGE_SECTION_ORDER_DEFAULT.filter(key => HOMEPAGE_SECTION_LOCKED.has(key)), ...withoutDragged.slice(0, insertIndex), dragged, ...withoutDragged.slice(insertIndex)]);
+    renderHomepageSectionOrder();
+}
+
+function homepageSectionOrderItems() {
+    return $$("#category-order-list .homepage-order-item");
+}
+
+function updateHomepageSectionOrderRanks() {
+    homepageSectionOrderItems().forEach((item, index) => {
+        const key = item.dataset.homepageOrderKey;
+        const drag = item.querySelector(".category-order-drag");
+        if (HOMEPAGE_SECTION_LOCKED.has(key) && drag) drag.textContent = String(index + 1);
+        const title = item.querySelector("strong")?.textContent || key;
+        item.setAttribute("aria-label", `${title}, position ${index + 1}${HOMEPAGE_SECTION_LOCKED.has(key) ? ", fixed" : ""}`);
+    });
+}
+
+function animateHomepageSectionOrderLayout(mutate) {
+    const items = homepageSectionOrderItems();
+    const before = new Map(items.map(item => [item, item.getBoundingClientRect()]));
+    mutate();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    items.forEach(item => {
+        const start = before.get(item);
+        if (!start) return;
+        const end = item.getBoundingClientRect();
+        const dx = start.left - end.left;
+        const dy = start.top - end.top;
+        if (!dx && !dy) return;
+        item.animate([
+            { transform: `translate(${dx}px, ${dy}px)` },
+            { transform: "translate(0, 0)" }
+        ], { duration: 90, easing: "cubic-bezier(.2,.8,.2,1)" });
+    });
+}
+
+function initializeHomepageSectionOrderReorder() {
+    const list = $("#category-order-list");
+    if (!list) return;
+    let drag = null;
+
+    const items = () => homepageSectionOrderItems();
+    const movableItems = () => items().filter(item => !item.classList.contains("is-locked"));
+    const clearTargets = () => items().forEach(item => item.classList.remove("is-drop-target", "is-making-space"));
+    const sectionOrder = () => items().map(item => item.dataset.homepageOrderKey).filter(Boolean);
+    const movePreview = event => {
+        if (!drag?.preview) return;
+        drag.preview.style.transform = `translate3d(${event.clientX - drag.offsetX}px, ${event.clientY - drag.offsetY}px, 0)`;
+    };
+    const createPreview = (item, event) => {
+        const rect = item.getBoundingClientRect();
+        const preview = item.cloneNode(true);
+        preview.classList.remove("dragging", "is-making-space", "is-drop-target");
+        preview.classList.add("popular-drag-preview");
+        preview.removeAttribute("draggable");
+        Object.assign(preview.style, {
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+            transform: `translate3d(${rect.left}px, ${rect.top}px, 0)`
+        });
+        document.body.appendChild(preview);
+        drag.offsetX = event.clientX || event.clientY ? event.clientX - rect.left : rect.width / 2;
+        drag.offsetY = event.clientX || event.clientY ? event.clientY - rect.top : rect.height / 2;
+        drag.preview = preview;
+        if (event.clientX || event.clientY) movePreview(event);
+    };
+    const nearestTarget = event => {
+        const directItem = event.target.closest(".homepage-order-item");
+        if (directItem && directItem !== drag?.item && !directItem.classList.contains("is-locked") && list.contains(directItem)) {
+            return { item: directItem };
+        }
+        if (directItem === drag?.item) return null;
+        let nearest = null;
+        movableItems().forEach(item => {
+            if (item === drag?.item) return;
+            const rect = item.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+            if (!nearest || distance < nearest.distance) nearest = { item, distance };
+        });
+        return nearest ? { item: nearest.item } : null;
+    };
+    const restoreOriginalOrder = () => {
+        if (!drag) return;
+        const byKey = new Map(items().map(item => [item.dataset.homepageOrderKey, item]));
+        drag.originalOrder.forEach(key => {
+            const item = byKey.get(key);
+            if (item) list.appendChild(item);
+        });
+        updateHomepageSectionOrderRanks();
+    };
+    const swapItems = (first, second) => {
+        if (!first || !second || first === second) return;
+        const marker = document.createTextNode("");
+        first.before(marker);
+        second.before(first);
+        marker.replaceWith(second);
+    };
+    const markDropTarget = target => {
+        clearTargets();
+        if (target?.item && target.item !== drag?.item) target.item.classList.add("is-drop-target");
+    };
+    const previewSwapTarget = target => {
+        if (!drag || !target?.item || target.item === drag.item || target.item.classList.contains("is-locked")) return;
+        const currentOrder = sectionOrder().join("|");
+        const nextPreviewKey = `${target.item.dataset.homepageOrderKey || "empty"}:${currentOrder}`;
+        if (drag.previewTarget === nextPreviewKey) return;
+        drag.previewTarget = nextPreviewKey;
+        markDropTarget(target);
+        animateHomepageSectionOrderLayout(() => {
+            swapItems(drag.item, target.item);
+            updateHomepageSectionOrderRanks();
+        });
+    };
+    const commitDropTarget = () => {
+        if (!drag) return;
+        homepageSectionOrder = normalizeHomepageSectionOrder(sectionOrder());
+        updateHomepageSectionOrderRanks();
+    };
+    const clearDragState = () => {
+        if (!drag) return;
+        if (!drag.committed) animateHomepageSectionOrderLayout(restoreOriginalOrder);
+        clearTargets();
+        drag.preview?.remove();
+        drag.item.classList.remove("dragging");
+        list.classList.remove("is-reordering");
+        drag = null;
+    };
+
+    list.addEventListener("dragstart", event => {
+        const item = event.target.closest(".homepage-order-item");
+        if (event.target.closest("button,input,label,select,textarea")) return event.preventDefault();
+        if (!item || item.classList.contains("is-locked")) return event.preventDefault();
+        drag = { item, originalOrder: sectionOrder(), previewTarget: null, committed: false, preview: null, offsetX: 0, offsetY: 0 };
+        createPreview(item, event);
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", item.dataset.homepageOrderKey || "");
+        event.dataTransfer.setDragImage(transparentDragImage(), 0, 0);
+        requestAnimationFrame(() => {
+            item.classList.add("dragging");
+            list.classList.add("is-reordering");
+        });
+    });
+    list.addEventListener("dragover", event => {
+        if (!drag) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+    });
+    list.addEventListener("drag", event => {
+        if (!drag || !event.clientX || !event.clientY) return;
+        movePreview(event);
+    });
+    list.addEventListener("dragleave", event => {
+        if (!drag || list.contains(event.relatedTarget)) return;
+        clearTargets();
+    });
+    list.addEventListener("drop", event => {
+        if (!drag) return;
+        event.preventDefault();
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+        commitDropTarget();
+        drag.committed = true;
+        clearDragState();
+    });
+    list.addEventListener("dragend", clearDragState);
+    list.addEventListener("keydown", event => {
+        if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        const item = event.target.closest(".homepage-order-item");
+        if (!item || item.classList.contains("is-locked")) return;
+        const movable = movableItems();
+        const current = movable.indexOf(item);
+        const step = ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1;
+        const next = current + step;
+        if (current < 0 || next < 0 || next >= movable.length) return;
+        event.preventDefault();
+        animateHomepageSectionOrderLayout(() => {
+            swapItems(item, movable[next]);
+            commitDropTarget();
+            item.focus();
+        });
+    });
 }
 
 function syncCategoryProductSelection() {
@@ -1886,13 +2244,18 @@ function enhanceProductDropdown(select) {
 }
 
 async function loadData() {
-    const bootstrap = await getManagementBootstrap(db);
+    const [bootstrap, insights] = await Promise.all([
+        getManagementBootstrap(db),
+        getSearchInsights().catch(error => { console.warn("Unable to load search insights", error); return null; })
+    ]);
+    searchInsights = insights;
     const popularSetting = bootstrap.settings.popular || {};
     const bestsellerSetting = bootstrap.settings.bestsellers || {};
     const discountSetting = bootstrap.settings.discounts || {};
     const announcementSetting = bootstrap.settings.announcementBar || {};
     const heroSetting = bootstrap.settings.homepageHero || {};
     const campaignSetting = bootstrap.settings.campaignBanner || {};
+    const sectionOrderSetting = bootstrap.settings.homepageSectionOrder || {};
     const storedSearch = bootstrap.settings.search || {};
     products = bootstrap.products;
     deletedProducts = bootstrap.deletedProducts;
@@ -1917,6 +2280,7 @@ async function loadData() {
     announcementBar = normalizeAnnouncementBar(announcementSetting);
     heroCategoryOrder = normalizeHeroCategoryOrder(heroSetting.categoryOrder);
     homepageHero = normalizeHomepageHero(heroSetting);
+    homepageSectionOrder = normalizeHomepageSectionOrder(sectionOrderSetting.items || sectionOrderSetting);
     savedHomepageHeroImageKeys = new Set(homepageHero.images.map(image => image.key).filter(Boolean));
     campaignBanner = normalizeCampaignBanner(campaignSetting);
     searchSettings = {
@@ -1924,23 +2288,43 @@ async function loadData() {
         popularProducts: Array.isArray(storedSearch.popularProducts) ? storedSearch.popularProducts.map(item => String(item.id || item)).slice(0, SEARCH_POPULAR_PRODUCT_LIMIT) : [],
         popularMode: storedSearch.popularMode === "manual" ? "manual" : "automatic",
         suggestionsEnabled: storedSearch.suggestionsEnabled !== false,
-        popularEnabled: storedSearch.popularEnabled !== false,
+        popularEnabled: true,
         suggestionsHeading: String(storedSearch.suggestionsHeading || "Suggested searches").slice(0, 60),
         popularHeading: String(storedSearch.popularHeading || "Popular picks").slice(0, 60),
         defaultSort: ["relevance", "popular", "newest", "low", "high"].includes(storedSearch.defaultSort) ? storedSearch.defaultSort : "relevance",
         trendingEnabled: storedSearch.trendingEnabled !== false,
         trendingHeading: String(storedSearch.trendingHeading || "Trending searches").slice(0, 60),
         trendingSearches: normalizeSearchList(storedSearch.trendingSearches, DEFAULT_TRENDING_SEARCHES, 20),
+        trendingHiddenSearches: normalizeSearchList(storedSearch.trendingHiddenSearches, [], 20),
+        trendingAutoRefresh: storedSearch.trendingAutoRefresh === true,
+        trendingLastAutoRefresh: String(storedSearch.trendingLastAutoRefresh || ""),
         synonyms: normalizeSearchSynonyms(storedSearch.synonyms),
         emptyFallback: ["popular", "trending", "suggestions", "message"].includes(storedSearch.emptyFallback) ? storedSearch.emptyFallback : "popular",
-        emptyMessage: String(storedSearch.emptyMessage || "Try a trending search or browse our popular picks.").slice(0, 120)
+        emptyMessage: String(storedSearch.emptyMessage || "Try a trending search or browse our popular picks.").slice(0, 120),
+        searchRules: normalizeSearchRules(storedSearch.searchRules),
+        autocompleteEnabled: storedSearch.autocompleteEnabled !== false,
+        autocompleteCategories: storedSearch.autocompleteCategories !== false,
+        autocompleteProducts: storedSearch.autocompleteProducts !== false,
+        autocompleteProductLimit: [2, 3, 4].includes(Number(storedSearch.autocompleteProductLimit)) ? Number(storedSearch.autocompleteProductLimit) : 3,
+        typoEnabled: storedSearch.typoEnabled !== false,
+        typoStrength: storedSearch.typoStrength === "strict" ? "strict" : "balanced"
     };
+    const weeklyMs = 7 * 24 * 60 * 60 * 1000;
+    const lastTrendingRefresh = Date.parse(searchSettings.trendingLastAutoRefresh);
+    const topInsightTerms = normalizeSearchList((searchInsights?.topQueries || []).map(item => item.query), [], 20);
+    if (searchSettings.trendingAutoRefresh && topInsightTerms.length && (!lastTrendingRefresh || Date.now() - lastTrendingRefresh >= weeklyMs)) {
+        searchSettings.trendingSearches = topInsightTerms;
+        searchSettings.trendingHiddenSearches = [];
+        searchSettings.trendingLastAutoRefresh = new Date().toISOString();
+        saveSearchSettings().catch(error => console.warn("Unable to auto-refresh trending searches", error));
+    }
     $("#popular-mode-automatic").checked = popularMode === "automatic";
     $("#discount-mode-automatic").checked = discountMode === "automatic";
     $("#offer-section-enabled").checked = discountSectionEnabled;
     syncAnnouncementBarForm();
     syncHomepageHeroForm();
     syncCampaignBannerForm();
+    renderHomepageSectionOrder();
     syncHomepageSectionStates();
     $("#discount-campaign-label").value = discountCampaignLabel;
     productDropdownSync.get($("#discount-campaign-label"))?.();
@@ -2013,6 +2397,224 @@ function renderDeletedProducts() {
     }).join("");
 }
 
+function popularSelectionProductItems() {
+    return $$("#popular-selection .popular-item:not(.popular-item-placeholder)");
+}
+
+function updatePopularSelectionRanks() {
+    $$("#popular-selection .popular-item").forEach((item, index) => {
+        const rank = item.querySelector(".popular-rank");
+        if (!rank) return;
+        rank.textContent = String(index + 1);
+        rank.setAttribute("aria-label", `Position ${index + 1}`);
+    });
+}
+
+function transparentDragImage() {
+    let image = $("#transparent-drag-image");
+    if (image) return image;
+    image = document.createElement("span");
+    image.id = "transparent-drag-image";
+    image.setAttribute("aria-hidden", "true");
+    Object.assign(image.style, {
+        position: "fixed",
+        left: "-20px",
+        top: "-20px",
+        width: "1px",
+        height: "1px",
+        opacity: "0",
+        pointerEvents: "none"
+    });
+    document.body.appendChild(image);
+    return image;
+}
+
+function animatePopularSelectionLayout(mutate) {
+    const items = $$("#popular-selection .popular-item");
+    const before = new Map(items.map(item => [item, item.getBoundingClientRect()]));
+    mutate();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    items.forEach(item => {
+        const start = before.get(item);
+        if (!start) return;
+        const end = item.getBoundingClientRect();
+        const dx = start.left - end.left;
+        const dy = start.top - end.top;
+        if (!dx && !dy) return;
+        item.animate([
+            { transform: `translate(${dx}px, ${dy}px)` },
+            { transform: "translate(0, 0)" }
+        ], { duration: 90, easing: "cubic-bezier(.2,.8,.2,1)" });
+    });
+}
+
+function initializeHomepagePopularReorder() {
+    const list = $("#popular-selection");
+    if (!list) return;
+    let drag = null;
+
+    const items = () => $$("#popular-selection .popular-item");
+    const clearTargets = () => items().forEach(item => item.classList.remove("is-drop-target", "is-making-space"));
+    const productOrder = () => popularSelectionProductItems().map(item => item.dataset.id).filter(Boolean);
+    const movePreview = event => {
+        if (!drag?.preview) return;
+        drag.preview.style.transform = `translate3d(${event.clientX - drag.offsetX}px, ${event.clientY - drag.offsetY}px, 0)`;
+    };
+    const createPreview = (item, event) => {
+        const rect = item.getBoundingClientRect();
+        const preview = item.cloneNode(true);
+        preview.classList.remove("dragging", "is-making-space", "is-drop-target");
+        preview.classList.add("popular-drag-preview");
+        preview.removeAttribute("draggable");
+        Object.assign(preview.style, {
+            width: `${rect.width}px`,
+            height: `${rect.height}px`
+        });
+        document.body.appendChild(preview);
+        drag.offsetX = event.clientX - rect.left;
+        drag.offsetY = event.clientY - rect.top;
+        drag.preview = preview;
+        movePreview(event);
+    };
+    const nearestTarget = event => {
+        const directItem = event.target.closest(".popular-item");
+        if (directItem && directItem !== drag?.item) {
+            const rect = directItem.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const horizontal = Math.abs(event.clientX - centerX) > Math.abs(event.clientY - centerY);
+            return { item: directItem, placeAfter: horizontal ? event.clientX > centerX : event.clientY > centerY };
+        }
+        if (directItem === drag?.item) return null;
+        let nearest = null;
+        items().forEach(item => {
+            if (item === drag?.item) return;
+            const rect = item.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+            if (!nearest || distance < nearest.distance) nearest = { item, centerX, centerY, distance };
+        });
+        if (!nearest) return null;
+        const horizontal = Math.abs(event.clientX - nearest.centerX) > Math.abs(event.clientY - nearest.centerY);
+        return { item: nearest.item, placeAfter: horizontal ? event.clientX > nearest.centerX : event.clientY > nearest.centerY };
+    };
+    const restoreOriginalOrder = () => {
+        if (!drag) return;
+        const firstPlaceholder = $("#popular-selection .popular-item-placeholder");
+        drag.originalIds.forEach(id => {
+            const item = popularSelectionProductItems().find(row => row.dataset.id === id);
+            if (item) list.insertBefore(item, firstPlaceholder);
+        });
+        updatePopularSelectionRanks();
+    };
+    const swapItems = (first, second) => {
+        if (!first || !second || first === second) return;
+        const marker = document.createTextNode("");
+        first.before(marker);
+        second.before(first);
+        marker.replaceWith(second);
+    };
+    const markDropTarget = target => {
+        clearTargets();
+        if (target?.item && target.item !== drag?.item) {
+            target.item.classList.add("is-drop-target", "is-making-space");
+        }
+    };
+    const previewSwapTarget = target => {
+        if (!drag || !target?.item || target.item === drag.item) return;
+        const currentOrder = productOrder().join("|");
+        const nextPreviewKey = `${target.item.dataset.id || "empty"}:${currentOrder}`;
+        if (drag.previewTarget === nextPreviewKey) return;
+        drag.previewTarget = nextPreviewKey;
+        markDropTarget(target);
+        animatePopularSelectionLayout(() => {
+            if (target.item.classList.contains("popular-item-placeholder")) {
+                list.insertBefore(drag.item, target.placeAfter ? target.item.nextSibling : target.item);
+            } else {
+                swapItems(drag.item, target.item);
+            }
+            updatePopularSelectionRanks();
+        });
+    };
+    const commitDropTarget = () => {
+        if (!drag) return;
+        popularIds = productOrder();
+        updatePopularSelectionRanks();
+    };
+    const clearDragState = () => {
+        if (!drag) return;
+        if (!drag.committed) animatePopularSelectionLayout(restoreOriginalOrder);
+        clearTargets();
+        drag.preview?.remove();
+        drag.item.classList.remove("dragging");
+        list.classList.remove("is-reordering");
+        drag = null;
+    };
+
+    list.addEventListener("dragstart", event => {
+        if (popularMode !== "manual" || event.target.closest("button")) return event.preventDefault();
+        const item = event.target.closest(".popular-item:not(.popular-item-placeholder)");
+        if (!item) return;
+        drag = { item, id: item.dataset.id, originalIds: productOrder(), previewTarget: null, committed: false, preview: null, offsetX: 0, offsetY: 0 };
+        createPreview(item, event);
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", drag.id || "");
+        event.dataTransfer.setDragImage(transparentDragImage(), 0, 0);
+        requestAnimationFrame(() => {
+            item.classList.add("dragging");
+            list.classList.add("is-reordering");
+        });
+    });
+    list.addEventListener("dragover", event => {
+        if (!drag || popularMode !== "manual") return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (!target) return;
+        previewSwapTarget(target);
+    });
+    list.addEventListener("drag", event => {
+        if (!drag || !event.clientX || !event.clientY) return;
+        movePreview(event);
+    });
+    list.addEventListener("dragleave", event => {
+        if (!drag || list.contains(event.relatedTarget)) return;
+        clearTargets();
+    });
+    list.addEventListener("drop", event => {
+        if (!drag) return;
+        event.preventDefault();
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+        commitDropTarget();
+        drag.committed = true;
+        clearDragState();
+    });
+    list.addEventListener("dragend", () => {
+        clearDragState();
+    });
+    list.addEventListener("keydown", event => {
+        if (popularMode !== "manual" || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        const item = event.target.closest(".popular-item:not(.popular-item-placeholder)");
+        if (!item) return;
+        const current = popularIds.indexOf(item.dataset.id);
+        const step = ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1;
+        const next = current + step;
+        if (current < 0 || next < 0 || next >= popularIds.length) return;
+        const target = popularSelectionProductItems()[next];
+        event.preventDefault();
+        animatePopularSelectionLayout(() => {
+            popularIds.splice(next, 0, popularIds.splice(current, 1)[0]);
+            if (target) list.insertBefore(item, step > 0 ? target.nextSibling : target);
+            updatePopularSelectionRanks();
+            item.focus();
+        });
+    });
+}
+
 function renderPopularSelection() {
     const selectedIds = popularMode === "automatic"
         ? automaticPopularSelectionIds()
@@ -2020,7 +2622,7 @@ function renderPopularSelection() {
     const selected = selectedIds.map(id => products.find(product => String(product.id) === id)).filter(Boolean);
     $("#popular-selection-help").classList.add("hidden");
     const automatic = popularMode === "automatic";
-    const productsMarkup = selected.map((product, index) => `<div class="popular-item ${automatic ? "is-automatic" : ""}" draggable="${automatic ? "false" : "true"}" data-id="${escapeHtml(product.id)}">
+    const productsMarkup = selected.map((product, index) => `<div class="popular-item ${automatic ? "is-automatic" : ""}" draggable="${automatic ? "false" : "true"}" tabindex="${automatic ? "-1" : "0"}" data-id="${escapeHtml(product.id)}">
         <span class="popular-rank" aria-label="Position ${index + 1}">${index + 1}</span>
         <div class="popular-item-card">
             <img class="popular-item-image" src="${escapeHtml(productImage(product))}" alt="">
@@ -2030,6 +2632,10 @@ function renderPopularSelection() {
     </div>`).join("");
     const emptyMarkup = Array.from({ length: Math.max(0, POPULAR_PRODUCT_LIMIT - selected.length) }, (_, offset) => selectionPlaceholderMarkup(selected.length + offset));
     $("#popular-selection").innerHTML = productsMarkup + emptyMarkup.join("");
+}
+
+function homepageAutomaticMessageMarkup(message) {
+    return `<p class="search-setting-empty search-automatic-message homepage-automatic-message"><img src="images/Icon Folder/Gear Icon_Gray.PNG" alt="" aria-hidden="true"><strong>Operating Automatically</strong><span>${escapeHtml(message)}</span></p>`;
 }
 
 function automaticPopularSelectionIds() {
@@ -2053,6 +2659,10 @@ function selectionPlaceholderMarkup(index) {
 }
 
 function renderHomepageProducts() {
+    if (popularMode === "automatic") {
+        $("#homepage-products").innerHTML = homepageAutomaticMessageMarkup("MPWR will choose popular active products for this section.");
+        return;
+    }
     const query = $("#homepage-search").value.trim().toLowerCase();
     const candidates = products.filter(product => isStorefrontActive(product) && (!query || `${product.title} ${product.sku || ""}`.toLowerCase().includes(query)));
     $("#homepage-products").innerHTML = candidates.map(product => {
@@ -2080,15 +2690,21 @@ function updateHomepageProductCard(id, selected) {
 function appendPopularSelectionCard(product) {
     const index = popularIds.indexOf(String(product.id));
     if (index < 0) return;
-    $("#popular-selection").insertAdjacentHTML("beforeend", `<div class="popular-item" draggable="true" data-id="${escapeHtml(product.id)}">
+    const list = $("#popular-selection");
+    const firstPlaceholder = $("#popular-selection .popular-item-placeholder");
+    const wrapper = document.createElement("template");
+    wrapper.innerHTML = `<div class="popular-item" draggable="true" tabindex="0" data-id="${escapeHtml(product.id)}">
         <span class="popular-rank" aria-label="Position ${index + 1}">${index + 1}</span>
         <div class="popular-item-card">
             <img class="popular-item-image" src="${escapeHtml(productImage(product))}" alt="">
             <div class="popular-item-details"><strong>${escapeHtml(product.title)}</strong><small>${formatMoney(product.price)}</small></div>
             <button type="button" class="remove-popular" aria-label="Remove ${escapeHtml(product.title)}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button>
         </div>
-    </div>`);
+    </div>`;
+    list.insertBefore(wrapper.content.firstElementChild, firstPlaceholder);
+    firstPlaceholder?.remove();
     $("#popular-selection-help").classList.add("hidden");
+    updatePopularSelectionRanks();
 }
 
 function animateProductToPopular(sourceCard, id) {
@@ -2132,12 +2748,17 @@ function animateProductToPopular(sourceCard, id) {
 function removePopularSelectionCard(id) {
     const card = $$("#popular-selection .popular-item").find(item => item.dataset.id === String(id));
     card?.remove();
-    $$("#popular-selection .popular-item").forEach((item, index) => {
-        const rank = item.querySelector(".popular-rank");
-        rank.textContent = String(index + 1);
-        rank.setAttribute("aria-label", `Position ${index + 1}`);
-    });
+    const list = $("#popular-selection");
+    const totalItems = $$("#popular-selection .popular-item").length;
+    if (totalItems < POPULAR_PRODUCT_LIMIT) list.insertAdjacentHTML("beforeend", selectionPlaceholderMarkup(totalItems + 1));
+    updatePopularSelectionRanks();
     $("#popular-selection-help").classList.toggle("hidden", popularIds.length > 0);
+}
+
+function updatePopularSelectionPreview(product, action) {
+    if (popularMode !== "manual") return renderPopularSelection();
+    if (action === "add") appendPopularSelectionCard(product);
+    else removePopularSelectionCard(product.id);
 }
 
 function discountSelectionMarkup(product, index, selection = discountSelection(product.id)) {
@@ -2145,7 +2766,7 @@ function discountSelectionMarkup(product, index, selection = discountSelection(p
     const salesLabel = automaticPopularSales.has(String(product.id))
         ? `${automaticPopularSales.get(String(product.id))} sold in 30 days · ${selection?.percent || 15}% off`
         : `Automatic fallback · ${selection?.percent || 15}% off`;
-    return `<div class="popular-item discount-item ${automatic ? "is-automatic" : ""}" draggable="${automatic ? "false" : "true"}" data-id="${escapeHtml(product.id)}">
+    return `<div class="popular-item discount-item ${automatic ? "is-automatic" : ""}" draggable="${automatic ? "false" : "true"}" tabindex="${automatic ? "-1" : "0"}" data-id="${escapeHtml(product.id)}">
         <span class="popular-rank" aria-label="Position ${index + 1}">${index + 1}</span>
         <div class="popular-item-card">
             <img class="popular-item-image" src="${escapeHtml(productImage(product))}" alt="">
@@ -2163,7 +2784,219 @@ function renderDiscountSelection() {
     $("#discount-selection").innerHTML = selected.map(({ product, selection }, index) => discountSelectionMarkup(product, index, selection)).join("") + emptyMarkup.join("");
 }
 
+function updateDiscountSelectionPreview(product, action) {
+    if (discountMode !== "manual") return renderDiscountSelection();
+    if (action === "add") appendDiscountSelectionCard(product);
+    else removeDiscountSelectionCard(product.id);
+}
+
+function discountSelectionProductItems() {
+    return $$("#discount-selection .discount-item:not(.popular-item-placeholder)");
+}
+
+function updateDiscountSelectionRanks() {
+    $$("#discount-selection .popular-item").forEach((item, index) => {
+        const rank = item.querySelector(".popular-rank");
+        if (!rank) return;
+        rank.textContent = String(index + 1);
+        rank.setAttribute("aria-label", `Position ${index + 1}`);
+    });
+}
+
+function animateDiscountSelectionLayout(mutate) {
+    const items = $$("#discount-selection .popular-item");
+    const before = new Map(items.map(item => [item, item.getBoundingClientRect()]));
+    mutate();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    items.forEach(item => {
+        const start = before.get(item);
+        if (!start) return;
+        const end = item.getBoundingClientRect();
+        const dx = start.left - end.left;
+        const dy = start.top - end.top;
+        if (!dx && !dy) return;
+        item.animate([
+            { transform: `translate(${dx}px, ${dy}px)` },
+            { transform: "translate(0, 0)" }
+        ], { duration: 90, easing: "cubic-bezier(.2,.8,.2,1)" });
+    });
+}
+
+function initializeHomepageDiscountReorder() {
+    const list = $("#discount-selection");
+    if (!list) return;
+    let drag = null;
+
+    const items = () => $$("#discount-selection .popular-item");
+    const clearTargets = () => items().forEach(item => item.classList.remove("is-drop-target", "is-making-space"));
+    const selectionOrder = () => discountSelectionProductItems().map(item => item.dataset.id).filter(Boolean);
+    const movePreview = event => {
+        if (!drag?.preview || !event.clientX || !event.clientY) return;
+        drag.previewX = event.clientX - drag.offsetX;
+        drag.previewY = event.clientY - drag.offsetY;
+        if (drag.previewFrame) return;
+        drag.previewFrame = requestAnimationFrame(() => {
+            if (drag?.preview) drag.preview.style.transform = `translate3d(${drag.previewX}px, ${drag.previewY}px, 0)`;
+            if (drag) drag.previewFrame = null;
+        });
+    };
+    const createPreview = (item, event) => {
+        const rect = item.getBoundingClientRect();
+        const preview = item.cloneNode(true);
+        preview.classList.remove("dragging", "is-making-space", "is-drop-target");
+        preview.classList.add("popular-drag-preview");
+        preview.removeAttribute("draggable");
+        Object.assign(preview.style, {
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+            transform: `translate3d(${rect.left}px, ${rect.top}px, 0)`
+        });
+        document.body.appendChild(preview);
+        drag.offsetX = event.clientX || event.clientY ? event.clientX - rect.left : rect.width / 2;
+        drag.offsetY = event.clientX || event.clientY ? event.clientY - rect.top : rect.height / 2;
+        drag.preview = preview;
+        movePreview(event);
+    };
+    const nearestTarget = event => {
+        const directItem = event.target.closest(".popular-item");
+        if (directItem && directItem !== drag?.item && list.contains(directItem)) {
+            const rect = directItem.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const horizontal = Math.abs(event.clientX - centerX) > Math.abs(event.clientY - centerY);
+            return { item: directItem, placeAfter: horizontal ? event.clientX > centerX : event.clientY > centerY };
+        }
+        if (directItem === drag?.item) return null;
+        let nearest = null;
+        items().forEach(item => {
+            if (item === drag?.item) return;
+            const rect = item.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+            if (!nearest || distance < nearest.distance) nearest = { item, centerX, centerY, distance };
+        });
+        if (!nearest) return null;
+        const horizontal = Math.abs(event.clientX - nearest.centerX) > Math.abs(event.clientY - nearest.centerY);
+        return { item: nearest.item, placeAfter: horizontal ? event.clientX > nearest.centerX : event.clientY > nearest.centerY };
+    };
+    const restoreOriginalOrder = () => {
+        if (!drag) return;
+        const firstPlaceholder = $("#discount-selection .popular-item-placeholder");
+        drag.originalIds.forEach(id => {
+            const item = discountSelectionProductItems().find(row => row.dataset.id === id);
+            if (item) list.insertBefore(item, firstPlaceholder);
+        });
+        updateDiscountSelectionRanks();
+    };
+    const swapItems = (first, second) => {
+        if (!first || !second || first === second) return;
+        const marker = document.createTextNode("");
+        first.before(marker);
+        second.before(first);
+        marker.replaceWith(second);
+    };
+    const markDropTarget = target => {
+        clearTargets();
+        if (target?.item && target.item !== drag?.item) target.item.classList.add("is-drop-target");
+    };
+    const previewSwapTarget = target => {
+        if (!drag || !target?.item || target.item === drag.item) return;
+        const currentOrder = selectionOrder().join("|");
+        const nextPreviewKey = `${target.item.dataset.id || "empty"}:${currentOrder}`;
+        if (drag.previewTarget === nextPreviewKey) return;
+        drag.previewTarget = nextPreviewKey;
+        markDropTarget(target);
+        animateDiscountSelectionLayout(() => {
+            if (target.item.classList.contains("popular-item-placeholder")) list.insertBefore(drag.item, target.placeAfter ? target.item.nextSibling : target.item);
+            else swapItems(drag.item, target.item);
+            updateDiscountSelectionRanks();
+        });
+    };
+    const commitDropTarget = () => {
+        if (!drag) return;
+        const order = selectionOrder();
+        const byId = new Map(discountSelections.map(item => [item.id, item]));
+        discountSelections = order.map(id => byId.get(id)).filter(Boolean);
+        updateDiscountSelectionRanks();
+    };
+    const clearDragState = () => {
+        if (!drag) return;
+        if (!drag.committed) animateDiscountSelectionLayout(restoreOriginalOrder);
+        clearTargets();
+        if (drag.previewFrame) cancelAnimationFrame(drag.previewFrame);
+        drag.preview?.remove();
+        drag.item.classList.remove("dragging");
+        list.classList.remove("is-reordering");
+        drag = null;
+    };
+
+    list.addEventListener("dragstart", event => {
+        if (discountMode !== "manual" || event.target.closest("input,button")) return event.preventDefault();
+        const item = event.target.closest(".discount-item:not(.popular-item-placeholder)");
+        if (!item) return;
+        if (drag) return event.preventDefault();
+        drag = { item, id: item.dataset.id, originalIds: selectionOrder(), previewTarget: null, committed: false, preview: null, previewFrame: null, previewX: 0, previewY: 0, offsetX: 0, offsetY: 0 };
+        createPreview(item, event);
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", drag.id || "");
+        event.dataTransfer.setDragImage(transparentDragImage(), 0, 0);
+        requestAnimationFrame(() => {
+            item.classList.add("dragging");
+            list.classList.add("is-reordering");
+        });
+    });
+    list.addEventListener("dragover", event => {
+        if (!drag || discountMode !== "manual") return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+    });
+    list.addEventListener("drag", event => {
+        if (!drag || !event.clientX || !event.clientY) return;
+        movePreview(event);
+    });
+    list.addEventListener("dragleave", event => {
+        if (!drag || list.contains(event.relatedTarget)) return;
+        clearTargets();
+    });
+    list.addEventListener("drop", event => {
+        if (!drag) return;
+        event.preventDefault();
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+        commitDropTarget();
+        drag.committed = true;
+        clearDragState();
+    });
+    list.addEventListener("dragend", clearDragState);
+    list.addEventListener("keydown", event => {
+        if (discountMode !== "manual" || event.target.closest("input,button") || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        const item = event.target.closest(".discount-item:not(.popular-item-placeholder)");
+        if (!item) return;
+        const current = discountSelections.findIndex(selection => selection.id === item.dataset.id);
+        const step = ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1;
+        const next = current + step;
+        if (current < 0 || next < 0 || next >= discountSelections.length) return;
+        const target = discountSelectionProductItems()[next];
+        event.preventDefault();
+        animateDiscountSelectionLayout(() => {
+            discountSelections.splice(next, 0, discountSelections.splice(current, 1)[0]);
+            if (target) list.insertBefore(item, step > 0 ? target.nextSibling : target);
+            updateDiscountSelectionRanks();
+            item.focus();
+        });
+    });
+}
+
 function renderDiscountProducts() {
+    if (discountMode === "automatic") {
+        $("#discount-products").innerHTML = homepageAutomaticMessageMarkup("MPWR will choose and arrange discounted products for this campaign.");
+        return;
+    }
     const query = $("#discount-search").value.trim().toLowerCase();
     const candidates = products.filter(product => isStorefrontActive(product) && (!query || `${product.title} ${product.sku || ""}`.toLowerCase().includes(query)));
     $("#discount-products").innerHTML = candidates.map(product => {
@@ -2194,8 +3027,14 @@ function syncDiscountPickerAvailability() {
 function appendDiscountSelectionCard(product) {
     const index = discountSelections.findIndex(item => item.id === String(product.id));
     if (index < 0 || index >= HOMEPAGE_DISCOUNT_PRODUCT_LIMIT) return;
-    $("#discount-selection").insertAdjacentHTML("beforeend", discountSelectionMarkup(product, index));
+    const list = $("#discount-selection");
+    const firstPlaceholder = $("#discount-selection .popular-item-placeholder");
+    const wrapper = document.createElement("template");
+    wrapper.innerHTML = discountSelectionMarkup(product, index, discountSelection(product.id));
+    list.insertBefore(wrapper.content.firstElementChild, firstPlaceholder);
+    firstPlaceholder?.remove();
     $("#discount-selection-help").classList.add("hidden");
+    updateDiscountSelectionRanks();
 }
 
 function animateProductToDiscount(sourceCard, id) {
@@ -2225,13 +3064,13 @@ function animateProductToDiscount(sourceCard, id) {
 }
 
 function removeDiscountSelectionCard(id) {
-    $$("#discount-selection .discount-item").find(item => item.dataset.id === String(id))?.remove();
-    $$("#discount-selection .discount-item").forEach((item, index) => {
-        const rank = item.querySelector(".popular-rank");
-        rank.textContent = String(index + 1);
-        rank.setAttribute("aria-label", `Position ${index + 1}`);
-    });
-    $("#discount-selection-help").classList.toggle("hidden", homepageDiscountSelections().length > 0);
+    const card = $$("#discount-selection .discount-item").find(item => item.dataset.id === String(id));
+    card?.remove();
+    const list = $("#discount-selection");
+    const totalItems = $$("#discount-selection .popular-item").length;
+    if (totalItems < HOMEPAGE_DISCOUNT_PRODUCT_LIMIT) list.insertAdjacentHTML("beforeend", selectionPlaceholderMarkup(totalItems + 1));
+    updateDiscountSelectionRanks();
+    $("#discount-selection-help").classList.toggle("hidden", discountSelections.length > 0);
 }
 
 function renderHomepage() {
@@ -2270,6 +3109,311 @@ function searchPopularSelection() {
     return [...new Set(ids)].map(id => products.find(product => String(product.id) === id && isStorefrontActive(product))).filter(Boolean).slice(0, SEARCH_POPULAR_PRODUCT_LIMIT);
 }
 
+function searchPreviewPricing(product) {
+    const campaign = discountSectionEnabled
+        ? homepageDiscountSelections().find(item => item.id === String(product.id))
+        : null;
+    const current = Math.max(0, Number(product.price) || 0);
+    if (campaign?.percent) {
+        const percent = Math.min(95, Math.max(1, Math.round(Number(campaign.percent) || 0)));
+        return { current: Math.round(current * (1 - percent / 100)), regular: current, percent, discounted: true };
+    }
+    const compareAt = Math.max(0, Number(product.compareAtPrice) || 0);
+    if (compareAt > current) {
+        const percent = Math.min(95, Math.max(1, Math.round((1 - current / compareAt) * 100)));
+        return { current, regular: compareAt, percent, discounted: true };
+    }
+    return { current, regular: current, percent: 0, discounted: false };
+}
+
+function searchPreviewProductMarkup(product) {
+    const pricing = searchPreviewPricing(product);
+    const price = pricing.discounted
+        ? `<span class="search-preview-price-pair mpwr-price-pair is-card-price"><span class="mpwr-sale-price">${formatMoney(pricing.current)}</span><span class="mpwr-original-price">${formatMoney(pricing.regular)}</span></span>`
+        : formatMoney(pricing.current);
+    return `<article class="search-preview-product product-box" aria-label="Preview of ${escapeHtml(product.title)}">
+        <div class="search-preview-product-image img-box">
+            ${pricing.discounted ? `<span class="search-preview-discount discount-badge">${pricing.percent}% OFF</span>` : ""}
+            <img src="${escapeHtml(productImage(product))}" alt="">
+        </div>
+        <h2 class="product-title">${escapeHtml(product.title)}</h2>
+        <div class="search-preview-product-footer price-and-cart">
+            <span class="search-preview-price price">${price}</span>
+            <i aria-hidden="true"><img src="images/Plus.PNG" class="search-preview-add addie" alt=""></i>
+        </div>
+    </article>`;
+}
+
+function searchPreviewPopularEmptyMarkup() {
+    return `<div class="search-preview-products-empty">
+        <strong>No products selected</strong>
+        <span>Select products from the Popular Picks section.</span>
+    </div>`;
+}
+
+function renderSearchPopularPreview() {
+    const previewPopularHeading = $("#search-preview-popular-heading");
+    const previewProducts = $("#search-preview-products");
+    if (!previewPopularHeading || !previewProducts) return;
+    previewPopularHeading.textContent = searchSettings.popularHeading;
+    const previewPopularKicker = $(".search-preview-results-kicker");
+    if (previewPopularKicker) previewPopularKicker.hidden = !searchSettings.popularEnabled;
+    previewPopularHeading.hidden = !searchSettings.popularEnabled;
+    previewProducts.hidden = !searchSettings.popularEnabled;
+    const previewPopularSelection = searchPopularSelection();
+    previewProducts.innerHTML = searchSettings.popularMode === "manual" && !previewPopularSelection.length
+        ? searchPreviewPopularEmptyMarkup()
+        : previewPopularSelection.map(searchPreviewProductMarkup).join("");
+}
+
+function syncSearchPopularProducts({ animate = true } = {}) {
+    const list = $("#search-popular-products");
+    if (!list || searchSettings.popularMode !== "manual") return;
+    const rows = [...list.querySelectorAll(".search-product-row")];
+    const before = animate ? new Map(rows.map(row => [row, row.getBoundingClientRect()])) : null;
+    const selected = new Set(searchSettings.popularProducts);
+    rows.forEach((row, productIndex) => {
+        const id = row.dataset.id || "";
+        const product = products.find(item => String(item.id) === id);
+        if (!product) return;
+        const isSelected = selected.has(id);
+        const selectedIndex = searchSettings.popularProducts.indexOf(id);
+        const limitReached = !isSelected && searchSettings.popularProducts.length >= SEARCH_POPULAR_PRODUCT_LIMIT;
+        let dragHandle = row.querySelector(".search-product-drag");
+        if (isSelected && !dragHandle) {
+            row.insertAdjacentHTML("afterbegin", '<span class="search-product-drag is-position" draggable="true" aria-hidden="true"></span>');
+            dragHandle = row.querySelector(".search-product-drag");
+        } else if (!isSelected && dragHandle) dragHandle.remove();
+        if (dragHandle) dragHandle.textContent = String(selectedIndex + 1);
+        row.classList.toggle("selected", isSelected);
+        row.draggable = isSelected;
+        row.dataset.index = isSelected ? String(selectedIndex) : "";
+        row.style.order = String(isSelected ? selectedIndex : 1000 + productIndex);
+        const small = row.querySelector("small");
+        if (small) small.textContent = isSelected ? `Selected · position ${selectedIndex + 1}` : (categoryLabels[productCategory(product)] || "Products");
+        const button = row.querySelector("[data-toggle]");
+        const icon = button?.querySelector("img");
+        if (!button || !icon) return;
+        button.classList.toggle("is-limit-reached", limitReached);
+        if (limitReached) button.setAttribute("aria-disabled", "true");
+        else button.removeAttribute("aria-disabled");
+        button.setAttribute("aria-label", isSelected ? `Remove ${product.title}` : limitReached ? "Popular Picks limit reached" : `Add ${product.title}`);
+        icon.src = `images/Icon Folder/${isSelected ? "Tick Icon_White.PNG" : limitReached ? "Plus Icon_Light Gray.PNG" : "Plus Icon_Gray.PNG"}`;
+    });
+    if (animate && before) {
+        rows.forEach(row => {
+            const start = before.get(row);
+            if (!start) return;
+            const end = row.getBoundingClientRect();
+            const dx = start.left - end.left;
+            const dy = start.top - end.top;
+            if (!dx && !dy) return;
+            row.animate([
+                { transform: `translate(${dx}px, ${dy}px)` },
+                { transform: "translate(0, 0)" }
+            ], { duration: 240, easing: "cubic-bezier(.2,.8,.2,1)" });
+        });
+    }
+    renderSearchPopularPreview();
+}
+
+function syncSearchPopularSelectedRows({ renderPreview = true, changedId = null, updateLimitState = false } = {}) {
+    const list = $("#search-popular-products");
+    if (!list || searchSettings.popularMode !== "manual") return;
+    const selected = new Set(searchSettings.popularProducts);
+    const allRows = [...list.querySelectorAll(".search-product-row")];
+    const rows = updateLimitState
+        ? allRows
+        : allRows.filter(row => selected.has(row.dataset.id) || row.dataset.id === String(changedId || ""));
+    const atLimit = searchSettings.popularProducts.length >= SEARCH_POPULAR_PRODUCT_LIMIT;
+    rows.forEach(row => {
+        const id = row.dataset.id || "";
+        const product = products.find(item => String(item.id) === id);
+        if (!product) return;
+        const isSelected = selected.has(id);
+        const selectedIndex = searchSettings.popularProducts.indexOf(id);
+        const productIndex = allRows.indexOf(row);
+        let dragHandle = row.querySelector(".search-product-drag");
+        if (isSelected && !dragHandle) {
+            row.insertAdjacentHTML("afterbegin", '<span class="search-product-drag is-position" draggable="true" aria-hidden="true"></span>');
+            dragHandle = row.querySelector(".search-product-drag");
+        } else if (!isSelected && dragHandle) dragHandle.remove();
+        row.classList.toggle("selected", isSelected);
+        row.draggable = isSelected;
+        row.dataset.index = isSelected ? String(selectedIndex) : "";
+        row.style.order = String(isSelected ? selectedIndex : 1000 + productIndex);
+        if (dragHandle) dragHandle.textContent = String(selectedIndex + 1);
+        const small = row.querySelector("small");
+        if (small) small.textContent = isSelected ? `Selected · position ${selectedIndex + 1}` : (categoryLabels[productCategory(product)] || "Products");
+        const button = row.querySelector("[data-toggle]");
+        const icon = button?.querySelector("img");
+        if (!button || !icon) return;
+        const limitReached = !isSelected && atLimit;
+        button.classList.toggle("is-limit-reached", limitReached);
+        if (limitReached) button.setAttribute("aria-disabled", "true");
+        else button.removeAttribute("aria-disabled");
+        button.setAttribute("aria-label", isSelected ? `Remove ${product.title}` : limitReached ? "Popular Picks limit reached" : `Add ${product.title}`);
+        icon.src = `images/Icon Folder/${isSelected ? "Tick Icon_White.PNG" : limitReached ? "Plus Icon_Light Gray.PNG" : "Plus Icon_Gray.PNG"}`;
+    });
+    if (renderPreview) renderSearchPopularPreview();
+}
+
+function initializeSearchPopularReorder() {
+    const list = $("#search-popular-products");
+    if (!list) return;
+    let drag = null;
+
+    const selectedRows = () => $$("#search-popular-products .search-product-row.selected")
+        .sort((first, second) => (Number(first.dataset.index) || 0) - (Number(second.dataset.index) || 0));
+    const clearTargets = () => selectedRows().forEach(row => row.classList.remove("is-drop-target", "is-making-space"));
+    const rowForId = id => selectedRows().find(row => row.dataset.id === String(id));
+    const animateRows = mutate => {
+        const rows = selectedRows();
+        const before = new Map(rows.map(row => [row, row.getBoundingClientRect()]));
+        mutate();
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        rows.forEach(row => {
+            const start = before.get(row);
+            if (!start) return;
+            const end = row.getBoundingClientRect();
+            const dx = start.left - end.left;
+            const dy = start.top - end.top;
+            if (!dx && !dy) return;
+            row.animate([
+                { transform: `translate(${dx}px, ${dy}px)` },
+                { transform: "translate(0, 0)" }
+            ], { duration: 90, easing: "cubic-bezier(.2,.8,.2,1)" });
+        });
+    };
+    const movePreview = event => {
+        if (!drag?.preview || !event.clientX || !event.clientY) return;
+        drag.preview.style.transform = `translate3d(${event.clientX - drag.offsetX}px, ${event.clientY - drag.offsetY}px, 0)`;
+    };
+    const createPreview = (row, event) => {
+        const rect = row.getBoundingClientRect();
+        const preview = row.cloneNode(true);
+        preview.classList.remove("dragging", "is-making-space", "is-drop-target");
+        preview.classList.add("search-product-drag-preview");
+        preview.removeAttribute("draggable");
+        Object.assign(preview.style, {
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+            transform: `translate3d(${rect.left}px, ${rect.top}px, 0)`
+        });
+        document.body.appendChild(preview);
+        drag.offsetX = event.clientX || event.clientY ? event.clientX - rect.left : rect.width / 2;
+        drag.offsetY = event.clientX || event.clientY ? event.clientY - rect.top : rect.height / 2;
+        drag.preview = preview;
+        movePreview(event);
+    };
+    const nearestTarget = event => {
+        const directRow = event.target.closest(".search-product-row.selected");
+        if (directRow && directRow !== drag?.row) {
+            const rect = directRow.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const horizontal = Math.abs(event.clientX - centerX) > Math.abs(event.clientY - centerY);
+            return { row: directRow, placeAfter: horizontal ? event.clientX > centerX : event.clientY > centerY };
+        }
+        if (directRow === drag?.row) return null;
+        let nearest = null;
+        selectedRows().forEach(row => {
+            if (row === drag?.row) return;
+            const rect = row.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+            if (!nearest || distance < nearest.distance) nearest = { row, centerX, centerY, distance };
+        });
+        if (!nearest) return null;
+        const horizontal = Math.abs(event.clientX - nearest.centerX) > Math.abs(event.clientY - nearest.centerY);
+        return { row: nearest.row, placeAfter: horizontal ? event.clientX > nearest.centerX : event.clientY > nearest.centerY };
+    };
+    const swapPopularIds = (firstId, secondId) => {
+        const firstIndex = searchSettings.popularProducts.indexOf(String(firstId));
+        const secondIndex = searchSettings.popularProducts.indexOf(String(secondId));
+        if (firstIndex < 0 || secondIndex < 0 || firstIndex === secondIndex) return;
+        [searchSettings.popularProducts[firstIndex], searchSettings.popularProducts[secondIndex]] = [searchSettings.popularProducts[secondIndex], searchSettings.popularProducts[firstIndex]];
+    };
+    const markDropTarget = target => {
+        clearTargets();
+        if (target?.row && target.row !== drag?.row) target.row.classList.add("is-drop-target");
+    };
+    const previewSwapTarget = target => {
+        if (!drag || !target?.row || target.row === drag.row) return;
+        const targetId = target.row.dataset.id;
+        const currentOrder = searchSettings.popularProducts.join("|");
+        const nextPreviewKey = `${targetId || "empty"}:${currentOrder}`;
+        if (drag.previewTarget === nextPreviewKey) return;
+        drag.previewTarget = nextPreviewKey;
+        markDropTarget(target);
+        animateRows(() => {
+            swapPopularIds(drag.id, targetId);
+            syncSearchPopularSelectedRows({ renderPreview: false });
+            drag.row = rowForId(drag.id) || drag.row;
+        });
+    };
+    const restoreOriginalOrder = () => {
+        if (!drag) return;
+        searchSettings.popularProducts = [...drag.originalIds];
+        syncSearchPopularSelectedRows({ renderPreview: false });
+        drag.row = rowForId(drag.id) || drag.row;
+    };
+    const clearDragState = () => {
+        if (!drag) return;
+        if (!drag.committed) animateRows(restoreOriginalOrder);
+        clearTargets();
+        drag.preview?.remove();
+        drag.row?.classList.remove("dragging");
+        list.classList.remove("is-reordering");
+        drag = null;
+    };
+
+    list.addEventListener("dragstart", event => {
+        if (searchSettings.popularMode !== "manual") return event.preventDefault();
+        if (event.target.closest("[data-toggle]")) return event.preventDefault();
+        const row = event.target.closest(".search-product-row.selected");
+        if (!row) return event.preventDefault();
+        if (drag) return event.preventDefault();
+        drag = { row, id: row.dataset.id, originalIds: [...searchSettings.popularProducts], previewTarget: null, committed: false, preview: null, offsetX: 0, offsetY: 0 };
+        createPreview(row, event);
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", drag.id || "");
+        event.dataTransfer.setDragImage(transparentDragImage(), 0, 0);
+        requestAnimationFrame(() => {
+            row.classList.add("dragging");
+            list.classList.add("is-reordering");
+        });
+    });
+    list.addEventListener("dragover", event => {
+        if (!drag || searchSettings.popularMode !== "manual") return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+    });
+    list.addEventListener("drag", event => {
+        if (!drag) return;
+        movePreview(event);
+    });
+    list.addEventListener("dragleave", event => {
+        if (!drag || list.contains(event.relatedTarget)) return;
+        clearTargets();
+    });
+    list.addEventListener("drop", event => {
+        if (!drag) return;
+        event.preventDefault();
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+        syncSearchPopularSelectedRows({ renderPreview: false });
+        drag.committed = true;
+        clearDragState();
+    });
+    list.addEventListener("dragend", clearDragState);
+}
+
 function normalizeSearchList(value, fallback = [], limit = 20) {
     const source = Array.isArray(value) ? value : fallback;
     const seen = new Set();
@@ -2290,68 +3434,786 @@ function parseSearchTermsTextarea(value, fallback = []) {
     return normalizeSearchList(String(value || "").split(/\n+/), fallback, 20);
 }
 
-function parseSearchSynonymsTextarea(value) {
-    return String(value || "").split(/\n+/).map(line => {
-        const [term, synonyms = ""] = line.split("=");
-        return { term: term?.trim(), synonyms: synonyms.split(",").map(item => item.trim()) };
-    }).filter(rule => rule.term && rule.synonyms.some(Boolean)).slice(0, 30);
+function hiddenTrendingSet() {
+    return new Set(normalizeSearchList(searchSettings.trendingHiddenSearches || [], [], 20).map(item => item.toLowerCase()));
 }
 
-function searchSynonymsToTextarea(items) {
-    return normalizeSearchSynonyms(items).map(rule => `${rule.term} = ${rule.synonyms.join(", ")}`).join("\n");
+function visibleTrendingSearches() {
+    const hidden = hiddenTrendingSet();
+    return searchSettings.trendingSearches.filter(label => !hidden.has(String(label).toLowerCase()));
+}
+
+function analyticsSearchKey(value) {
+    return String(value || "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+function productForSearchTerm(label) {
+    const normalized = String(label || "").toLowerCase();
+    return products.find(product => isStorefrontActive(product) && `${product.title} ${categoryLabels[productCategory(product)] || ""} ${product.category || ""}`.toLowerCase().includes(normalized))
+        || products.find(product => isStorefrontActive(product) && normalized.split(/\s+/).some(term => term.length > 2 && `${product.title} ${categoryLabels[productCategory(product)] || ""}`.toLowerCase().includes(term)));
+}
+
+function trendInsightFor(label, index) {
+    const normalized = analyticsSearchKey(label);
+    const insight = [...(searchInsights?.queries || []), ...(searchInsights?.topQueries || [])].find(item => analyticsSearchKey(item.query) === normalized);
+    const clickRate = Number(insight?.clickRate) || 0;
+    const purchases = Number(insight?.purchases) || 0;
+    const revenue = Number(insight?.revenue) || 0;
+    const conversion = insight
+        ? purchases ? `${purchases} purchase${purchases === 1 ? "" : "s"} · ${formatMoney(revenue)}` : clickRate > 0 ? `${clickRate}% product clicks` : "No clicks yet"
+        : "No search data";
+    return {
+        searches: Number(insight?.searches) || 0,
+        trend: insight?.trendPercent,
+        category: insight?.suggestedLink?.label || "No click data",
+        conversion,
+        hasInsight: Boolean(insight),
+        clickRate,
+        purchases,
+        revenue,
+        zeroResultRate: Number(insight?.zeroResultRate) || 0
+    };
+}
+
+function formatSearchVolume(value) {
+    const number = Number(value) || 0;
+    if (number >= 1000) return `${(number / 1000).toFixed(number >= 10000 ? 0 : 1).replace(/\.0$/, "")}k searches`;
+    return `${number} searches`;
+}
+
+function renderTrendingManager() {
+    const list = $("#search-trending-list");
+    if (!list) return;
+    const hidden = hiddenTrendingSet();
+    const visibleLimit = 5;
+    const allTerms = searchSettings.trendingSearches;
+    const hiddenCount = Math.max(0, allTerms.length - visibleLimit);
+    const displayedTerms = searchTrendingExpanded ? allTerms : allTerms.slice(0, visibleLimit);
+    const moreRow = hiddenCount > 0
+        ? `<tr class="search-trending-more-row"><td colspan="9"><button type="button" data-trending-more aria-expanded="${searchTrendingExpanded}"><span>${searchTrendingExpanded ? "Show less" : "More"}</span><small>${searchTrendingExpanded ? "Hide extra search terms" : `${hiddenCount} more search term${hiddenCount === 1 ? "" : "s"}`}</small></button></td></tr>`
+        : "";
+    list.innerHTML = displayedTerms.map(label => {
+        const index = allTerms.indexOf(label);
+        const insight = trendInsightFor(label, index);
+        const isVisible = !hidden.has(String(label).toLowerCase());
+        const trendClass = Number(insight.trend) < 0 ? "down" : "up";
+        const trendLabel = !insight.hasInsight ? "No data" : insight.trend === null || insight.trend === undefined ? "New" : `${Number(insight.trend) < 0 ? "" : "+"}${insight.trend}%`;
+        return `
+            <tr class="${isVisible ? "" : "is-hidden"}" draggable="true" data-index="${index}" data-label="${escapeHtml(label)}">
+                <td><span class="search-trending-drag" aria-hidden="true"><img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt=""></span></td>
+                <td>${index + 1}</td>
+                <td><strong>${escapeHtml(label)}</strong></td>
+                <td><span class="search-trend-pill ${trendClass}">${trendLabel}</span></td>
+                <td>${escapeHtml(formatSearchVolume(insight.searches))}</td>
+                <td>${escapeHtml(insight.conversion)}</td>
+                <td><span class="search-trending-link-pill">${escapeHtml(insight.category)}</span></td>
+                <td><label class="toggle-row search-trending-row-toggle"><input type="checkbox" data-trending-visible ${isVisible ? "checked" : ""}><span class="toggle-control"></span></label></td>
+                <td><div class="search-trending-actions"><button type="button" data-trending-remove aria-label="Remove ${escapeHtml(label)}"><img src="images/Icon Folder/Delete Icon_Gray.PNG" alt=""></button></div></td>
+            </tr>
+        `;
+    }).join("") + moreRow || '<tr><td colspan="9"><p class="search-setting-empty">No trending searches added.</p></td></tr>';
+    const previewHeading = $("#search-trending-preview-heading");
+    const previewChips = $("#search-trending-preview-chips");
+    const previewList = $("#search-trending-preview-list");
+    if (previewHeading && previewChips && previewList) {
+        const visible = visibleTrendingSearches();
+        previewHeading.textContent = searchSettings.trendingHeading;
+        previewHeading.hidden = searchSettings.trendingEnabled === false;
+        previewChips.hidden = searchSettings.trendingEnabled === false;
+        previewList.hidden = searchSettings.trendingEnabled === false;
+        previewChips.innerHTML = visible.slice(0, 4).map(label => `<span>↗ ${escapeHtml(label)}</span>`).join("");
+        previewList.innerHTML = visible.slice(0, 6).map(label => `<div><span>⌕</span><strong>${escapeHtml(label)}</strong><span>›</span></div>`).join("") || '<p class="search-setting-empty">No visible trends.</p>';
+    }
+}
+
+function createSearchReorderState({ list, rowSelector, handleSelector, getItems, setItems, afterCommit, direction = "vertical" }) {
+    let drag = null;
+    const rows = () => [...list.querySelectorAll(rowSelector)];
+    const clearTargets = () => rows().forEach(row => row.classList.remove("is-drop-target"));
+    const nearestDropTarget = event => {
+        let nearest = null;
+        rows().forEach(row => {
+            if (row === drag?.row) return;
+            const rect = row.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+            if (!nearest || distance < nearest.distance) nearest = { row, rect, centerX, centerY, distance };
+        });
+        if (!nearest) return null;
+        const horizontal = direction === "grid" && Math.abs(event.clientX - nearest.centerX) > Math.abs(event.clientY - nearest.centerY);
+        return {
+            row: nearest.row,
+            placeAfter: horizontal ? event.clientX > nearest.centerX : event.clientY > nearest.centerY
+        };
+    };
+    const finish = event => {
+        if (!drag) return;
+        if (drag.handle.hasPointerCapture?.(event.pointerId)) drag.handle.releasePointerCapture(event.pointerId);
+        const nextItems = rows().map(row => drag.original[Number(row.dataset.index)]).filter(item => item !== undefined);
+        setItems(nextItems);
+        drag.row.classList.remove("dragging");
+        rows().forEach(row => row.classList.remove("is-drop-target", "is-making-space"));
+        list.classList.remove("is-reordering");
+        drag = null;
+        afterCommit?.();
+        renderSearchSettings();
+    };
+    list.addEventListener("pointerdown", event => {
+        const handle = event.target.closest(handleSelector);
+        const row = handle?.closest(rowSelector);
+        if (!handle || !row) return;
+        event.preventDefault();
+        drag = { row, handle, original: [...getItems()] };
+        row.classList.add("dragging");
+        rows().forEach(item => item.classList.toggle("is-making-space", item !== row));
+        list.classList.add("is-reordering");
+        handle.setPointerCapture?.(event.pointerId);
+    });
+    list.addEventListener("pointermove", event => {
+        if (!drag) return;
+        event.preventDefault();
+        const target = nearestDropTarget(event);
+        if (!target || target.row.parentElement !== drag.row.parentElement) return;
+        clearTargets();
+        target.row.classList.add("is-drop-target");
+        target.row.parentElement.insertBefore(drag.row, target.placeAfter ? target.row.nextSibling : target.row);
+    });
+    list.addEventListener("pointerleave", event => {
+        if (!drag || list.contains(event.relatedTarget)) return;
+        clearTargets();
+    });
+    list.addEventListener("pointerup", finish);
+    list.addEventListener("pointercancel", finish);
+}
+
+function initializeSearchTrendingReorder() {
+    const list = $("#search-trending-list");
+    if (!list) return;
+    let drag = null;
+
+    const rows = () => $$("#search-trending-list tr[data-index]");
+    const clearTargets = () => rows().forEach(row => row.classList.remove("is-drop-target", "is-making-space"));
+    const rowOrder = () => rows().map(row => row.dataset.label).filter(label => label !== undefined);
+    const reindexRows = () => {
+        rows().forEach((row, index) => {
+            row.dataset.index = String(index);
+            const positionCell = row.children[1];
+            if (positionCell) positionCell.textContent = String(index + 1);
+        });
+    };
+    const updateTrendingPreview = () => {
+        const previewChips = $("#search-trending-preview-chips");
+        const previewList = $("#search-trending-preview-list");
+        if (!previewChips || !previewList) return;
+        const visible = visibleTrendingSearches();
+        previewChips.innerHTML = visible.slice(0, 4).map(label => `<span>↗ ${escapeHtml(label)}</span>`).join("");
+        previewList.innerHTML = visible.slice(0, 6).map(label => `<div><span>⌕</span><strong>${escapeHtml(label)}</strong><span>›</span></div>`).join("") || '<p class="search-setting-empty">No visible trends.</p>';
+    };
+    const animateRows = mutate => {
+        const items = rows();
+        const before = new Map(items.map(row => [row, row.getBoundingClientRect()]));
+        mutate();
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        items.forEach(row => {
+            const start = before.get(row);
+            if (!start) return;
+            const end = row.getBoundingClientRect();
+            const dx = start.left - end.left;
+            const dy = start.top - end.top;
+            if (!dx && !dy) return;
+            row.animate([
+                { transform: `translate(${dx}px, ${dy}px)` },
+                { transform: "translate(0, 0)" }
+            ], { duration: 90, easing: "cubic-bezier(.2,.8,.2,1)" });
+        });
+    };
+    const movePreview = event => {
+        if (!drag?.preview || !event.clientX || !event.clientY) return;
+        drag.preview.style.transform = `translate3d(${event.clientX - drag.offsetX}px, ${event.clientY - drag.offsetY}px, 0)`;
+    };
+    const createPreview = (row, event) => {
+        const rect = row.getBoundingClientRect();
+        const table = document.createElement("table");
+        const tbody = document.createElement("tbody");
+        const previewRow = row.cloneNode(true);
+        previewRow.classList.remove("dragging", "is-making-space", "is-drop-target");
+        [...row.children].forEach((cell, index) => {
+            const previewCell = previewRow.children[index];
+            if (previewCell) previewCell.style.width = `${cell.getBoundingClientRect().width}px`;
+        });
+        table.className = "search-trending-table search-trending-drag-preview";
+        table.setAttribute("aria-hidden", "true");
+        tbody.append(previewRow);
+        table.append(tbody);
+        Object.assign(table.style, {
+            width: `${rect.width}px`,
+            minWidth: `${rect.width}px`,
+            height: `${rect.height}px`,
+            transform: `translate3d(${rect.left}px, ${rect.top}px, 0)`
+        });
+        document.body.appendChild(table);
+        drag.offsetX = event.clientX || event.clientY ? event.clientX - rect.left : rect.width / 2;
+        drag.offsetY = event.clientX || event.clientY ? event.clientY - rect.top : rect.height / 2;
+        drag.preview = table;
+        movePreview(event);
+    };
+    const nearestTarget = event => {
+        const directRow = event.target.closest("tr[data-index]");
+        if (directRow && directRow !== drag?.row) {
+            const rect = directRow.getBoundingClientRect();
+            const centerY = rect.top + rect.height / 2;
+            return { row: directRow, placeAfter: event.clientY > centerY };
+        }
+        if (directRow === drag?.row) return null;
+        let nearest = null;
+        rows().forEach(row => {
+            if (row === drag?.row) return;
+            const rect = row.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+            if (!nearest || distance < nearest.distance) nearest = { row, centerY, distance };
+        });
+        if (!nearest) return null;
+        return { row: nearest.row, placeAfter: event.clientY > nearest.centerY };
+    };
+    const restoreOriginalOrder = () => {
+        if (!drag) return;
+        drag.originalLabels.forEach(label => {
+            const row = rows().find(item => item.dataset.label === label);
+            if (row) list.append(row);
+        });
+        reindexRows();
+    };
+    const swapRows = (first, second) => {
+        if (!first || !second || first === second) return;
+        const marker = document.createTextNode("");
+        first.before(marker);
+        second.before(first);
+        marker.replaceWith(second);
+    };
+    const markDropTarget = target => {
+        clearTargets();
+        if (target?.row && target.row !== drag?.row) target.row.classList.add("is-drop-target");
+    };
+    const previewSwapTarget = target => {
+        if (!drag || !target?.row || target.row === drag.row) return;
+        const currentOrder = rowOrder().join("|");
+        const nextPreviewKey = `${target.row.dataset.label || "empty"}:${currentOrder}`;
+        if (drag.previewTarget === nextPreviewKey) return;
+        drag.previewTarget = nextPreviewKey;
+        markDropTarget(target);
+        animateRows(() => {
+            swapRows(drag.row, target.row);
+            reindexRows();
+        });
+    };
+    const commitDropTarget = () => {
+        if (!drag) return;
+        const hidden = hiddenTrendingSet();
+        const orderedVisible = rowOrder();
+        const orderedSet = new Set(orderedVisible.map(item => item.toLowerCase()));
+        const remaining = searchSettings.trendingSearches.filter(item => !orderedSet.has(String(item).toLowerCase()));
+        searchSettings.trendingSearches = [...orderedVisible, ...remaining];
+        searchSettings.trendingHiddenSearches = searchSettings.trendingSearches.filter(item => hidden.has(item.toLowerCase()));
+        reindexRows();
+        updateTrendingPreview();
+    };
+    const clearDragState = () => {
+        if (!drag) return;
+        if (!drag.committed) animateRows(restoreOriginalOrder);
+        clearTargets();
+        drag.preview?.remove();
+        drag.row.classList.remove("dragging");
+        list.classList.remove("is-reordering");
+        drag = null;
+    };
+
+    list.addEventListener("dragstart", event => {
+        if (event.target.closest("button,input,label,.toggle-row")) return event.preventDefault();
+        const row = event.target.closest("tr[data-index]");
+        if (!row) return event.preventDefault();
+        if (drag) return event.preventDefault();
+        drag = { row, originalLabels: rowOrder(), previewTarget: null, committed: false, preview: null, offsetX: 0, offsetY: 0 };
+        createPreview(row, event);
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", row.dataset.label || "");
+        event.dataTransfer.setDragImage(transparentDragImage(), 0, 0);
+        requestAnimationFrame(() => {
+            row.classList.add("dragging");
+            list.classList.add("is-reordering");
+        });
+    });
+    list.addEventListener("dragover", event => {
+        if (!drag) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+    });
+    list.addEventListener("drag", event => {
+        if (!drag) return;
+        movePreview(event);
+    });
+    list.addEventListener("dragleave", event => {
+        if (!drag || list.contains(event.relatedTarget)) return;
+        clearTargets();
+    });
+    list.addEventListener("drop", event => {
+        if (!drag) return;
+        event.preventDefault();
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+        commitDropTarget();
+        drag.committed = true;
+        clearDragState();
+    });
+    list.addEventListener("dragend", clearDragState);
+}
+
+function initializeSearchSuggestionReorder() {
+    const list = $("#search-suggestion-list");
+    if (!list) return;
+    let drag = null;
+
+    const rows = () => $$("#search-suggestion-list .search-suggestion-row");
+    const clearTargets = () => rows().forEach(row => row.classList.remove("is-drop-target", "is-making-space"));
+    const rowOrder = () => rows().map(row => row.dataset.label).filter(label => label !== undefined);
+    const reindexRows = () => {
+        rows().forEach((row, index) => {
+            row.dataset.index = String(index);
+        });
+    };
+    const updateSuggestionPreview = () => {
+        const previewChips = $("#search-preview-chips");
+        if (!previewChips) return;
+        previewChips.innerHTML = searchSettings.suggestions.map(label => `<button class="search-chip" type="button" tabindex="-1" aria-disabled="true">${escapeHtml(label)}</button>`).join("");
+    };
+    const animateRows = mutate => {
+        const items = rows();
+        const before = new Map(items.map(row => [row, row.getBoundingClientRect()]));
+        mutate();
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        items.forEach(row => {
+            const start = before.get(row);
+            if (!start) return;
+            const end = row.getBoundingClientRect();
+            const dx = start.left - end.left;
+            const dy = start.top - end.top;
+            if (!dx && !dy) return;
+            row.animate([
+                { transform: `translate(${dx}px, ${dy}px)` },
+                { transform: "translate(0, 0)" }
+            ], { duration: 280, easing: "cubic-bezier(.2,.8,.2,1)" });
+        });
+    };
+    const movePreview = event => {
+        if (!drag?.preview || !event.clientX || !event.clientY) return;
+        drag.preview.style.transform = `translate3d(${event.clientX - drag.offsetX}px, ${event.clientY - drag.offsetY}px, 0)`;
+    };
+    const createPreview = (row, event) => {
+        const rect = row.getBoundingClientRect();
+        const preview = row.cloneNode(true);
+        preview.classList.remove("dragging", "is-making-space", "is-drop-target");
+        preview.classList.add("search-suggestion-drag-preview");
+        preview.removeAttribute("draggable");
+        Object.assign(preview.style, {
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+            transform: `translate3d(${rect.left}px, ${rect.top}px, 0)`
+        });
+        document.body.appendChild(preview);
+        drag.offsetX = event.clientX || event.clientY ? event.clientX - rect.left : rect.width / 2;
+        drag.offsetY = event.clientX || event.clientY ? event.clientY - rect.top : rect.height / 2;
+        drag.preview = preview;
+        movePreview(event);
+    };
+    const nearestTarget = event => {
+        const directRow = event.target.closest(".search-suggestion-row");
+        if (directRow && directRow !== drag?.row) {
+            const rect = directRow.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const horizontal = Math.abs(event.clientX - centerX) > Math.abs(event.clientY - centerY);
+            return { row: directRow, placeAfter: horizontal ? event.clientX > centerX : event.clientY > centerY };
+        }
+        if (directRow === drag?.row) return null;
+        let nearest = null;
+        rows().forEach(row => {
+            if (row === drag?.row) return;
+            const rect = row.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+            if (!nearest || distance < nearest.distance) nearest = { row, centerX, centerY, distance };
+        });
+        if (!nearest) return null;
+        const horizontal = Math.abs(event.clientX - nearest.centerX) > Math.abs(event.clientY - nearest.centerY);
+        return { row: nearest.row, placeAfter: horizontal ? event.clientX > nearest.centerX : event.clientY > nearest.centerY };
+    };
+    const restoreOriginalOrder = () => {
+        if (!drag) return;
+        drag.originalLabels.forEach(label => {
+            const row = rows().find(item => item.dataset.label === label);
+            if (row) list.append(row);
+        });
+        reindexRows();
+    };
+    const swapRows = (first, second) => {
+        if (!first || !second || first === second) return;
+        const marker = document.createTextNode("");
+        first.before(marker);
+        second.before(first);
+        marker.replaceWith(second);
+    };
+    const markDropTarget = target => {
+        clearTargets();
+        if (target?.row && target.row !== drag?.row) target.row.classList.add("is-drop-target", "is-making-space");
+    };
+    const previewSwapTarget = target => {
+        if (!drag || !target?.row || target.row === drag.row) return;
+        const currentOrder = rowOrder().join("|");
+        const nextPreviewKey = `${target.row.dataset.label || "empty"}:${currentOrder}`;
+        if (drag.previewTarget === nextPreviewKey) return;
+        drag.previewTarget = nextPreviewKey;
+        markDropTarget(target);
+        animateRows(() => {
+            swapRows(drag.row, target.row);
+            reindexRows();
+        });
+    };
+    const commitDropTarget = () => {
+        if (!drag) return;
+        searchSettings.suggestions = rowOrder();
+        reindexRows();
+        updateSuggestionPreview();
+    };
+    const clearDragState = () => {
+        if (!drag) return;
+        if (!drag.committed) animateRows(restoreOriginalOrder);
+        clearTargets();
+        drag.preview?.remove();
+        drag.row.classList.remove("dragging");
+        list.classList.remove("is-reordering");
+        drag = null;
+    };
+
+    list.addEventListener("dragstart", event => {
+        if (event.target.closest("[data-remove]")) return event.preventDefault();
+        const row = event.target.closest(".search-suggestion-row");
+        if (!row) return event.preventDefault();
+        if (drag) return event.preventDefault();
+        drag = { row, originalLabels: rowOrder(), previewTarget: null, committed: false, preview: null, offsetX: 0, offsetY: 0 };
+        createPreview(row, event);
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", row.dataset.label || "");
+        event.dataTransfer.setDragImage(transparentDragImage(), 0, 0);
+        requestAnimationFrame(() => {
+            row.classList.add("dragging");
+            list.classList.add("is-reordering");
+        });
+    });
+    list.addEventListener("dragover", event => {
+        if (!drag) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+    });
+    list.addEventListener("drag", event => {
+        if (!drag) return;
+        movePreview(event);
+    });
+    list.addEventListener("dragleave", event => {
+        if (!drag || list.contains(event.relatedTarget)) return;
+        clearTargets();
+    });
+    list.addEventListener("drop", event => {
+        if (!drag) return;
+        event.preventDefault();
+        movePreview(event);
+        const target = nearestTarget(event);
+        if (target) previewSwapTarget(target);
+        commitDropTarget();
+        drag.committed = true;
+        clearDragState();
+    });
+    list.addEventListener("dragend", clearDragState);
+}
+
+function renderSearchSynonyms() {
+    const list = $("#search-synonym-list");
+    if (!list) return;
+    list.innerHTML = searchSettings.synonyms.map((rule, index) => {
+        const term = escapeHtml(rule.term || "");
+        const chips = (rule.synonyms || []).map((label, synonymIndex) => `
+            <button class="search-synonym-chip" type="button" data-remove-synonym="${synonymIndex}" aria-label="Remove ${escapeHtml(label)} from ${term || "this rule"}">
+                <span>${escapeHtml(label)}</span>
+                <img src="images/Icon Folder/Close Icon_Gray.PNG" alt="">
+            </button>
+        `).join("");
+        const addControl = activeSynonymAddIndex === index
+            ? `<form class="search-synonym-add-form" data-synonym-add-form><input data-synonym-add-input maxlength="40" placeholder="Add synonym" aria-label="New connected search"><button type="submit">Add</button></form>`
+            : `<button class="search-add-synonym-chip" type="button" data-add-synonym><img src="images/Icon Folder/Plus Icon_E5A484.PNG" alt="">Add synonym</button>`;
+        return `
+            <div class="search-synonym-rule" data-index="${index}">
+                <label class="search-synonym-term-field">
+                    <span>Primary term</span>
+                    <input data-synonym-term maxlength="40" value="${term}" placeholder="Primary term">
+                </label>
+                <div class="search-synonym-connected">
+                    ${chips}
+                    ${addControl}
+                </div>
+                <button class="search-delete-synonym-rule" type="button" data-delete-synonym-rule aria-label="Delete synonym rule" title="Delete synonym rule">
+                    <img src="images/Icon Folder/Delete Icon_Black.PNG" alt="">
+                </button>
+            </div>
+        `;
+    }).join("") || '<p class="search-setting-empty">No synonym rules added.</p>';
+    if (activeSynonymAddIndex !== null) {
+        requestAnimationFrame(() => $("#search-synonym-list [data-synonym-add-input]")?.focus());
+    }
+}
+
+function normalizeSearchRules(value) {
+    return (Array.isArray(value) ? value : []).map(rule => ({
+        query: String(rule?.query || "").trim().replace(/\s+/g, " ").slice(0, 40),
+        targetType: rule?.targetType === "category" ? "category" : "product",
+        targetId: String(rule?.targetId || "").trim()
+    })).filter(rule => rule.query && rule.targetId).slice(0, 30);
+}
+
+function searchRuleTargetLabel(rule) {
+    if (rule.targetType === "category") return categories.find(category => category.slug === rule.targetId)?.label || rule.targetId;
+    return products.find(product => String(product.id) === rule.targetId)?.title || "Unavailable product";
+}
+
+function populateSearchRuleTargets() {
+    const select = $("#search-rule-target");
+    if (!select || select.options.length) return;
+    const categoryGroup = document.createElement("optgroup");
+    categoryGroup.label = "Categories";
+    categories.forEach(category => categoryGroup.append(new Option(category.label, `category:${category.slug}`)));
+    const productGroup = document.createElement("optgroup");
+    productGroup.label = "Products";
+    products.filter(isStorefrontActive).forEach(product => productGroup.append(new Option(product.title, `product:${product.id}`)));
+    select.append(categoryGroup, productGroup);
+    enhanceManagementSelect(select);
+}
+
+function renderSearchInsights() {
+    if (!searchInsights) return;
+    const totalSearches = Number(searchInsights.totalSearches) || 0;
+    const clickRate = Math.min(100, Number(searchInsights.clickRate) || 0);
+    const purchases = Number(searchInsights.totalPurchases) || 0;
+    const revenue = Number(searchInsights.attributedRevenue) || 0;
+    const zeroResults = Number(searchInsights.zeroResultSearches) || 0;
+    const uniqueQueries = Number(searchInsights.uniqueQueries) || 0;
+    const metrics = [
+        { label: "Searches", value: String(totalSearches), icon: "Search Icon_E5A484.PNG", trend: "12%", tone: "positive" },
+        { label: "Product clicks", value: `${clickRate}%`, icon: "Password Visible Icon_E5A484.PNG", trend: "0%", tone: "neutral" },
+        { label: "Purchases", value: String(purchases), icon: "Purchased Icon_E5A484.PNG", trend: "0%", tone: "neutral" },
+        { label: "Revenue", value: formatMoney(revenue), icon: "Credit Card 2_E5A484.PNG", trend: "0%", tone: "neutral" },
+        { label: "No-result searches", value: String(zeroResults), icon: "X Icon_E5A484.PNG", trend: zeroResults ? "100%" : "0%", tone: zeroResults ? "negative" : "neutral" },
+        { label: "Unique searches", value: String(uniqueQueries), icon: "Customers Icon_E5A484.PNG", trend: "22%", tone: "positive" }
+    ];
+    $("#search-insight-stats").innerHTML = metrics.map(metric => `
+        <div class="search-insight-stat">
+            <span class="search-insight-stat-icon"><img src="images/Icon Folder/${metric.icon}" alt=""></span>
+            <strong>${escapeHtml(metric.value)}</strong>
+            <span>${escapeHtml(metric.label)}</span>
+            <small class="${metric.tone}">${metric.tone === "positive" ? "+" : metric.tone === "negative" ? "!" : ""} ${escapeHtml(metric.trend)} <em>vs previous 30 days</em></small>
+        </div>
+    `).join("");
+    $("#search-activity-chart").innerHTML = searchActivityChartMarkup(totalSearches, zeroResults);
+    renderSearchQueryTable("#search-top-queries", searchInsights.topQueries, "No search activity yet.", "searches");
+    renderSearchQueryTable("#search-zero-queries", searchInsights.zeroResultQueries, "No unsuccessful searches.", "zeroResults", true);
+}
+
+function searchActivityChartMarkup(totalSearches, zeroResults) {
+    const days = 30;
+    const base = Array.from({ length: days }, (_, index) => {
+        const wave = Math.max(0, Math.sin((index + 1) * .9) * 2.2);
+        const pulse = index % 6 === 4 ? 3 : index % 11 === 0 ? 2 : 0;
+        return Math.round(wave + pulse);
+    });
+    const baseTotal = base.reduce((sum, value) => sum + value, 0) || 1;
+    let remaining = Math.max(0, Math.round(totalSearches));
+    const searchValues = base.map((value, index) => {
+        if (index === days - 1) return remaining;
+        const scaled = Math.min(remaining, Math.round((value / baseTotal) * totalSearches));
+        remaining -= scaled;
+        return scaled;
+    });
+    const noResultValues = Array.from({ length: days }, () => 0);
+    const noResultCount = Math.min(days, Math.max(0, Math.round(zeroResults)));
+    for (let index = 0; index < noResultCount; index += 1) {
+        noResultValues[Math.max(0, days - 5 - (index * 7))] += 1;
+    }
+    const maxValue = Math.max(10, ...searchValues, ...noResultValues);
+    const width = 920;
+    const height = 210;
+    const pad = { left: 36, right: 16, top: 14, bottom: 34 };
+    const x = index => pad.left + (index / (days - 1)) * (width - pad.left - pad.right);
+    const y = value => pad.top + (1 - (value / maxValue)) * (height - pad.top - pad.bottom);
+    const line = values => values.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`).join(" ");
+    const area = values => `${pad.left},${height - pad.bottom} ${line(values)} ${width - pad.right},${height - pad.bottom}`;
+    const yTicks = [0, Math.ceil(maxValue / 2), maxValue];
+    const xTicks = [0, 4, 9, 14, 19, 24, 29];
+    return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${totalSearches} searches and ${zeroResults} no-result searches in the last 30 days">
+        <defs><linearGradient id="searchChartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#e57f58" stop-opacity=".22"/><stop offset="1" stop-color="#e57f58" stop-opacity="0"/></linearGradient></defs>
+        ${yTicks.map(value => `<g><line x1="${pad.left}" y1="${y(value).toFixed(1)}" x2="${width - pad.right}" y2="${y(value).toFixed(1)}"></line><text x="4" y="${(y(value) + 4).toFixed(1)}">${value}</text></g>`).join("")}
+        ${xTicks.map(index => `<text class="x-label" x="${x(index).toFixed(1)}" y="${height - 10}">Mar ${index + 1}</text>`).join("")}
+        <polygon points="${area(searchValues)}" class="search-chart-area"></polygon>
+        <polyline points="${line(searchValues)}" class="search-chart-line"></polyline>
+        <polyline points="${line(noResultValues)}" class="search-chart-line is-empty"></polyline>
+        ${searchValues.map((value, index) => `<circle cx="${x(index).toFixed(1)}" cy="${y(value).toFixed(1)}" r="3"></circle>`).join("")}
+    </svg>`;
+}
+
+function renderSearchQueryTable(selector, items, emptyText, metric, issueMode = false) {
+    const rows = (items || []).slice(0, 8);
+    if (!rows.length) {
+        $(selector).innerHTML = `<p class="search-setting-empty">${emptyText}</p>`;
+        return;
+    }
+    const max = Math.max(1, ...rows.map(item => Number(item[metric]) || 0));
+    $(selector).innerHTML = `
+        <div class="search-query-table">
+            <div class="search-query-table-head"><span>#</span><span>Search term</span><span>${issueMode ? "Issues" : "Searches"}</span></div>
+            ${rows.map((item, index) => {
+                const value = Number(item[metric]) || 0;
+                const width = Math.max(8, Math.round((value / max) * 100));
+                return `<div class="search-query-row">
+                    <span class="search-query-rank">${index + 1}</span>
+                    <span class="search-query-term">${escapeHtml(item.query)}</span>
+                    ${issueMode
+                        ? `<strong class="search-query-issue">${value} no-result search${value === 1 ? "" : "es"}</strong>`
+                        : `<span class="search-query-volume"><i style="width:${width}%"></i></span><strong>${value}</strong>`}
+                </div>`;
+            }).join("")}
+        </div>
+    `;
 }
 
 function renderSearchSettings() {
     if (!$("#search-suggestion-list")) return;
+    populateSearchRuleTargets();
+    renderSearchInsights();
     $("#search-suggestions-enabled").checked = searchSettings.suggestionsEnabled;
-    $("#search-popular-enabled").checked = searchSettings.popularEnabled;
+    $("#search-popular-enabled").checked = searchSettings.popularEnabled !== false;
     $("#search-popular-automatic").checked = searchSettings.popularMode === "automatic";
     $("#search-suggestions-heading").value = searchSettings.suggestionsHeading;
     $("#search-popular-heading").value = searchSettings.popularHeading;
     $("#search-default-sort").value = searchSettings.defaultSort;
     $("#search-trending-enabled").checked = searchSettings.trendingEnabled !== false;
+    $("#search-trending-auto").checked = searchSettings.trendingAutoRefresh === true;
     $("#search-trending-heading").value = searchSettings.trendingHeading;
-    $("#search-trending-terms").value = searchSettings.trendingSearches.join("\n");
-    $("#search-synonyms").value = searchSynonymsToTextarea(searchSettings.synonyms);
+    renderSearchSynonyms();
+    renderTrendingManager();
     $("#search-empty-fallback").value = searchSettings.emptyFallback;
     $("#search-empty-fallback").managementPickerSync?.();
     $("#search-empty-message").value = searchSettings.emptyMessage;
+    $("#search-autocomplete-enabled").checked = searchSettings.autocompleteEnabled;
+    $("#search-autocomplete-categories").checked = searchSettings.autocompleteCategories;
+    $("#search-autocomplete-products").checked = searchSettings.autocompleteProducts;
+    $("#search-autocomplete-product-limit").value = String(searchSettings.autocompleteProductLimit);
+    $("#search-autocomplete-product-limit").managementPickerSync?.();
+    $("#search-typo-enabled").checked = searchSettings.typoEnabled;
+    $("#search-typo-strength").value = searchSettings.typoStrength;
+    $("#search-typo-strength").managementPickerSync?.();
+    $(".search-autocomplete-toggle-label").textContent = searchSettings.autocompleteEnabled ? "On" : "Off";
+    $(".search-typo-toggle-label").textContent = searchSettings.typoEnabled ? "On" : "Off";
+    $("#search-rule-list").innerHTML = searchSettings.searchRules.map((rule, index) => `<div class="search-rule-row" data-index="${index}"><div><strong>${escapeHtml(rule.query)}</strong><span>Promotes ${escapeHtml(searchRuleTargetLabel(rule))}</span></div><button type="button" data-remove-rule aria-label="Remove rule for ${escapeHtml(rule.query)}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`).join("") || '<p class="search-setting-empty">No search rules added.</p>';
     $("#search-default-sort").managementPickerSync?.();
     $("#search-suggestions-enabled").closest(".toggle-row").querySelector(".search-toggle-label").textContent = searchSettings.suggestionsEnabled ? "Shown" : "Hidden";
-    $("#search-popular-enabled").closest(".toggle-row").querySelector(".search-toggle-label").textContent = searchSettings.popularEnabled ? "Shown" : "Hidden";
+    $(".search-popular-toggle-label").textContent = searchSettings.popularEnabled !== false ? "Shown" : "Hidden";
     $(".search-trending-toggle-label").textContent = searchSettings.trendingEnabled !== false ? "Shown" : "Hidden";
+    syncSearchVisibilityIcon($("#search-suggestions-enabled"), searchSettings.suggestionsEnabled, "Suggested Searches");
+    syncSearchVisibilityIcon($("#search-popular-enabled"), searchSettings.popularEnabled !== false, "Popular Picks");
+    syncSearchVisibilityIcon($("#search-trending-enabled"), searchSettings.trendingEnabled !== false, "Trending Searches");
     $(".search-mode-label").textContent = searchSettings.popularMode === "automatic" ? "Automatic" : "Manual";
-    $("#search-suggestion-list").innerHTML = searchSettings.suggestions.map((label, index) => `<div class="search-suggestion-row" data-index="${index}"><button class="search-suggestion-drag" type="button" aria-label="Drag ${escapeHtml(label)} to reorder"><img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt=""></button><span>${escapeHtml(label)}</span><button type="button" data-remove aria-label="Remove ${escapeHtml(label)}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`).join("") || '<p class="search-setting-empty">No suggested searches added.</p>';
-    const query = $("#search-popular-product-search").value.trim().toLowerCase();
+    $("#search-suggestion-list").innerHTML = searchSettings.suggestions.map((label, index) => `<div class="search-suggestion-row" draggable="true" data-index="${index}" data-label="${escapeHtml(label)}"><button class="search-suggestion-drag" type="button" aria-label="Drag ${escapeHtml(label)} to reorder"><img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt=""></button><span>${escapeHtml(label)}</span><button type="button" data-remove aria-label="Remove ${escapeHtml(label)}"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>`).join("") || '<p class="search-setting-empty">No suggested searches added.</p>';
     const manual = searchSettings.popularMode === "manual";
-    const selected = new Set(searchSettings.popularProducts);
-    $("#search-popular-products").innerHTML = products.filter(product => isStorefrontActive(product) && (!query || `${product.title} ${product.category || ""}`.toLowerCase().includes(query))).map(product => {
-        const id = String(product.id);
-        const selectedIndex = searchSettings.popularProducts.indexOf(id);
-        const controls = selected.has(id) && manual
-            ? `<div class="search-product-controls"><button type="button" data-move="up" aria-label="Move ${escapeHtml(product.title)} up">↑</button><button type="button" data-move="down" aria-label="Move ${escapeHtml(product.title)} down">↓</button><button type="button" data-toggle aria-label="Remove ${escapeHtml(product.title)}">✓</button></div>`
-            : `<button type="button" data-toggle ${manual ? "" : "disabled"} aria-label="${selected.has(id) ? "Remove" : "Add"} ${escapeHtml(product.title)}">${selected.has(id) ? "✓" : "+"}</button>`;
-        return `<div class="search-product-row ${selected.has(id) ? "selected" : ""}" data-id="${escapeHtml(id)}"><img src="${escapeHtml(productImage(product))}" alt=""><div><strong>${escapeHtml(product.title)}</strong><small>${selected.has(id) ? `Selected · position ${selectedIndex + 1}` : (categoryLabels[productCategory(product)] || "Products")}</small></div>${controls}</div>`;
-    }).join("");
-    $("#search-popular-product-search").disabled = !manual;
-    $("#search-popular-products").classList.toggle("is-disabled", !manual);
-    $("#search-preview-suggestions-heading").textContent = searchSettings.suggestionsHeading;
-    $("#search-preview-suggestions-heading").hidden = !searchSettings.suggestionsEnabled;
-    $("#search-preview-chips").hidden = !searchSettings.suggestionsEnabled;
-    $("#search-preview-chips").innerHTML = searchSettings.suggestions.map(label => `<span>${escapeHtml(label)}</span>`).join("");
-    $("#search-preview-trending-heading").textContent = searchSettings.trendingHeading;
-    $("#search-preview-trending-heading").hidden = searchSettings.trendingEnabled === false;
-    $("#search-preview-trending").hidden = searchSettings.trendingEnabled === false;
-    $("#search-preview-trending").innerHTML = searchSettings.trendingSearches.map(label => `<span>${escapeHtml(label)}</span>`).join("");
-    $("#search-preview-popular-heading").textContent = searchSettings.popularHeading;
-    $("#search-preview-popular-heading").hidden = !searchSettings.popularEnabled;
-    $("#search-preview-products").hidden = !searchSettings.popularEnabled;
-    $("#search-preview-products").innerHTML = searchPopularSelection().slice(0, 6).map(product => `<div><img src="${escapeHtml(productImage(product))}" alt=""><span>${escapeHtml(product.title)}</span></div>`).join("");
+    const popularProductSearch = $("#search-popular-product-search");
+    popularProductSearch.closest(".search-field").hidden = !manual;
+    if (!manual) {
+        popularProductSearch.disabled = true;
+        $("#search-popular-products").classList.remove("is-disabled");
+        $("#search-popular-products").innerHTML = '<p class="search-setting-empty search-automatic-message"><img src="images/Icon Folder/Gear Icon_Gray.PNG" alt="" aria-hidden="true"><strong>Operating Automatically</strong><span>MPWR will choose popular active products for this section.</span></p>';
+    } else {
+        const query = popularProductSearch.value.trim().toLowerCase();
+        const selected = new Set(searchSettings.popularProducts);
+        const popularIndex = product => {
+            const index = searchSettings.popularProducts.indexOf(String(product.id));
+            return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+        };
+        const visibleProducts = products
+            .filter(product => isStorefrontActive(product) && (!query || `${product.title} ${product.category || ""}`.toLowerCase().includes(query)))
+            .sort((first, second) => {
+                const firstIndex = popularIndex(first);
+                const secondIndex = popularIndex(second);
+                if (firstIndex !== secondIndex) return firstIndex - secondIndex;
+                return 0;
+            });
+        $("#search-popular-products").innerHTML = visibleProducts.map((product, productIndex) => {
+            const id = String(product.id);
+            const selectedIndex = searchSettings.popularProducts.indexOf(id);
+            const isSelected = selected.has(id);
+            const limitReached = !isSelected && searchSettings.popularProducts.length >= SEARCH_POPULAR_PRODUCT_LIMIT;
+            const buttonIcon = isSelected ? "Tick Icon_White.PNG" : limitReached ? "Plus Icon_Light Gray.PNG" : "Plus Icon_Gray.PNG";
+            const buttonLabel = isSelected ? `Remove ${escapeHtml(product.title)}` : limitReached ? "Popular Picks limit reached" : `Add ${escapeHtml(product.title)}`;
+            const controls = `<button type="button" class="${limitReached ? "is-limit-reached" : ""}" data-toggle ${manual ? "" : "disabled"} ${limitReached ? 'aria-disabled="true"' : ""} aria-label="${buttonLabel}"><img src="images/Icon Folder/${buttonIcon}" alt=""></button>`;
+            const dragHandle = isSelected ? `<span class="search-product-drag is-position" draggable="true" aria-hidden="true">${selectedIndex + 1}</span>` : "";
+            const visualOrder = isSelected ? selectedIndex : 1000 + productIndex;
+            return `<div class="search-product-row ${isSelected ? "selected" : ""}" draggable="${isSelected ? "true" : "false"}" data-id="${escapeHtml(id)}" data-index="${isSelected ? selectedIndex : ""}" style="order:${visualOrder}">${dragHandle}<img src="${escapeHtml(productImage(product))}" alt=""><div><strong>${escapeHtml(product.title)}</strong><small>${isSelected ? `Selected · position ${selectedIndex + 1}` : (categoryLabels[productCategory(product)] || "Products")}</small></div>${controls}</div>`;
+        }).join("");
+        popularProductSearch.disabled = false;
+        $("#search-popular-products").classList.remove("is-disabled");
+    }
+    const previewSuggestionsHeading = $("#search-preview-suggestions-heading");
+    const previewChips = $("#search-preview-chips");
+    const previewTrendingHeading = $("#search-preview-trending-heading");
+    const previewTrending = $("#search-preview-trending");
+    const previewPopularHeading = $("#search-preview-popular-heading");
+    const previewProducts = $("#search-preview-products");
+    if (previewSuggestionsHeading && previewChips && previewTrendingHeading && previewTrending && previewPopularHeading && previewProducts) {
+        previewSuggestionsHeading.textContent = searchSettings.suggestionsHeading;
+        previewSuggestionsHeading.closest(".search-preview-discovery-section").hidden = !searchSettings.suggestionsEnabled;
+        previewChips.innerHTML = searchSettings.suggestions.map(label => `<button class="search-chip" type="button" tabindex="-1" aria-disabled="true">${escapeHtml(label)}</button>`).join("");
+        previewTrendingHeading.textContent = searchSettings.trendingHeading;
+        previewTrendingHeading.closest(".search-preview-discovery-section").hidden = searchSettings.trendingEnabled === false;
+        previewTrending.innerHTML = visibleTrendingSearches().map(label => `<button class="search-chip" type="button" tabindex="-1" aria-disabled="true">${escapeHtml(label)}</button>`).join("");
+        renderSearchPopularPreview();
+    }
 }
 
 async function saveSearchSettings() {
     const selected = searchSettings.popularProducts.map(id => products.find(product => String(product.id) === id)).filter(Boolean);
+    searchSettings.synonyms = normalizeSearchSynonyms(searchSettings.synonyms);
+    const hidden = hiddenTrendingSet();
+    searchSettings.trendingHiddenSearches = searchSettings.trendingSearches.filter(label => hidden.has(String(label).toLowerCase()));
     await setDoc(doc(db, "storefront", "search"), { ...searchSettings, popularProducts: selected.map(product => ({ id: String(product.id), title: product.title, image: productImage(product) })) });
+}
+
+function validateSearchSynonyms() {
+    const invalidIndex = searchSettings.synonyms.findIndex(rule => !String(rule.term || "").trim() || !rule.synonyms?.length);
+    if (invalidIndex < 0) return true;
+    const rule = searchSettings.synonyms[invalidIndex];
+    showToast(!String(rule.term || "").trim() ? "Add a primary term to this synonym rule." : "Add at least one connected search to this synonym rule.", "error");
+    const row = $(`#search-synonym-list .search-synonym-rule[data-index="${invalidIndex}"]`);
+    row?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!String(rule.term || "").trim()) row?.querySelector("[data-synonym-term]")?.focus();
+    else {
+        activeSynonymAddIndex = invalidIndex;
+        renderSearchSynonyms();
+    }
+    return false;
 }
 
 function setEditorPanel(panel, focusField = true) {
@@ -2373,13 +4235,27 @@ function setEditorPanel(panel, focusField = true) {
     }
 }
 
+function lockProductEditorScroll() {
+    productEditorScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    document.documentElement.classList.add("product-editor-open");
+    document.body.classList.add("product-editor-open");
+    document.body.style.top = `-${productEditorScrollY}px`;
+}
+
+function unlockProductEditorScroll() {
+    document.documentElement.classList.remove("product-editor-open");
+    document.body.classList.remove("product-editor-open");
+    document.body.style.top = "";
+    window.scrollTo(0, productEditorScrollY);
+}
+
 function closeEditor() {
     pendingMediaPreviewUrls.forEach(url => URL.revokeObjectURL(url));
     pendingMediaPreviewUrls = [];
     selectedMediaFiles = [];
     removedExistingImageUrls = new Set();
     $(".product-modal").classList.add("hidden");
-    document.body.classList.remove("product-editor-open");
+    unlockProductEditorScroll();
     $(".product-modal-content").classList.remove("is-editing");
     editingProduct = null;
     setEditorPanel("product", false);
@@ -2420,7 +4296,7 @@ function openEditor(product = null) {
     const existingMedia = $("#existing-media");
     existingMedia.innerHTML = `${gallery.map((url, index) => `<button class="existing-media-view" type="button" draggable="true" data-media-url="${escapeHtml(url)}" aria-label="View product image ${index + 1}" title="Drag to rearrange"><img src="${escapeHtml(url)}" alt="Product image ${index + 1}" draggable="false"><span class="existing-media-remove" aria-label="Remove product image"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></span></button>`).join("")}${videos.map(video => `<video src="${escapeHtml(video.url || video)}" muted aria-label="Existing product video"></video>`).join("")}<button class="existing-media-add" type="button" aria-label="Add another image or video"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></button>`;
     existingMedia.classList.remove("hidden");
-    document.body.classList.add("product-editor-open");
+    lockProductEditorScroll();
     $(".product-modal").classList.remove("hidden");
     setEditorPanel("product");
 }
@@ -2545,12 +4421,14 @@ function syncHomepageSectionStates() {
     }
     const offerPreview = $("#offer-preview-card");
     const offerLayout = offerPreview?.closest(".homepage-layout");
+    const offerPanel = $("#homepage-section-discounts");
+    offerPanel?.classList.toggle("section-disabled", !discountSectionEnabled);
+    if (offerPanel) offerPanel.inert = !discountSectionEnabled;
     offerPreview?.classList.toggle("section-disabled", !discountSectionEnabled);
     offerLayout?.classList.toggle("section-disabled", !discountSectionEnabled);
     if (offerPreview) offerPreview.querySelector(".popular-selection").inert = !discountSectionEnabled;
     if (offerLayout) offerLayout.querySelector(".homepage-picker-card").inert = !discountSectionEnabled;
-    const offerLabel = offerToggle.closest(".homepage-section-toggle")?.querySelector(".homepage-section-toggle-label");
-    if (offerLabel) offerLabel.textContent = discountSectionEnabled ? "Shown" : "Hidden";
+    syncHomepageTabVisibility(offerToggle, discountSectionEnabled, "Discount Products");
     const automaticDiscounts = discountMode === "automatic";
     $("#discount-mode-automatic").checked = automaticDiscounts;
     $(".discount-mode-toggle-label").textContent = automaticDiscounts ? "Automatic" : "Manual";
@@ -2589,7 +4467,7 @@ function syncHomepageSectionStates() {
 }
 
 async function saveHomepageSettings({ includeHero = false } = {}) {
-    const saves = [savePopularSetting(), saveDiscountSetting(), saveAnnouncementBar(), saveCampaignBanner(), saveCategorySetting()];
+    const saves = [savePopularSetting(), saveDiscountSetting(), saveAnnouncementBar(), saveCampaignBanner(), saveCategorySetting(), saveHomepageSectionOrder()];
     if (includeHero) saves.push(saveHomepageHero());
     await Promise.all(saves);
 }
@@ -2642,6 +4520,12 @@ async function saveCampaignBanner() {
 async function saveCategorySetting() {
     await setDoc(doc(db, "storefront", "categories"), { items: categories });
     localStorage.setItem("mpwrCategories", JSON.stringify(categories));
+}
+
+async function saveHomepageSectionOrder() {
+    homepageSectionOrder = normalizeHomepageSectionOrder(homepageSectionOrder);
+    await setDoc(doc(db, "storefront", "homepageSectionOrder"), { items: homepageSectionOrder });
+    localStorage.setItem("mpwrHomepageSectionOrder", JSON.stringify(homepageSectionOrder));
 }
 
 async function verifyHomepageAddition(section, productId) {
@@ -2966,6 +4850,61 @@ function enhanceHomepageDestinationPicker(select) {
 function bindEvents() {
     enhanceManagementSelect($("#search-default-sort"));
     enhanceManagementSelect($("#search-empty-fallback"));
+    enhanceManagementSelect($("#search-autocomplete-product-limit"));
+    enhanceManagementSelect($("#search-typo-strength"));
+    activateHomepageSection(activeHomepageSection);
+    const homepageTabs = $$("[data-homepage-section-tab]");
+    homepageTabs.forEach(tab => {
+        tab.addEventListener("click", () => activateHomepageSection(tab.dataset.homepageSectionTab));
+        tab.addEventListener("keydown", event => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const current = homepageTabs.indexOf(tab);
+            const nextIndex = event.key === "Home"
+                ? 0
+                : event.key === "End"
+                    ? homepageTabs.length - 1
+                    : (current + (event.key === "ArrowRight" ? 1 : -1) + homepageTabs.length) % homepageTabs.length;
+            homepageTabs[nextIndex]?.focus();
+            activateHomepageSection(homepageTabs[nextIndex]?.dataset.homepageSectionTab);
+        });
+    });
+    activateSearchSection(activeSearchSection);
+    const searchTabs = $$("[data-search-section-tab]");
+    searchTabs.forEach(tab => {
+        tab.addEventListener("click", () => activateSearchSection(tab.dataset.searchSectionTab));
+        tab.addEventListener("keydown", event => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const current = searchTabs.indexOf(tab);
+            const nextIndex = event.key === "Home"
+                ? 0
+                : event.key === "End"
+                    ? searchTabs.length - 1
+                    : (current + (event.key === "ArrowRight" ? 1 : -1) + searchTabs.length) % searchTabs.length;
+            searchTabs[nextIndex]?.focus();
+            activateSearchSection(searchTabs[nextIndex]?.dataset.searchSectionTab);
+        });
+    });
+    $("#search-rule-form").addEventListener("submit", event => {
+        event.preventDefault();
+        const query = $("#search-rule-query").value.trim().replace(/\s+/g, " ").slice(0, 40);
+        const [targetType, ...targetParts] = $("#search-rule-target").value.split(":");
+        const targetId = targetParts.join(":");
+        if (!query || !targetId) return showToast("Add a search and something to promote.", "error");
+        const duplicate = searchSettings.searchRules.some(rule => rule.query.toLowerCase() === query.toLowerCase() && rule.targetType === targetType && rule.targetId === targetId);
+        if (duplicate) return showToast("That search rule already exists.", "error");
+        if (searchSettings.searchRules.length >= 30) return showToast("Add up to 30 search rules.", "error");
+        searchSettings.searchRules.push({ query, targetType, targetId });
+        $("#search-rule-query").value = "";
+        renderSearchSettings();
+    });
+    $("#search-rule-list").addEventListener("click", event => {
+        const row = event.target.closest(".search-rule-row");
+        if (!row || !event.target.closest("[data-remove-rule]")) return;
+        searchSettings.searchRules.splice(Number(row.dataset.index), 1);
+        renderSearchSettings();
+    });
     $("#search-suggestion-form").addEventListener("submit", event => {
         event.preventDefault();
         const input = $("#search-suggestion-input");
@@ -2985,63 +4924,162 @@ function bindEvents() {
         else return;
         renderSearchSettings();
     });
-    let suggestionDrag = null;
-    $("#search-suggestion-list").addEventListener("pointerdown", event => {
-        const handle = event.target.closest(".search-suggestion-drag");
-        const row = handle?.closest(".search-suggestion-row");
-        if (!handle || !row) return;
-        event.preventDefault();
-        suggestionDrag = { row, handle, original: [...searchSettings.suggestions] };
-        row.classList.add("dragging");
-        handle.setPointerCapture(event.pointerId);
-    });
-    $("#search-suggestion-list").addEventListener("pointermove", event => {
-        if (!suggestionDrag) return;
-        event.preventDefault();
-        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest(".search-suggestion-row");
-        if (!target || target === suggestionDrag.row || target.parentElement !== suggestionDrag.row.parentElement) return;
-        const rect = target.getBoundingClientRect();
-        target.parentElement.insertBefore(suggestionDrag.row, event.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
-    });
-    const finishSuggestionDrag = event => {
-        if (!suggestionDrag) return;
-        if (suggestionDrag.handle.hasPointerCapture(event.pointerId)) suggestionDrag.handle.releasePointerCapture(event.pointerId);
-        searchSettings.suggestions = [...$("#search-suggestion-list").querySelectorAll(".search-suggestion-row")].map(row => suggestionDrag.original[Number(row.dataset.index)]);
-        suggestionDrag.row.classList.remove("dragging");
-        suggestionDrag = null;
-        renderSearchSettings();
-    };
-    $("#search-suggestion-list").addEventListener("pointerup", finishSuggestionDrag);
-    $("#search-suggestion-list").addEventListener("pointercancel", finishSuggestionDrag);
+    initializeSearchSuggestionReorder();
+    initializeSearchPopularReorder();
     $("#search-popular-products").addEventListener("click", event => {
         const row = event.target.closest(".search-product-row");
         if (!row || searchSettings.popularMode !== "manual" || !event.target.closest("button")) return;
         const id = row.dataset.id;
-        const index = searchSettings.popularProducts.indexOf(id);
-        if (event.target.closest('[data-move="up"]') && index > 0) [searchSettings.popularProducts[index - 1], searchSettings.popularProducts[index]] = [searchSettings.popularProducts[index], searchSettings.popularProducts[index - 1]];
-        else if (event.target.closest('[data-move="down"]') && index >= 0 && index < searchSettings.popularProducts.length - 1) [searchSettings.popularProducts[index + 1], searchSettings.popularProducts[index]] = [searchSettings.popularProducts[index], searchSettings.popularProducts[index + 1]];
-        else if (searchSettings.popularProducts.includes(id)) searchSettings.popularProducts = searchSettings.popularProducts.filter(value => value !== id);
+        const wasAtLimit = searchSettings.popularProducts.length >= SEARCH_POPULAR_PRODUCT_LIMIT;
+        if (searchSettings.popularProducts.includes(id)) searchSettings.popularProducts = searchSettings.popularProducts.filter(value => value !== id);
         else if (searchSettings.popularProducts.length < SEARCH_POPULAR_PRODUCT_LIMIT) searchSettings.popularProducts.push(id);
         else return showToast(`Choose up to ${SEARCH_POPULAR_PRODUCT_LIMIT} Popular Picks.`, "error");
-        renderSearchSettings();
+        const isAtLimit = searchSettings.popularProducts.length >= SEARCH_POPULAR_PRODUCT_LIMIT;
+        syncSearchPopularSelectedRows({ changedId: id, updateLimitState: wasAtLimit !== isAtLimit });
     });
     $("#search-popular-product-search").addEventListener("input", renderSearchSettings);
     $("#search-suggestions-enabled").addEventListener("change", event => { searchSettings.suggestionsEnabled = event.target.checked; renderSearchSettings(); });
     $("#search-popular-enabled").addEventListener("change", event => { searchSettings.popularEnabled = event.target.checked; renderSearchSettings(); });
     $("#search-popular-automatic").addEventListener("change", event => { searchSettings.popularMode = event.target.checked ? "automatic" : "manual"; renderSearchSettings(); });
-    $("#search-suggestions-heading").addEventListener("input", event => { searchSettings.suggestionsHeading = event.target.value.trimStart().slice(0, 60) || "Suggested searches"; $("#search-preview-suggestions-heading").textContent = searchSettings.suggestionsHeading; });
-    $("#search-popular-heading").addEventListener("input", event => { searchSettings.popularHeading = event.target.value.trimStart().slice(0, 60) || "Popular picks"; $("#search-preview-popular-heading").textContent = searchSettings.popularHeading; });
+    $("#search-suggestions-heading").addEventListener("input", event => { searchSettings.suggestionsHeading = event.target.value.trimStart().slice(0, 60) || "Suggested searches"; const previewHeading = $("#search-preview-suggestions-heading"); if (previewHeading) previewHeading.textContent = searchSettings.suggestionsHeading; });
+    $("#search-popular-heading").addEventListener("input", event => { searchSettings.popularHeading = event.target.value.trimStart().slice(0, 60) || "Popular picks"; const previewHeading = $("#search-preview-popular-heading"); if (previewHeading) previewHeading.textContent = searchSettings.popularHeading; });
     $("#search-default-sort").addEventListener("change", event => { searchSettings.defaultSort = event.target.value; });
     $("#search-trending-enabled").addEventListener("change", event => { searchSettings.trendingEnabled = event.target.checked; renderSearchSettings(); });
-    $("#search-trending-heading").addEventListener("input", event => { searchSettings.trendingHeading = event.target.value.trimStart().slice(0, 60) || "Trending searches"; $("#search-preview-trending-heading").textContent = searchSettings.trendingHeading; });
-    $("#search-trending-terms").addEventListener("input", event => {
-        searchSettings.trendingSearches = parseSearchTermsTextarea(event.target.value, DEFAULT_TRENDING_SEARCHES);
-        $("#search-preview-trending").innerHTML = searchSettings.trendingSearches.map(label => `<span>${escapeHtml(label)}</span>`).join("");
+    $("#search-trending-auto").addEventListener("change", event => { searchSettings.trendingAutoRefresh = event.target.checked; });
+    $("#search-trending-heading").addEventListener("input", event => {
+        searchSettings.trendingHeading = event.target.value.trimStart().slice(0, 60) || "Trending searches";
+        const previewHeading = $("#search-preview-trending-heading");
+        if (previewHeading) previewHeading.textContent = searchSettings.trendingHeading;
+        renderTrendingManager();
     });
-    $("#search-synonyms").addEventListener("input", event => { searchSettings.synonyms = normalizeSearchSynonyms(parseSearchSynonymsTextarea(event.target.value)); });
+    $("#search-trending-form").addEventListener("submit", event => {
+        event.preventDefault();
+        const input = $("#search-trending-input");
+        const label = input.value.trim().replace(/\s+/g, " ").slice(0, 40);
+        if (!label) return;
+        if (searchSettings.trendingSearches.some(item => item.toLowerCase() === label.toLowerCase())) return showToast("That trend already exists.", "error");
+        if (searchSettings.trendingSearches.length >= 20) return showToast("Add up to 20 trending searches.", "error");
+        searchSettings.trendingSearches.push(label);
+        searchSettings.trendingHiddenSearches = normalizeSearchList(searchSettings.trendingHiddenSearches, [], 20).filter(item => item.toLowerCase() !== label.toLowerCase());
+        input.value = "";
+        renderSearchSettings();
+    });
+    $("#import-search-trends").addEventListener("click", () => {
+        const insightTerms = normalizeSearchList((searchInsights?.topQueries || []).map(item => item.query), [], 20);
+        if (!insightTerms.length) return showToast("No search insights are available to import yet.", "error");
+        searchSettings.trendingSearches = insightTerms;
+        searchSettings.trendingHiddenSearches = [];
+        searchSettings.trendingLastAutoRefresh = new Date().toISOString();
+        renderSearchSettings();
+        showToast("Trending searches imported from insights.");
+    });
+    $("#search-trending-list").addEventListener("click", event => {
+        if (event.target.closest("[data-trending-more]")) {
+            searchTrendingExpanded = !searchTrendingExpanded;
+            renderTrendingManager();
+            return;
+        }
+        const row = event.target.closest("tr[data-index]");
+        if (!row) return;
+        const index = Number(row.dataset.index);
+        const label = searchSettings.trendingSearches[index];
+        if (!label) return;
+        if (event.target.closest("[data-trending-remove]")) {
+            searchSettings.trendingSearches.splice(index, 1);
+            searchSettings.trendingHiddenSearches = normalizeSearchList(searchSettings.trendingHiddenSearches, [], 20).filter(item => item.toLowerCase() !== label.toLowerCase());
+            renderSearchSettings();
+            return;
+        }
+    });
+    $("#search-trending-list").addEventListener("change", event => {
+        if (!event.target.matches("[data-trending-visible]")) return;
+        const row = event.target.closest("tr[data-index]");
+        const label = searchSettings.trendingSearches[Number(row?.dataset.index)];
+        if (!label) return;
+        const hidden = hiddenTrendingSet();
+        if (event.target.checked) hidden.delete(label.toLowerCase());
+        else hidden.add(label.toLowerCase());
+        searchSettings.trendingHiddenSearches = searchSettings.trendingSearches.filter(item => hidden.has(item.toLowerCase()));
+        renderSearchSettings();
+    });
+    initializeSearchTrendingReorder();
+    $("#search-synonym-list").addEventListener("input", event => {
+        const row = event.target.closest(".search-synonym-rule");
+        if (!row || !event.target.matches("[data-synonym-term]")) return;
+        const index = Number(row.dataset.index);
+        if (!searchSettings.synonyms[index]) return;
+        searchSettings.synonyms[index].term = event.target.value.trimStart().slice(0, 40);
+    });
+    $("#search-synonym-list").addEventListener("blur", event => {
+        const row = event.target.closest(".search-synonym-rule");
+        if (!row || !event.target.matches("[data-synonym-term]")) return;
+        const index = Number(row.dataset.index);
+        if (!searchSettings.synonyms[index]) return;
+        searchSettings.synonyms[index].term = event.target.value.trim().replace(/\s+/g, " ");
+        event.target.value = searchSettings.synonyms[index].term;
+    }, true);
+    $("#search-synonym-list").addEventListener("click", event => {
+        const row = event.target.closest(".search-synonym-rule");
+        if (!row) return;
+        const index = Number(row.dataset.index);
+        const rule = searchSettings.synonyms[index];
+        if (!rule) return;
+        if (event.target.closest("[data-delete-synonym-rule]")) {
+            searchSettings.synonyms.splice(index, 1);
+            activeSynonymAddIndex = null;
+            renderSearchSynonyms();
+            return;
+        }
+        const removeButton = event.target.closest("[data-remove-synonym]");
+        if (removeButton) {
+            rule.synonyms.splice(Number(removeButton.dataset.removeSynonym), 1);
+            renderSearchSynonyms();
+            return;
+        }
+        if (event.target.closest("[data-add-synonym]")) {
+            activeSynonymAddIndex = index;
+            renderSearchSynonyms();
+        }
+    });
+    $("#search-synonym-list").addEventListener("submit", event => {
+        const form = event.target.closest("[data-synonym-add-form]");
+        if (!form) return;
+        event.preventDefault();
+        const row = form.closest(".search-synonym-rule");
+        const index = Number(row.dataset.index);
+        const rule = searchSettings.synonyms[index];
+        const input = form.querySelector("[data-synonym-add-input]");
+        const label = input.value.trim().replace(/\s+/g, " ").slice(0, 40);
+        if (!rule || !label) return;
+        if (rule.synonyms.some(item => item.toLowerCase() === label.toLowerCase())) return showToast("That synonym already exists in this rule.", "error");
+        if (rule.synonyms.length >= 8) return showToast("Add up to 8 connected searches per rule.", "error");
+        rule.synonyms.push(label);
+        activeSynonymAddIndex = null;
+        renderSearchSynonyms();
+    });
+    $("#add-search-synonym-rule").addEventListener("click", () => {
+        if (searchSettings.synonyms.length >= 30) return showToast("Add up to 30 synonym rules.", "error");
+        searchSettings.synonyms.push({ term: "", synonyms: [] });
+        activeSynonymAddIndex = null;
+        renderSearchSynonyms();
+        requestAnimationFrame(() => {
+            const inputs = $$("#search-synonym-list [data-synonym-term]");
+            inputs.at(-1)?.focus();
+        });
+    });
+    $("#search-autocomplete-enabled").addEventListener("change", event => { searchSettings.autocompleteEnabled = event.target.checked; renderSearchSettings(); });
+    $("#search-autocomplete-categories").addEventListener("change", event => { searchSettings.autocompleteCategories = event.target.checked; });
+    $("#search-autocomplete-products").addEventListener("change", event => { searchSettings.autocompleteProducts = event.target.checked; });
+    $("#search-autocomplete-product-limit").addEventListener("change", event => { searchSettings.autocompleteProductLimit = Number(event.target.value) || 3; });
+    $("#search-typo-enabled").addEventListener("change", event => { searchSettings.typoEnabled = event.target.checked; renderSearchSettings(); });
+    $("#search-typo-strength").addEventListener("change", event => { searchSettings.typoStrength = event.target.value === "strict" ? "strict" : "balanced"; });
     $("#search-empty-fallback").addEventListener("change", event => { searchSettings.emptyFallback = ["popular", "trending", "suggestions", "message"].includes(event.target.value) ? event.target.value : "popular"; });
     $("#search-empty-message").addEventListener("input", event => { searchSettings.emptyMessage = event.target.value.trimStart().slice(0, 120) || "Try a trending search or browse our popular picks."; });
-    $("#save-search-settings").addEventListener("click", () => { $("#search-save-modal").classList.remove("hidden"); $("#confirm-search-save").focus(); });
+    $("#save-search-settings").addEventListener("click", () => {
+        if (!validateSearchSynonyms()) return;
+        $("#search-save-modal").classList.remove("hidden");
+        $("#confirm-search-save").focus();
+    });
     const closeSearchSave = () => { $("#search-save-modal").classList.add("hidden"); $("#save-search-settings").focus(); };
     $("#cancel-search-save").addEventListener("click", closeSearchSave);
     $("#search-save-modal").addEventListener("click", event => { if (event.target === event.currentTarget) closeSearchSave(); });
@@ -3300,34 +5338,7 @@ function bindEvents() {
     $("#homepage-search").addEventListener("input", renderHomepageProducts);
     $("#discount-search").addEventListener("input", renderDiscountProducts);
     initializeHeroCategoryReorder();
-    $("#category-order-list").addEventListener("click", event => {
-        const button = event.target.closest("[data-category-move]");
-        const item = event.target.closest(".category-order-item");
-        if (!button || !item) return;
-        moveCategory(item.dataset.slug, button.dataset.categoryMove);
-    });
-    $("#category-order-list").addEventListener("dragstart", event => {
-        const item = event.target.closest(".category-order-item");
-        if (!item) return;
-        item.classList.add("dragging");
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", item.dataset.slug);
-    });
-    $("#category-order-list").addEventListener("dragend", event => {
-        event.target.closest(".category-order-item")?.classList.remove("dragging");
-    });
-    $("#category-order-list").addEventListener("dragover", event => {
-        const item = event.target.closest(".category-order-item");
-        if (!item) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-    });
-    $("#category-order-list").addEventListener("drop", event => {
-        const item = event.target.closest(".category-order-item");
-        if (!item) return;
-        event.preventDefault();
-        reorderCategoryBefore(event.dataTransfer.getData("text/plain"), item.dataset.slug);
-    });
+    initializeHomepageSectionOrderReorder();
     ["#homepage-announcement-enabled", "#homepage-announcement-message", "#homepage-announcement-link-label", "#homepage-announcement-link"].forEach(selector => {
         const field = $(selector);
         field.addEventListener(field.type === "checkbox" ? "change" : "input", renderAnnouncementBarPreview);
@@ -3364,8 +5375,12 @@ function bindEvents() {
         syncLinkedCampaignControls({ refreshContent: event.target.value === "discounts" });
     });
     $("#homepage-campaign-sync").addEventListener("change", event => {
+        $("#homepage-campaign-source").value = event.target.checked ? "discounts" : "custom";
+        if (!event.target.checked) resetCampaignBannerDefaultFields();
+        productDropdownSync.get($("#homepage-campaign-source"))?.();
         syncLinkedCampaignControls({ refreshContent: event.target.checked });
     });
+    $("#homepage-campaign-manage")?.addEventListener("click", () => activateHomepageSection("discounts"));
     const closeHomepageSaveConfirmation = () => {
         $("#homepage-save-modal").classList.add("hidden");
         $("#save-homepage").focus();
@@ -3418,6 +5433,7 @@ function bindEvents() {
         event.target.value = discountCampaignLabel;
         productDropdownSync.get(event.target)?.();
         $("#discount-campaign-preview").textContent = discountCampaignLabel;
+        renderHomepageSectionOrder();
         if ($("#homepage-campaign-source").value === "discounts" && $("#homepage-campaign-sync").checked) {
             syncLinkedCampaignControls({ refreshContent: true });
         }
@@ -3531,6 +5547,7 @@ function bindEvents() {
         const product = products.find(entry => String(entry.id) === item.dataset.id);
         if (product) updateHomepageSelection(product, "remove");
     });
+    initializeHomepagePopularReorder();
     $("#cancel-homepage-removal").addEventListener("click", closeHomepageRemovalConfirmation);
     $("#confirm-homepage-removal").addEventListener("click", () => {
         if (!homepageRemovalTarget) return;
@@ -3613,6 +5630,7 @@ function bindEvents() {
             $("#discount-campaign-label").value = value;
             productDropdownSync.get($("#discount-campaign-label"))?.();
             $("#discount-campaign-preview").textContent = value;
+            renderHomepageSectionOrder();
         } else if (type === "popularMode") {
             popularMode = value;
             syncHomepageSectionStates();
@@ -3652,6 +5670,7 @@ function bindEvents() {
             $("#discount-campaign-label").value = discountCampaignLabel;
             productDropdownSync.get($("#discount-campaign-label"))?.();
             $("#discount-campaign-preview").textContent = discountCampaignLabel;
+            renderHomepageSectionOrder();
             syncHomepageSectionStates();
             renderHomepage();
             homepageAutosaveQueue = Promise.resolve();
@@ -3671,6 +5690,7 @@ function bindEvents() {
         const product = products.find(entry => String(entry.id) === item.dataset.id);
         if (product) updateDiscountSelection(product, "remove");
     });
+    initializeHomepageDiscountReorder();
     $("#discount-selection").addEventListener("input", event => {
         if (discountMode !== "manual") return;
         const input = event.target.closest(".discount-percent-input");
@@ -3706,34 +5726,6 @@ function bindEvents() {
     });
     $("#discount-removal-modal").addEventListener("click", event => {
         if (event.target === event.currentTarget) closeDiscountRemovalConfirmation();
-    });
-    let draggedId = null;
-    $("#popular-selection").addEventListener("dragstart", event => { if (popularMode !== "manual") return event.preventDefault(); const item = event.target.closest(".popular-item"); if (item) { draggedId = item.dataset.id; item.classList.add("dragging"); } });
-    $("#popular-selection").addEventListener("dragend", event => {
-        event.target.closest(".popular-item")?.classList.remove("dragging");
-        draggedId = null;
-    });
-    $("#popular-selection").addEventListener("dragover", event => { if (popularMode !== "manual") return; event.preventDefault(); const target = event.target.closest(".popular-item:not(.popular-item-placeholder)"); if (!draggedId || !target || target.dataset.id === draggedId) return; const from = popularIds.indexOf(draggedId); const to = popularIds.indexOf(target.dataset.id); popularIds.splice(to, 0, popularIds.splice(from, 1)[0]); renderPopularSelection(); });
-    let draggedDiscountId = null;
-    $("#discount-selection").addEventListener("dragstart", event => {
-        if (discountMode !== "manual") return event.preventDefault();
-        if (event.target.closest("input,button")) return event.preventDefault();
-        const item = event.target.closest(".discount-item");
-        if (item) { draggedDiscountId = item.dataset.id; item.classList.add("dragging"); }
-    });
-    $("#discount-selection").addEventListener("dragend", event => {
-        event.target.closest(".discount-item")?.classList.remove("dragging");
-        draggedDiscountId = null;
-    });
-    $("#discount-selection").addEventListener("dragover", event => {
-        if (discountMode !== "manual") return;
-        event.preventDefault();
-        const target = event.target.closest(".discount-item:not(.popular-item-placeholder)");
-        if (!draggedDiscountId || !target || target.dataset.id === draggedDiscountId) return;
-        const from = discountSelections.findIndex(item => item.id === draggedDiscountId);
-        const to = discountSelections.findIndex(item => item.id === target.dataset.id);
-        discountSelections.splice(to, 0, discountSelections.splice(from, 1)[0]);
-        renderDiscountSelection();
     });
 }
 

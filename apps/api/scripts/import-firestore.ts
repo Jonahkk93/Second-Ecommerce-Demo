@@ -9,7 +9,7 @@ import { Pool } from "pg";
 import { carts, favorites, orderItems, orders, products, reviews, storefrontSettings, users } from "../src/database/schema";
 
 type Row = { id: string; data: Record<string, any>; createTime?: string; updateTime?: string };
-const status = (value: unknown): "pending" | "processing" | "shipped" | "delivered" | "cancelled" => { const normalized = String(value || "pending").toLowerCase(); return (["pending", "processing", "shipped", "delivered", "cancelled"].includes(normalized) ? normalized : "pending") as any; };
+const status = (value: unknown): "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "returned" => { const normalized = String(value || "pending").toLowerCase(); return (["pending", "processing", "shipped", "delivered", "cancelled", "returned"].includes(normalized) ? normalized : "pending") as any; };
 
 async function main() {
   const connectionString = process.env.DATABASE_URL; if (!connectionString) throw new Error("DATABASE_URL is required");

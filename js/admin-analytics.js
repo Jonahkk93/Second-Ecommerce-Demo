@@ -6,7 +6,7 @@ const localHost = /^(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168
 const API_ROOT = window.MPWR_API_URL || (localHost ? `http://${window.location.hostname}:3000/v1` : "/api/v1");
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
-const statusColours = { pending: "#f2ad4b", processing: "#578ee9", shipped: "#8c65df", delivered: "#31ad76", cancelled: "#d95c5c" };
+const statusColours = { pending: "#f2ad4b", processing: "#578ee9", shipped: "#8c65df", delivered: "#31ad76", cancelled: "#d95c5c", returned: "#8a6f5a" };
 const categoryLabels = { "press-ons": "Press-On Nails", wigs: "Wigs", lashes: "Lashes", products: "Products", polish: "Nail Polish" };
 let report = null;
 let toastTimer;
@@ -133,7 +133,7 @@ function renderStatuses(statuses) {
         return `<div class="status-row"><i style="background:${statusColours[item.status]}"></i><span>${escapeHtml(item.status)}</span><div><b style="width:${share}%"></b></div><strong>${item.count}</strong></div>`;
     }).join("");
     const count = status => statuses.find(item => item.status === status)?.count || 0;
-    const active = Math.max(0, total - count("cancelled"));
+    const active = Math.max(0, total - count("cancelled") - count("returned"));
     $("#delivered-share").textContent = `${active ? Math.round((count("delivered") / active) * 100) : 0}%`;
     $("#cancelled-share").textContent = `${total ? Math.round((count("cancelled") / total) * 100) : 0}%`;
 }

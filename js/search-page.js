@@ -5,6 +5,7 @@ const searchInput = document.querySelector("#page-search-input");
 const searchForm = document.querySelector(".search-form");
 const searchResults = document.querySelector(".search-results");
 const searchEmpty = document.querySelector(".search-empty");
+const searchResultsSection = document.querySelector(".search-results-section");
 const resultTitle = document.querySelector("#search-results-title");
 const resultCount = document.querySelector(".results-count");
 const recentContainer = document.querySelector(".recent-searches");
@@ -52,7 +53,10 @@ try {
     const response = await fetch(`${apiRoot}/storefront/search`, { credentials:"include", cache:"no-store" });
     if (response.ok) searchPageSettings = await response.json();
     if (Array.isArray(searchPageSettings.suggestions)) suggestions = searchPageSettings.suggestions.map(String).filter(Boolean);
-    if (Array.isArray(searchPageSettings.trendingSearches)) trendingSearches = searchPageSettings.trendingSearches.map(String).filter(Boolean);
+    if (Array.isArray(searchPageSettings.trendingSearches)) {
+        const hidden = new Set((Array.isArray(searchPageSettings.trendingHiddenSearches) ? searchPageSettings.trendingHiddenSearches : []).map(item => String(item).toLowerCase()));
+        trendingSearches = searchPageSettings.trendingSearches.map(String).filter(label => label && !hidden.has(label.toLowerCase()));
+    }
     if (Array.isArray(searchPageSettings.synonyms)) searchSynonyms = normalizeSearchSynonyms(searchPageSettings.synonyms);
 } catch (error) {
     console.warn("Using default search page settings", error);
@@ -95,12 +99,6 @@ function suggestionLabels() {
         labels.add(rule.term);
         rule.synonyms.forEach(label => labels.add(label));
     });
-    products.forEach(product => {
-        labels.add(product.title);
-        (product.options || []).forEach(group => {
-            (group.values || []).forEach(value => labels.add(value));
-        });
-    });
     return [...labels];
 }
 
@@ -124,17 +122,43 @@ function hideLiveSuggestions() {
     searchInput.setAttribute("aria-expanded","false");
 }
 
+function autocompleteCategories() {
+    const configured = Array.isArray(window.MPWRCategoryOrder) ? window.MPWRCategoryOrder : [];
+    if (configured.length) return configured;
+    const slugs = [...new Set(products.map(product => String(product.category || "")).filter(Boolean))];
+    return slugs.map(slug => ({ slug, label:slug.replace(/-/g," ").replace(/\b\w/g, letter => letter.toUpperCase()), image:"images/Icon Folder/Products 2 Icon_333.PNG" }));
+}
+
+function categoryHref(category) {
+    const pages = { "press-ons":"Nails.html", wigs:"Wigs.html", lashes:"Lashes.html", products:"ProductsPage.html" };
+    return pages[category.slug] || `ProductsPage.html?category=${encodeURIComponent(category.slug)}`;
+}
+
+function appendSuggestionHeading(label) {
+    const heading = document.createElement("div");
+    heading.className = "live-suggestion-heading";
+    heading.textContent = label;
+    liveSuggestions.appendChild(heading);
+}
+
 function renderLiveSuggestions(query) {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) {
+    if (!normalized || searchPageSettings.autocompleteEnabled === false) {
         hideLiveSuggestions();
         return;
     }
     const matches = suggestionLabels()
         .filter(label => label.toLowerCase().includes(normalized))
         .sort((a,b) => Number(!a.toLowerCase().startsWith(normalized)) - Number(!b.toLowerCase().startsWith(normalized)) || a.localeCompare(b))
-        .slice(0,14);
+        .slice(0,5);
+    const categories = searchPageSettings.autocompleteCategories === false ? [] : autocompleteCategories()
+        .filter(category => `${category.label} ${category.slug}`.toLowerCase().includes(normalized)).slice(0,3);
+    const productMatches = searchPageSettings.autocompleteProducts === false ? [] : products
+        .filter(product => searchMatchesProduct(product, normalized))
+        .sort((a,b) => Number(!a.title.toLowerCase().startsWith(normalized)) - Number(!b.title.toLowerCase().startsWith(normalized)))
+        .slice(0, Number(searchPageSettings.autocompleteProductLimit) || 3);
     liveSuggestions.replaceChildren();
+    if (matches.length) appendSuggestionHeading("Searches");
     matches.forEach(label => {
         const button = document.createElement("button");
         button.type = "button";
@@ -153,8 +177,41 @@ function renderLiveSuggestions(query) {
         });
         liveSuggestions.appendChild(button);
     });
-    liveSuggestions.hidden = matches.length === 0;
-    searchInput.setAttribute("aria-expanded",String(matches.length > 0));
+    if (categories.length) appendSuggestionHeading("Categories");
+    categories.forEach(category => {
+        const link = document.createElement("a");
+        link.className = "live-suggestion live-category-suggestion";
+        link.href = categoryHref(category);
+        const icon = document.createElement("img");
+        icon.src = category.image || "images/Icon Folder/Products 2 Icon_333.PNG";
+        icon.alt = "";
+        const copy = document.createElement("span");
+        copy.append(category.label);
+        const detail = document.createElement("small");
+        detail.textContent = "Category";
+        copy.appendChild(detail);
+        link.append(icon, copy);
+        liveSuggestions.appendChild(link);
+    });
+    if (productMatches.length) appendSuggestionHeading("Products");
+    productMatches.forEach(product => {
+        const link = document.createElement("a");
+        link.className = "live-suggestion live-product-suggestion";
+        link.href = `product.html?id=${encodeURIComponent(product.id)}`;
+        const image = document.createElement("img");
+        image.src = product.image;
+        image.alt = "";
+        const copy = document.createElement("span");
+        copy.append(product.title);
+        const detail = document.createElement("small");
+        detail.textContent = `UGX ${Number(product.price || 0).toLocaleString()}`;
+        copy.appendChild(detail);
+        link.append(image, copy);
+        liveSuggestions.appendChild(link);
+    });
+    const total = matches.length + categories.length + productMatches.length;
+    liveSuggestions.hidden = total === 0;
+    searchInput.setAttribute("aria-expanded",String(total > 0));
 }
 
 function savedSearches() {
@@ -472,6 +529,17 @@ function renderResults(query = "") {
     } else if (!normalized) {
         matches = matches.slice(0,12);
     }
+    const manualPopularWithoutProducts = !normalized
+        && searchPageSettings.popularMode === "manual"
+        && Array.isArray(searchPageSettings.popularProducts)
+        && matches.length === 0;
+    searchResultsSection.hidden = searchPageSettings.popularEnabled === false || manualPopularWithoutProducts;
+    if (manualPopularWithoutProducts) {
+        searchResults.replaceChildren();
+        searchEmpty.hidden = true;
+        resultCount.textContent = "";
+        return;
+    }
     searchResults.replaceChildren(...matches.map(productCard));
     searchEmpty.hidden = matches.length > 0;
     searchResults.hidden = matches.length === 0;
@@ -544,7 +612,7 @@ document.querySelector(".suggested-searches-section h2").textContent = searchPag
 document.querySelector(".trending-searches-section h2").textContent = searchPageSettings.trendingHeading || "Trending searches";
 document.querySelector(".trending-searches-section").hidden = searchPageSettings.trendingEnabled === false;
 document.querySelector(".suggested-searches-section").hidden = searchPageSettings.suggestionsEnabled === false;
-document.querySelector(".search-results-section").hidden = searchPageSettings.popularEnabled === false;
+searchResultsSection.hidden = searchPageSettings.popularEnabled === false;
 trendingContainer.replaceChildren(...trendingSearches.map(chip));
 suggestedContainer.replaceChildren(...suggestions.map(chip));
 renderRecentSearches();

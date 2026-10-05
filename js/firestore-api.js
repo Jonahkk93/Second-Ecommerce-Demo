@@ -43,12 +43,20 @@ export function initializePayment(orderId, method) {
     return request(`/payments/initialize/${encodeURIComponent(orderId)}`, { method: "POST", body: { method }, db: window.db });
 }
 
+export function getSearchInsights() {
+    return request("/admin/search-insights", { db: window.db, cache: "no-store" });
+}
+
 export function getPaymentStatus(orderId) {
     return request(`/payments/${encodeURIComponent(orderId)}`, { db: window.db });
 }
 
 export function markCustomerCancellationSeen(orderId, seen, db = window.db) {
     return request(`/orders/${encodeURIComponent(orderId)}/cancellation-seen`, { method: "PATCH", body: { seen }, db });
+}
+
+export function reviewCustomerCancellation(orderId, decision, db = window.db) {
+    return request(`/orders/${encodeURIComponent(orderId)}/cancellation-review`, { method: "PATCH", body: { decision }, db });
 }
 
 export function updateOrderRefund(orderId, status, db = window.db, details = {}) {
