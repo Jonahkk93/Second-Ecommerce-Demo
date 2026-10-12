@@ -1096,10 +1096,11 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
         22px
         max(24px, env(safe-area-inset-bottom, 0px));
     flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
     color: #333;
     background: #fff;
     border-right: 1px solid #e0e0e0;
@@ -1108,6 +1109,12 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     transition: transform .35s ease;
     will-change: transform;
     contain: layout paint;
+}
+
+.sidebar_menu::-webkit-scrollbar{
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .sidebar-toggle:checked ~ .sidebar-backdrop{
@@ -1144,6 +1151,142 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     color: #E5A484;
 }
 
+.sidebar-campaign-card{
+    position: relative;
+    display: flex;
+    min-height: 116px;
+    margin: 10px 0 24px;
+    padding: 20px 60px 20px 20px;
+    align-items: center;
+    gap: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(229, 164, 132, .22);
+    border-radius: 14px;
+    color: #fff;
+    text-decoration: none;
+    background: linear-gradient(135deg, #201b19 0%, #3c241d 100%);
+    box-shadow: 0 14px 34px rgba(32, 27, 25, .14);
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+
+.sidebar-campaign-card::before{
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+        linear-gradient(90deg, rgba(32, 27, 25, .92) 0%, rgba(32, 27, 25, .72) 54%, rgba(32, 27, 25, .42) 100%),
+        linear-gradient(0deg, rgba(32, 27, 25, .2), rgba(32, 27, 25, .2));
+    content: "";
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sidebar-campaign-card.has-image::before{
+    opacity: 1;
+}
+
+.sidebar-campaign-card:hover,
+.sidebar-campaign-card:focus-visible{
+    outline: none;
+    border-color: rgba(229, 164, 132, .46);
+    box-shadow: 0 18px 40px rgba(32, 27, 25, .18);
+    transform: translateY(-2px);
+}
+
+.sidebar-campaign-bg{
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transform: scale(1.02);
+    transition: opacity .25s ease, transform .4s ease;
+}
+
+.sidebar-campaign-card.has-image .sidebar-campaign-bg{
+    opacity: 1;
+}
+
+.sidebar-campaign-card.has-image:hover .sidebar-campaign-bg{
+    transform: scale(1.06);
+}
+
+.sidebar-campaign-icon-tile{
+    position: relative;
+    z-index: 2;
+    display: grid;
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(229, 164, 132, .16);
+    border: 1px solid rgba(229, 164, 132, .2);
+}
+
+.sidebar-campaign-icon{
+    display: block;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    filter: none;
+}
+
+.sidebar-campaign-copy{
+    position: relative;
+    z-index: 2;
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+}
+
+.sidebar-campaign-eyebrow{
+    color: #e5a484;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+}
+
+.sidebar-campaign-copy strong{
+    max-width: 150px;
+    color: #fff;
+    font-size: 15px;
+    line-height: 1.16;
+    letter-spacing: 0;
+}
+
+.sidebar-campaign-body{
+    max-width: 148px;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: rgba(255, 255, 255, .78);
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.sidebar-campaign-arrow{
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background:
+        rgba(229, 164, 132, .96)
+        url("../images/Icon Folder/Back Icon Right_White.PNG")
+        center / 14px 14px
+        no-repeat;
+    opacity: 1;
+    transform: translateY(-50%);
+}
+
 .sidebar-close{
     display: grid;
     margin-left: auto;
@@ -1168,7 +1311,21 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 }
 
 .menu2{
-    margin-top: 22px;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.menu2::-webkit-scrollbar{
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .sidebar-section-title{
@@ -1188,22 +1345,6 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     position: relative;
 }
 
-.menu2 li:not(:last-child)::after{
-    content: "";
-    position: absolute;
-    right: 24px;
-    bottom: 0;
-    left: 24px;
-    height: 1px;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        #dedede 18%,
-        #dedede 82%,
-        transparent
-    );
-}
-
 .menu2 a{
     display: flex;
     align-items: center;
@@ -1217,17 +1358,53 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     transition: color .25s ease, opacity .25s ease, transform .25s ease;
 }
 
+.menu2 a::after{
+    content: "";
+    display: block;
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    margin-left: 2px;
+    background: url("../images/Icon Folder/Back Icon Right_Gray.PNG") center / contain no-repeat;
+    opacity: .55;
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.menu2 a:is(:hover,:focus-visible)::after{
+    opacity: .9;
+    transform: translateX(2px);
+}
+
 .menu2 a span{
     display: flex;
     align-items: center;
+    margin-right: auto;
     line-height: 20px;
+    min-width: 0;
+}
+
+.sidebar-category-badge-icon,
+.sidebar-category-hot-icon{
+    display: block;
+    width: 17px;
+    height: 17px;
+    flex: 0 0 17px;
+    margin-left: auto;
+    object-fit: contain;
+}
+
+.sidebar-category-sale-icon{
+    width: 42px;
+    height: auto;
+    flex-basis: 42px;
+    transform: none;
 }
 
 .sidebar-item-icon{
     display: block;
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
     filter:brightness(0) invert(20%);
     object-fit: contain;
     transition:filter .2s ease;
@@ -1277,21 +1454,23 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 .menu2 a[aria-current="page"] .sidebar-item-icon{filter:none}
 
 .menu2 a[aria-current="page"][href="index.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Home Icon_E5A484.PNG")}
-.menu2 a[aria-current="page"][href="Nails.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Nails Icon_E5A484.PNG")}
+.menu2 a[aria-current="page"][href="Nails.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Nails 3 Icon_Black.PNG")}
 .menu2 a[aria-current="page"][href="Wigs.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Wigs Icon_E5A484.PNG")}
 .menu2 a[aria-current="page"][href="ProductsPage.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Products 2 Icon_E5A484.PNG")}
-.menu2 a[aria-current="page"][href="ProductsPage.html?category=all"] .sidebar-item-icon{content:url("../images/Icon Folder/Products 2 Icon_E5A484.PNG")}
+.menu2 a[aria-current="page"][href="ProductsPage.html?category=all"] .sidebar-item-icon{content:url("../images/Icon Folder/Categories Icon_Black.PNG")}
 .menu2 a[aria-current="page"][href="Lashes.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Lashes Icon_E5A484.PNG")}
 .menu2 :is(.sidebar-campaign-item,.sidebar-discounts-item) .sidebar-item-icon{
     filter:none;
 }
 
 .social_media{
+    flex: 0 0 auto;
     display: flex;
     justify-content: center;
     gap: 20px;
     margin-top: auto;
-    padding-top: 24px;
+    padding-top: 18px;
+    background: #fff;
 }
 
 .social_media a{

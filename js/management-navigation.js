@@ -6,12 +6,15 @@
     const hash = window.location.hash.toLowerCase();
     const onDashboard = page === "admin.html";
     const onProducts = page === "admin-products.html";
+    const onCategoryEditor = page === "admin-category.html";
 
     const activeKey = onDashboard
         ? (hash === "#orders" ? "orders" : "dashboard")
         : onProducts
-            ? (hash === "#homepage" ? "homepage" : hash === "#search-page" ? "search" : hash === "#deleted-products" ? "deleted" : "products")
-            : page === "admin-reviews.html"
+            ? (hash === "#homepage" ? "homepage" : hash === "#categories" ? "categories" : hash === "#sidebar" ? "sidebar" : hash === "#search-page" ? "search" : hash === "#deleted-products" ? "deleted" : "products")
+            : onCategoryEditor
+                ? "categories"
+                : page === "admin-reviews.html"
                 ? "reviews"
                 : page === "admin-analytics.html"
                     ? "analytics"
@@ -26,6 +29,7 @@
         "Dashboard Icon_E5A484.PNG",
         "Order status_E5A484.PNG",
         "Products 2 Icon_E5A484.PNG",
+        "Categories Icon_E5A484.PNG",
         "Home Icon_E5A484.PNG",
         "Search Icon_E5A484.PNG",
         "Delete Icon_E5A484.PNG",
@@ -42,7 +46,9 @@
         `<button class="management-nav-item" data-coming-soon="${label}" type="button">${iconMarkup}${label}</button>`;
 
     const productExtra = onProducts ? ' data-panel="catalogue"' : "";
+    const categoriesExtra = onProducts ? ' data-panel="categories"' : "";
     const homepageExtra = onProducts ? ' data-panel="homepage"' : "";
+    const sidebarExtra = onProducts ? ' data-panel="sidebar"' : "";
     const searchExtra = onProducts ? ' data-panel="search"' : "";
     const deletedExtra = onProducts ? ' data-panel="deleted"' : "";
     const dashboardHref = onDashboard ? "admin.html" : "admin.html";
@@ -56,7 +62,9 @@
             ${link("dashboard", dashboardHref, "Dashboard", icon("Dashboard Icon_Light Gray.PNG"))}
             ${link("orders", ordersHref, "Orders", icon("Order status_Light Gray.PNG"))}
             ${link("products", "admin-products.html#products", "Products", icon("Products 2 Icon_Light Gray.PNG"), productExtra)}
+            ${link("categories", "admin-products.html#categories", "Categories", icon("Categories Icon_Light Gray.PNG"), categoriesExtra)}
             ${link("homepage", "admin-products.html#homepage", "Homepage", icon("Home Icon_Light Gray.PNG"), homepageExtra)}
+            ${link("sidebar", "admin-products.html#sidebar", "Sidebar", icon("Menu Bar Icon_Light Gray.PNG"), sidebarExtra)}
             ${link("search", "admin-products.html#search-page", "Search Page", icon("Search Icon_Light Gray.PNG"), searchExtra)}
             ${link("deleted", "admin-products.html#deleted-products", '<span class="management-nav-label">Deleted Products <em id="deleted-nav-count">0</em></span>', icon("Delete Icon_Light Gray.PNG"), deletedExtra)}
             ${link("customers", "admin-customers.html", "Customers", icon("Customers Icon_Light Gray.PNG"))}

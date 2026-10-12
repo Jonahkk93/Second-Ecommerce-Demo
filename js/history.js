@@ -436,9 +436,7 @@ function updateModalFavorite() {
     productModalFavorite.setAttribute("title",label);
     const text = productModalFavorite.querySelector("span");
     if (text) text.textContent = label;
-    productModalFavorite.querySelector("img").src = isFavorite
-        ? "images/Heart7.PNG"
-        : "images/optimized/heart-outline.png";
+    productModalFavorite.querySelector("img").src = "images/Icon Folder/Heart Outline Icon_E5A484.PNG";
 }
 
 function openProductModal(item) {

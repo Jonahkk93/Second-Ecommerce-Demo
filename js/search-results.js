@@ -1026,7 +1026,7 @@ function updateModalFavoriteButton(isFavorite = getFavorites().some(item => Stri
     productModalFavorite.setAttribute("title",label);
     productModalFavorite.classList.toggle("is-favorite",isFavorite);
     if (text) text.textContent = label;
-    icon?.setAttribute("src",isFavorite ? "images/Heart7.PNG" : "images/optimized/heart-outline.png");
+    icon?.setAttribute("src","images/Icon Folder/Heart Outline Icon_E5A484.PNG");
 }
 
 async function updateModalReviews(product) {

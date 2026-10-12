@@ -363,7 +363,7 @@ function setFavorite(product,enabled) {
 function updateModalFavorite() {
     const favorite = selectedModalProduct && isFavorite(selectedModalProduct.id);
     const label = favorite ? "Remove from Wishlist" : "Add to Wishlist";
-    productModalFavorite.querySelector("img").src = favorite ? "images/Heart7.PNG" : "images/optimized/heart-outline.png";
+    productModalFavorite.querySelector("img").src = "images/Icon Folder/Heart Outline Icon_E5A484.PNG";
     productModalFavorite.querySelector("span").textContent = label;
     productModalFavorite.setAttribute("aria-label",label);
     productModalFavorite.setAttribute("title",label);

@@ -684,7 +684,7 @@ function closeRelatedProductModal() {
 function updateRelatedModalFavorite() {
     if (!selectedModalProduct || !productModalFavoriteIcon) return;
     const active = isFavoriteProduct(selectedModalProduct);
-    productModalFavoriteIcon.src = active ? "images/Heart7.PNG" : "images/optimized/heart-outline.png";
+    productModalFavoriteIcon.src = "images/Icon Folder/Heart Outline Icon_E5A484.PNG";
     productModalFavorite?.setAttribute("aria-label", active ? "Remove from Wishlist" : "Add to Wishlist");
     if (productModalFavoriteLabel) productModalFavoriteLabel.textContent = active ? "Remove from Wishlist" : "Add to Wishlist";
 }

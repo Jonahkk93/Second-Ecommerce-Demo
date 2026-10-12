@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" class="site-loading-enabled">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPWR Category Management</title>
+    <link rel="stylesheet" href="css/admin-products.css?v=20261011-32">
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/touch-interactions.css?v=20260929-3">
+    <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
+    <link rel="stylesheet" href="css/management-navigation.css?v=20261012-1">
+    <script src="js/loading-states.js?v=20260809-23" defer></script>
+    <script src="js/touch-interactions.js" defer></script>
+    <script src="js/auto-grow-textareas.js?v=20260930-1" defer></script>
+    <script src="js/management-navigation.js?v=20261012-1" defer></script>
+    <script type="module" src="js/management-account.js?v=20260909-3"></script>
+</head>
+<body>
+<div class="management-page-loading" id="management-page-loading" role="status" aria-live="polite">
+    <span class="management-loading-spinner" aria-hidden="true"></span>
+    <p>Loading category editor…</p>
+</div>
+<div class="management-shell" id="category-editor-app" hidden>
+    <aside class="management-sidebar" data-management-sidebar></aside>
+    <main class="management-main">
+        <form id="category-page-form" class="category-page-editor">
+            <header class="management-topbar catalogue-topbar category-page-topbar">
+                <div><p class="eyebrow">Catalogue category</p><h1 id="category-page-title">Add Category</h1><p>Manage category placement, linked campaign banner, product order, and assignments.</p></div>
+            </header>
+
+            <section class="form-section category-page-section">
+                <div class="form-section-heading"><span>1</span><div><h3>Category details</h3><p>Control how the category appears in management and storefront navigation.</p></div></div>
+                <div class="form-grid">
+                    <label class="field field-wide"><span>Category name</span><input type="text" id="category-name" placeholder="e.g. Hair Accessories" maxlength="60" required></label>
+                    <label class="field field-wide"><span>Category handle</span><input type="text" id="category-slug" placeholder="hair-accessories" maxlength="60" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required><small>Used internally to organize and filter products.</small></label>
+                    <label class="field category-priority-field"><span>Display priority</span><input type="number" id="category-priority" min="1" step="1" placeholder="1"><small>Lower numbers appear first.</small></label>
+                    <label class="field category-status-field"><span>Status</span><select id="category-status"><option value="active">Active</option><option value="hidden">Hidden</option><option value="draft">Draft</option></select></label>
+                    <label class="field"><span>Product order</span><select id="category-sort-mode"><option value="manual">Manual order</option><option value="newest">Newest first</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="discounted">Discounted first</option><option value="in-stock">Most stock first</option><option value="name">Name A-Z</option></select></label>
+                    <label class="field"><span>Badge</span><select id="category-badge"><option value="">No badge</option><option value="New">New</option><option value="Hot">Hot</option><option value="Sale">Sale</option><option value="Trending">Trending</option><option value="Limited">Limited</option></select></label>
+                    <label class="field field-wide"><span>Subcategories</span><input type="text" id="category-subcategories" placeholder="French Tips, Lace Front, Mink Lashes" maxlength="220"><small>Separate subcategories with commas.</small></label>
+                </div>
+                <label class="category-image-upload" for="category-image">
+                    <span class="category-image-preview">
+                        <img id="category-image-preview" alt="" hidden>
+                        <img class="category-image-placeholder" src="images/Icon Folder/Plus Icon_Gray.PNG" alt="">
+                    </span>
+                    <span class="category-image-copy"><strong>Category image</strong><small id="category-image-status">Choose a JPEG, PNG, WebP, or GIF image up to 5 MB.</small></span>
+                    <span class="category-image-action">Choose image</span>
+                    <input type="file" id="category-image" accept="image/jpeg,image/png,image/webp,image/gif">
+                </label>
+            </section>
+
+            <section class="form-section category-page-section">
+                <div class="form-section-heading"><span>2</span><div><h3>Campaign banner</h3><p>Linked to the Homepage Campaign Banner details.</p></div></div>
+                <div class="category-campaign-layout">
+                    <div class="form-grid">
+                        <label class="field"><span>Small label</span><input type="text" id="category-hero-eyebrow" placeholder="Linked from homepage campaign" maxlength="40" readonly></label>
+                        <label class="field"><span>Button text</span><input type="text" id="category-hero-button-label" placeholder="Linked from homepage campaign" maxlength="32" readonly></label>
+                        <label class="field field-wide"><span>Main heading</span><input type="text" id="category-hero-heading" placeholder="Linked from homepage campaign" maxlength="80" readonly></label>
+                        <label class="field field-wide"><span>Short description</span><textarea id="category-hero-body" rows="2" maxlength="180" placeholder="Linked from homepage campaign" readonly></textarea></label>
+                        <label class="field field-wide"><span>Button destination</span><input type="text" id="category-hero-button-link" placeholder="Linked from homepage campaign" maxlength="140" readonly></label>
+                        <div class="banner-media-field field-wide category-campaign-media" data-category-campaign-media>
+                            <span class="banner-upload-heading">Photo <span>(optional, maximum 1)</span></span>
+                            <div class="banner-media-row">
+                                <label class="banner-media-dropzone banner-file-button is-disabled" for="category-campaign-image-file" aria-label="Linked campaign banner photo"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></label>
+                                <input id="category-campaign-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled>
+                                <div class="banner-media-preview" id="category-campaign-image-preview-wrap" hidden><img class="banner-media-thumbnail" id="category-campaign-image-preview" alt="Current campaign banner"><button class="banner-media-reset" type="button" id="category-campaign-image-reset" aria-label="Remove campaign image" disabled><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>
+                            </div>
+                            <p class="banner-image-limit">JPEG, PNG, WebP, or GIF · Maximum 1 photo · 10 MB per image</p>
+                            <span class="banner-media-status" id="category-campaign-image-status" aria-live="polite">Linked from homepage campaign banner</span>
+                            <details class="banner-media-advanced"><summary>Advanced: use an image URL</summary><div class="hero-url-grid campaign-url-grid" aria-label="Campaign banner image URL">
+                                <label class="field"><span>Image 1</span><span class="hero-url-control"><input id="category-campaign-image-url" maxlength="500" placeholder="Linked from homepage campaign" readonly><button type="button" id="category-campaign-image-url-preview" aria-label="Preview campaign image" disabled><img src="images/Icon Folder/Password Visible Icon_E5A484.PNG" alt=""></button></span></label>
+                            </div></details>
+                            <input id="category-campaign-image-key" type="hidden">
+                        </div>
+                    </div>
+                    <article class="homepage-hero-preview homepage-campaign-preview category-campaign-preview" id="category-campaign-preview" aria-label="Category campaign banner preview" aria-live="polite">
+                        <img class="homepage-campaign-image" alt="">
+                        <div class="homepage-campaign-copy"><p class="hero-preview-eyebrow homepage-campaign-eyebrow"></p><h3></h3><p class="hero-preview-body homepage-campaign-body"></p></div>
+                        <span class="hero-preview-button homepage-campaign-button"></span>
+                    </article>
+                </div>
+            </section>
+
+            <section class="form-section category-page-section">
+                <div class="form-section-heading"><span>3</span><div><h3>Products</h3><p>Choose products assigned to this category. Product display order follows the selected product order mode.</p></div></div>
+                <label class="search-field category-product-search"><span><img src="images/Icon Folder/Search Icon_Gray.PNG" alt=""></span><input type="search" id="category-product-search" placeholder="Search products…"></label>
+                <div class="category-product-picker-heading"><strong id="category-product-selection-count">0 products selected</strong><span>Required</span></div>
+                <div id="category-product-picker" class="category-product-picker"></div>
+                <p id="category-products-empty" class="category-products-empty hidden">No products match this search.</p>
+            </section>
+            <div class="category-page-save-footer"><a class="secondary-button" href="admin-products.html#categories">Back</a><button class="primary-button" id="category-page-save" type="submit">Save Category</button></div>
+        </form>
+    </main>
+</div>
+<div class="admin-products-toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/admin-category.js?v=20261012-1"></script>
+</body>
+</html>

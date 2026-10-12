@@ -1,24 +1,33 @@
 (() => {
-    fetch("index.html", { cache: "no-store" })
-        .then(response => {
-            if (!response.ok) throw new Error(`Unable to load page (${response.status})`);
-            return response.text();
-        })
+    const INDEX_MARKUP_CACHE_KEY = "mpwrIndexMarkupManagedSidebar";
+    const INDEX_MARKUP_CACHE_TIME_KEY = "mpwrIndexMarkupManagedSidebarCachedAt";
+    const INDEX_MARKUP_MAX_AGE = 5 * 60 * 1000;
+
+    function cachedIndexMarkup() {
+        try {
+            const cachedAt = Number(sessionStorage.getItem(INDEX_MARKUP_CACHE_TIME_KEY) || 0);
+            const markup = sessionStorage.getItem(INDEX_MARKUP_CACHE_KEY);
+            return markup && Date.now() - cachedAt < INDEX_MARKUP_MAX_AGE ? markup : "";
+        } catch (_) {
+            return "";
+        }
+    }
+
+    function loadIndexMarkup() {
+        const cached = cachedIndexMarkup();
+        if (cached) return Promise.resolve(cached);
+        return fetch("index.html", { cache: "force-cache" })
+            .then(response => {
+                if (!response.ok) throw new Error(`Unable to load page (${response.status})`);
+                return response.text();
+            });
+    }
+
+    loadIndexMarkup()
         .then(markup => {
             markup = markup.replace(
                 /\s*<!--FOOTER-->\s*<footer class="footer">[\s\S]*?<\/footer>/,
                 ""
-            );
-
-            markup = markup.replace(
-                '<a href="Nails.html">',
-                `<a href="index.html" class="category-sidebar-home">
-                    <img src="images/Icon Folder/Home Icon_333.PNG" class="sidebar-item-icon" alt="">
-                    <span>Home</span>
-                </a>
-            </li>
-            <li>
-                <a href="Nails.html">`
             );
 
             const currentPage = window.location.pathname.split("/").pop().toLowerCase();
