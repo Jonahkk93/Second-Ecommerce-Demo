@@ -1,6 +1,6 @@
 (() => {
-    const INDEX_MARKUP_CACHE_KEY = "mpwrIndexMarkupManagedSidebar";
-    const INDEX_MARKUP_CACHE_TIME_KEY = "mpwrIndexMarkupManagedSidebarCachedAt";
+    const INDEX_MARKUP_CACHE_KEY = "mpwrIndexMarkupManagedSidebarV2";
+    const INDEX_MARKUP_CACHE_TIME_KEY = "mpwrIndexMarkupManagedSidebarCachedAtV2";
     const INDEX_MARKUP_MAX_AGE = 5 * 60 * 1000;
 
     function cachedIndexMarkup() {

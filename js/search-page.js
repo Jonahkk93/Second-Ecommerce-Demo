@@ -204,7 +204,7 @@ function renderLiveSuggestions(query) {
         const copy = document.createElement("span");
         copy.append(product.title);
         const detail = document.createElement("small");
-        detail.textContent = `UGX ${Number(product.price || 0).toLocaleString()}`;
+        detail.textContent = `USh${Number(product.price || 0).toLocaleString("en-UG")}`;
         copy.appendChild(detail);
         link.append(image, copy);
         liveSuggestions.appendChild(link);

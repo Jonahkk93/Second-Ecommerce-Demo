@@ -76,10 +76,10 @@
         prices.className = "discount-price-group";
         const price = document.createElement("span");
         price.className = "price";
-        price.textContent = `UGX ${salePrice.toLocaleString()}`;
+        price.textContent = `USh${salePrice.toLocaleString("en-UG")}`;
         const originalPrice = document.createElement("span");
         originalPrice.className = "original-price";
-        originalPrice.textContent = `UGX ${regularPrice.toLocaleString()}`;
+        originalPrice.textContent = `USh${regularPrice.toLocaleString("en-UG")}`;
         prices.append(price, originalPrice);
 
         const addWrapper = document.createElement("i");
@@ -120,10 +120,10 @@
         priceGroup.replaceChildren();
         const price = document.createElement("span");
         price.className = "price";
-        price.textContent = `UGX ${salePrice.toLocaleString()}`;
+        price.textContent = `USh${salePrice.toLocaleString("en-UG")}`;
         const originalPrice = document.createElement("span");
         originalPrice.className = "original-price";
-        originalPrice.textContent = `UGX ${regularPrice.toLocaleString()}`;
+        originalPrice.textContent = `USh${regularPrice.toLocaleString("en-UG")}`;
         priceGroup.append(price, originalPrice);
     }
 

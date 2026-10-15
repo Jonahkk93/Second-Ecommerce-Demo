@@ -193,7 +193,7 @@ function refundPanel(refund) {
     const dueLabel = status === "pending" ? "Initiate by" : status === "refunded" ? "Completed" : "Expected by";
     const dueValue = status === "pending" ? refund.initiationDueAt : status === "refunded" ? refund.completedAt : refund.expectedBy;
     return `<section class="admin-refund-panel" data-refund-status="${dashboardEscape(status)}">
-        <div><p class="admin-refund-kicker">Full refund</p><h4>UGX ${Number(refund.amount || 0).toLocaleString()}</h4><span class="refund-status refund-${dashboardEscape(status)}">${dashboardEscape(labels[status] || status)}</span></div>
+        <div><p class="admin-refund-kicker">Full refund</p><h4>USh${Number(refund.amount || 0).toLocaleString("en-UG")}</h4><span class="refund-status refund-${dashboardEscape(status)}">${dashboardEscape(labels[status] || status)}</span></div>
         <dl><div><dt>Return to</dt><dd>${dashboardEscape(refund.destination || "Original payment method")}</dd></div><div><dt>${dueLabel}</dt><dd>${refundDate(dueValue)}</dd></div>${refund.reference ? `<div><dt>Reference</dt><dd>${dashboardEscape(refund.reference)}</dd></div>` : ""}</dl>
         <div class="admin-refund-actions">${(actions[status] || []).map(([next, label]) => `<button type="button" data-refund-next="${next}">${label}</button>`).join("")}</div>
     </section>`;
@@ -229,7 +229,7 @@ function dashboardEscape(value = "") {
 }
 
 function dashboardMoney(value) {
-    return `UGX ${Math.round(Number(value) || 0).toLocaleString()}`;
+    return `USh${Math.round(Number(value) || 0).toLocaleString("en-UG")}`;
 }
 
 function orderCreatedAt(order) {
@@ -525,9 +525,9 @@ orderCard.innerHTML = `
         <p><strong>Customer:</strong> ${dashboardEscape(customerName)}</p>
         <p><strong>Email:</strong> ${dashboardEscape(customerEmail)}</p>
 
-        <p><strong>Subtotal:</strong> UGX ${orderSubtotal.toLocaleString()}</p>
-        <p><strong>Delivery:</strong> UGX ${deliveryFee.toLocaleString()}${order.delivery?.district ? ` to ${dashboardEscape(order.delivery.district)}` : ""}</p>
-        <p><strong>Total:</strong> UGX ${orderTotal.toLocaleString()}</p>
+        <p><strong>Subtotal:</strong> USh${orderSubtotal.toLocaleString("en-UG")}</p>
+        <p><strong>Delivery:</strong> USh${deliveryFee.toLocaleString("en-UG")}${order.delivery?.district ? ` to ${dashboardEscape(order.delivery.district)}` : ""}</p>
+        <p><strong>Total:</strong> USh${orderTotal.toLocaleString("en-UG")}</p>
         ${order.delivery?.etaLabel ? `<p><strong>Delivery ETA:</strong> ${dashboardEscape(order.delivery.etaLabel)}</p>` : ""}
         <p><strong>Order Date:</strong> ${dashboardEscape(orderDate)}</p>
         <p><strong>Items:</strong> ${itemCount}</p>
@@ -787,7 +787,7 @@ showAdminToast("Order status updated successfully");
     document.getElementById("delivered-orders")?.replaceChildren(String(portalStatusCounts.Delivered));
     document.getElementById("cancelled-orders")?.replaceChildren(String(portalStatusCounts.Cancelled));
     document.getElementById("returned-orders")?.replaceChildren(String(portalStatusCounts.Returned));
-    document.getElementById("total-revenue")?.replaceChildren(`UGX ${totalRevenue.toLocaleString()}`);
+    document.getElementById("total-revenue")?.replaceChildren(`USh${totalRevenue.toLocaleString("en-UG")}`);
     document.getElementById("total-customers")?.replaceChildren(String(customers.size));
 
     if (!ordersPortal) renderDashboard(dashboardOrders, management.products || []);

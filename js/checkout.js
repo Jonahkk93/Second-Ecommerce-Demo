@@ -81,7 +81,7 @@ function closeNetworkPicker() {
 }
 
 const numberFromPrice = value => Number(String(value ?? 0).replace(/[^\d]/g, "")) || 0;
-const money = value => `UGX ${value.toLocaleString()}`;
+const money = value => `USh${value.toLocaleString("en-UG")}`;
 const itemOptions = item => Object.values(item.selectedOptions || {}).filter(Boolean).join(" · ") || [item.color, item.size].filter(Boolean).join(" · ");
 
 function refreshDeliveryQuote() {

@@ -5607,24 +5607,44 @@ html.site-loading-enabled :is(
 }
 
 .product-page-price .is-product-page-price {
+    display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 14px;
+    gap: 4px 8px;
+    white-space: normal;
+    line-height: 1.2;
+}
+
+.product-page-price .is-product-page-price .mpwr-sale-price {
+    color: #E5A484;
+    font-size: 38px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.product-page-price .is-product-page-price .is-regular-price {
+    color: #E5A484;
+}
+
+.product-page-price .is-product-page-price .mpwr-discount-percent {
+    color: #E5A484;
+    font-size: 16px;
+    font-weight: 800;
     white-space: nowrap;
 }
 
 .product-page-price .is-product-page-price .mpwr-original-price {
-    order: 2;
+    color: #999;
+    font-size: 16px;
+    font-weight: 400;
+    white-space: nowrap;
 }
 
-.product-page-price .is-product-page-price .mpwr-sale-price {
-    order: 1;
-    color: #E5A484;
-}
-
-.product-page-price .mpwr-original-price {
-    font-size: 1em;
-    font-weight: 600;
+@media (max-width: 600px) {
+    .product-page-price .is-product-page-price .mpwr-sale-price {font-size: 30px;}
+    .product-page-price .is-product-page-price .mpwr-discount-percent,
+    .product-page-price .is-product-page-price .mpwr-original-price {font-size: 14px;}
 }
 
 .wishlist-details .wishlist-price .mpwr-sale-price,

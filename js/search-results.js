@@ -1,4 +1,4 @@
-import { mountMPWRDrawers } from "./drawer-component.js?v=20260924-7";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20261015-selection-26";
 
 await (window.MPWRCatalogueReady || Promise.resolve(window.products));
 
@@ -411,7 +411,7 @@ function renderCartDrawer() {
     document.querySelector(".total").style.display = cart.length ? "flex" : "none";
     document.querySelector(".btn-buy").style.display = cart.length ? "block" : "none";
     const total = cart.reduce((sum,item) => sum + cartItemPrice(item) * Math.max(1,Number(item.quantity) || 1),0);
-    document.querySelector(".total-price").textContent = `UGX ${total.toLocaleString()}`;
+    document.querySelector(".total-price").textContent = `USh${total.toLocaleString("en-UG")}`;
 }
 
 function openCartDrawer() {
@@ -959,6 +959,128 @@ if (correctedQuery) {
 }
 recordSearchEvent("search", { resultCount:baseMatches.length, correctedQuery:correctedQuery || undefined });
 
+const RESULTS_PAGE_SIZE = 60;
+const desktopResults = window.matchMedia("(min-width: 601px)");
+const resultsPagination = document.querySelector(".results-pagination");
+let currentResultsPage = new URLSearchParams(location.search).get("page") || 1;
+let restoringResultsState = false;
+
+function paginateResults(matches, requestedPage, desktop) {
+    const totalPages = Math.max(1, Math.ceil(matches.length / RESULTS_PAGE_SIZE));
+    const page = Math.min(totalPages, Math.max(1, Math.floor(Number(requestedPage)) || 1));
+    const start = desktop ? (page - 1) * RESULTS_PAGE_SIZE : 0;
+    return { page, totalPages, start, items: desktop ? matches.slice(start, start + RESULTS_PAGE_SIZE) : matches };
+}
+
+function restoreResultsState() {
+    const params = new URLSearchParams(location.search);
+    currentResultsPage = params.get("page") || 1;
+    const sort = params.get("sort");
+    if (["relevance", "popular", "newest", "low", "high"].includes(sort)) sortResults.value = sort;
+    else sortResults.value = searchResultSettings.defaultSort || "relevance";
+    for (const [control, key] of [[colorFilter, "color"], [sizeFilter, "size"]]) {
+        const value = params.get(key) || "";
+        control.value = [...control.options].some(option => option.value === value) ? value : "";
+    }
+}
+
+function saveResultsState(push = false) {
+    const url = new URL(location.href);
+    for (const [key, value] of [["page", currentResultsPage > 1 ? currentResultsPage : ""], ["sort", sortResults.value], ["color", colorFilter.value], ["size", sizeFilter.value]]) {
+        if (value) url.searchParams.set(key, value);
+        else url.searchParams.delete(key);
+    }
+    if (url.href !== location.href) history[push ? "pushState" : "replaceState"](null, "", url);
+}
+
+function selectResultsPage(page) {
+    currentResultsPage = page;
+    saveResultsState(true);
+    render();
+    resultsGrid.scrollIntoView({ block: "start" });
+    resultsPagination.querySelector('[aria-current="page"]')?.focus({ preventScroll: true });
+}
+
+function renderResultsPagination(pagination, totalResults) {
+    resultsPagination.replaceChildren();
+    resultsPagination.hidden = !desktopResults.matches || totalResults <= RESULTS_PAGE_SIZE;
+    if (resultsPagination.hidden) return;
+    const status = document.createElement("p");
+    status.className = "results-page-status";
+    status.setAttribute("aria-live", "polite");
+    status.textContent = `Showing ${pagination.start + 1}–${pagination.start + pagination.items.length} of ${totalResults} products`;
+    const controls = document.createElement("div");
+    controls.className = "results-page-controls";
+    const button = (label, page, disabled = false) => {
+        const element = document.createElement("button");
+        element.type = "button";
+        if (label === "Previous" || label === "Next") {
+            const direction = label === "Previous" ? "left" : "right";
+            const icon = document.createElement("img");
+            icon.src = `images/Icon Folder/Back Icon ${direction === "left" ? "Left" : "Right"}_Gray.PNG`;
+            icon.alt = "";
+            element.className = `results-page-arrow results-page-arrow-${direction}`;
+            element.appendChild(icon);
+        } else {
+            element.textContent = label;
+        }
+        element.disabled = disabled;
+        element.setAttribute("aria-label", /^\d+$/.test(label) ? `Page ${label}` : `${label} page`);
+        element.title = /^\d+$/.test(label) ? `Page ${label}` : `${label} page`;
+        if (page === pagination.page && /^\d+$/.test(label)) element.setAttribute("aria-current", "page");
+        element.addEventListener("click", () => selectResultsPage(page));
+        return element;
+    };
+    controls.append(button("Previous", pagination.page - 1, pagination.page === 1));
+    const pages = new Set([1, pagination.totalPages]);
+    const first = Math.max(1, Math.min(pagination.page - 2, pagination.totalPages - 4));
+    for (let page = first; page <= Math.min(pagination.totalPages, first + 4); page++) pages.add(page);
+    let previous = 0;
+    [...pages].sort((a, b) => a - b).forEach(page => {
+        if (page - previous > 1) {
+            const ellipsis = document.createElement("span");
+            ellipsis.textContent = "…";
+            ellipsis.setAttribute("aria-hidden", "true");
+            controls.append(ellipsis);
+        }
+        controls.append(button(String(page), page));
+        previous = page;
+    });
+    controls.append(button("Next", pagination.page + 1, pagination.page === pagination.totalPages));
+    const navigation = document.createElement("div");
+    navigation.className = "results-page-navigation";
+    navigation.append(controls);
+    if (pagination.totalPages > 5) {
+        const jump = document.createElement("form");
+        jump.className = "results-page-jump";
+        const label = document.createElement("label");
+        label.htmlFor = "results-go-to-page";
+        label.textContent = "Go to page";
+        const input = document.createElement("input");
+        input.id = "results-go-to-page";
+        input.type = "number";
+        input.inputMode = "numeric";
+        input.min = "1";
+        input.max = String(pagination.totalPages);
+        input.step = "1";
+        input.required = true;
+        input.value = String(pagination.page);
+        const total = document.createElement("span");
+        total.textContent = `of ${pagination.totalPages}`;
+        const submit = document.createElement("button");
+        submit.type = "submit";
+        submit.textContent = "Go";
+        jump.append(label, input, total, submit);
+        jump.addEventListener("submit", event => {
+            event.preventDefault();
+            if (!input.checkValidity()) { input.reportValidity(); return; }
+            selectResultsPage(Number(input.value));
+        });
+        navigation.append(jump);
+    }
+    resultsPagination.append(navigation, status);
+}
+
 function render() {
     let matches = baseMatches.filter(product => {
         const colors = [...(product.colors || []),...optionValues(product,/color/i)];
@@ -975,7 +1097,11 @@ function render() {
             explorationWeight: 0.62
         });
     } else if (sortResults.value === "popular") matches.sort((a,b) => Number(a.id) - Number(b.id));
-    resultsGrid.replaceChildren(...matches.map(resultCard));
+    const pagination = paginateResults(matches, currentResultsPage, desktopResults.matches);
+    currentResultsPage = pagination.page;
+    saveResultsState();
+    resultsGrid.replaceChildren(...pagination.items.map(resultCard));
+    renderResultsPagination(pagination, matches.length);
     resultsGrid.hidden = matches.length === 0;
     noResults.hidden = matches.length > 0;
     if (matches.length === 0) renderNoResultsFallback();
@@ -984,6 +1110,7 @@ function render() {
 queryInput.value = query;
 addOptions(colorFilter,baseMatches.flatMap(product => [...(product.colors || []),...optionValues(product,/color/i)]));
 addOptions(sizeFilter,baseMatches.flatMap(product => [...(product.sizes || []),...optionValues(product,/size|length/i)]));
+restoreResultsState();
 [sortResults,colorFilter,sizeFilter].forEach(enhanceFilterSelect);
 resultsToolbar.classList.add("filters-ready");
 resultsToolbar.removeAttribute("aria-busy");
@@ -1179,7 +1306,7 @@ document.querySelector(".cart-share-all").addEventListener("click",async() => {
         showDrawerToast("Your cart is empty 🛒","warning");
         return;
     }
-    const text = cart.map(item => `${Math.max(1,Number(item.quantity) || 1)} × ${cartItemTitle(item)} — UGX ${cartItemPrice(item).toLocaleString()}`).join("\n");
+    const text = cart.map(item => `${Math.max(1,Number(item.quantity) || 1)} × ${cartItemTitle(item)} — USh${cartItemPrice(item).toLocaleString("en-UG")}`).join("\n");
     try {
         if (navigator.share) {
             await navigator.share({title:"My MPWR cart",text});
@@ -1265,7 +1392,19 @@ loadFirebaseServices().then(({ auth, db, doc, getDoc, setDoc, onAuthStateChanged
 }).catch(error => {
     console.error("Unable to initialize account synchronization",error);
 });
-[sortResults,colorFilter,sizeFilter].forEach(control => control.addEventListener("change",render));
+[sortResults,colorFilter,sizeFilter].forEach(control => control.addEventListener("change", () => {
+    if (restoringResultsState) return;
+    currentResultsPage = 1;
+    render();
+}));
+desktopResults.addEventListener("change", () => { closeFilterPickers(); render(); });
+window.addEventListener("popstate", () => {
+    restoreResultsState();
+    restoringResultsState = true;
+    [sortResults,colorFilter,sizeFilter].forEach(control => control.dispatchEvent(new Event("change", { bubbles: true })));
+    restoringResultsState = false;
+    render();
+});
 document.querySelector(".reset-filters").addEventListener("click",() => {
     sortResults.value = "relevance";
     colorFilter.value = "";
@@ -1302,3 +1441,17 @@ document.querySelector(".wishlist-share-all").addEventListener("click",async () 
 });
 document.addEventListener("click",event => { if (!event.target.closest(".wishlist-header-actions")) closeWishlistActionsMenu(); });
 document.addEventListener("keydown",event => { if (event.key === "Escape" && !wishlistActionsMenu.hidden) closeWishlistActionsMenu(); });
+
+document.addEventListener("mpwr:drawer-remove-selected", event => {
+    const indices = new Set(event.detail?.indices || []);
+    if (!indices.size) return;
+    if (event.detail.drawer === "cart") {
+        saveCart(getCart().filter((item, index) => !indices.has(index)));
+        showDrawerToast(`${indices.size} cart ${indices.size === 1 ? "item" : "items"} removed`, "success");
+        return;
+    }
+    if (event.detail.drawer === "wishlist") {
+        saveFavorites(getFavorites().filter((item, index) => !indices.has(index)));
+        showDrawerToast(`${indices.size} Wishlist ${indices.size === 1 ? "item" : "items"} removed`, "success");
+    }
+});

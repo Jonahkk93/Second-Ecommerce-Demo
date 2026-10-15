@@ -13,7 +13,16 @@ const mediaTypes: Record<string, { extension: string; kind: "image" | "video"; s
   "image/jpeg": { extension: "jpg", kind: "image", signature: buffer => buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff },
   "image/png": { extension: "png", kind: "image", signature: buffer => buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
   "image/webp": { extension: "webp", kind: "image", signature: buffer => buffer.subarray(0, 4).toString() === "RIFF" && buffer.subarray(8, 12).toString() === "WEBP" },
+  "image/svg+xml": { extension: "svg", kind: "image", signature: buffer => buffer.subarray(0, 512).toString("utf8").trimStart().startsWith("<svg") || buffer.subarray(0, 512).toString("utf8").includes("<svg") },
+  "image/avif": { extension: "avif", kind: "image", signature: buffer => buffer.subarray(4, 8).toString() === "ftyp" && buffer.subarray(8, 32).toString().includes("avif") },
   "image/gif": { extension: "gif", kind: "image", signature: buffer => ["GIF87a", "GIF89a"].includes(buffer.subarray(0, 6).toString()) },
+  "image/tiff": { extension: "tiff", kind: "image", signature: buffer => buffer.subarray(0, 4).equals(Buffer.from([0x49, 0x49, 0x2a, 0x00])) || buffer.subarray(0, 4).equals(Buffer.from([0x4d, 0x4d, 0x00, 0x2a])) },
+  "image/tif": { extension: "tiff", kind: "image", signature: buffer => buffer.subarray(0, 4).equals(Buffer.from([0x49, 0x49, 0x2a, 0x00])) || buffer.subarray(0, 4).equals(Buffer.from([0x4d, 0x4d, 0x00, 0x2a])) },
+  "image/vnd.adobe.photoshop": { extension: "psd", kind: "image", signature: buffer => buffer.subarray(0, 4).toString() === "8BPS" },
+  "image/x-photoshop": { extension: "psd", kind: "image", signature: buffer => buffer.subarray(0, 4).toString() === "8BPS" },
+  "image/x-psd": { extension: "psd", kind: "image", signature: buffer => buffer.subarray(0, 4).toString() === "8BPS" },
+  "application/photoshop": { extension: "psd", kind: "image", signature: buffer => buffer.subarray(0, 4).toString() === "8BPS" },
+  "application/octet-stream": { extension: "psd", kind: "image", signature: buffer => buffer.subarray(0, 4).toString() === "8BPS" },
   "video/mp4": { extension: "mp4", kind: "video", signature: buffer => buffer.subarray(4, 8).toString() === "ftyp" },
   "video/quicktime": { extension: "mov", kind: "video", signature: buffer => buffer.subarray(4, 8).toString() === "ftyp" },
   "video/webm": { extension: "webm", kind: "video", signature: buffer => buffer.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])) }
@@ -87,7 +96,7 @@ export class MediaService {
     const file = await request.file({ limits: { files: 1, fileSize: maxFileSize } });
     if (!file) throw new UnsupportedMediaTypeException("Media file is required");
     const type = mediaTypes[file.mimetype];
-    if (!type || (type.kind === "video" && purpose !== "product")) throw new UnsupportedMediaTypeException(purpose === "product" ? "Use JPEG, PNG, WebP, GIF, MP4, MOV, or WebM media" : "Use a JPEG, PNG, WebP, or GIF image");
+    if (!type || (type.kind === "video" && purpose !== "product")) throw new UnsupportedMediaTypeException(purpose === "product" ? "Use JPEG, PNG, WebP, SVG, AVIF, GIF, TIFF, PSD, MP4, MOV, or WebM media" : "Use a JPEG, PNG, WebP, SVG, AVIF, GIF, TIFF, or PSD image");
     const buffer = await file.toBuffer();
     if (!type.signature(buffer)) throw new UnsupportedMediaTypeException("Media contents do not match its file type");
     return this.storeBuffer(user, purpose, buffer, file.mimetype, file.filename);

@@ -15,8 +15,11 @@ import {
 } from "./firestore-api.js";
 import { openReviewLightbox } from "./review-lightbox.js";
 import { deleteImage, uploadImage } from "./media-api.js";
+import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261015-26";
 
 await (window.MPWRCatalogueReady || Promise.resolve(window.products));
+
+mountMPWRDrawerSelection(document.body);
 
 const auth = window.auth;
 const db = window.db;
@@ -1758,7 +1761,7 @@ function updateTotalPrice(cartItems) {
         total += price * item.quantity;
     });
 
-    totalPriceElement.textContent = `UGX ${total.toLocaleString()}`;
+    totalPriceElement.textContent = `USh${total.toLocaleString("en-UG")}`;
 }
 
 function updateCartUI(cartItems) {
@@ -2951,3 +2954,26 @@ document.querySelector(".wishlist-share-all").addEventListener("click",async () 
 });
 document.addEventListener("click",event => { if (!event.target.closest(".wishlist-header-actions")) closeWishlistActionsMenu(); });
 document.addEventListener("keydown",event => { if (event.key === "Escape" && !wishlistActionsMenu.hidden) closeWishlistActionsMenu(); });
+
+document.addEventListener("mpwr:drawer-remove-selected", event => {
+    const indices = new Set(event.detail?.indices || []);
+    if (!indices.size) return;
+    if (event.detail.drawer === "cart") {
+        const cartItems = (window.MPWRCartStorage?.current() || [])
+            .filter((item, index) => !indices.has(index));
+        saveCart(cartItems);
+        renderSavedCart();
+        updateTotalPrice(cartItems);
+        updateCartBadge();
+        showToast(`${indices.size} cart ${indices.size === 1 ? "item" : "items"} removed`, "success");
+        return;
+    }
+    if (event.detail.drawer === "wishlist") {
+        favorites = favorites.filter((item, index) => !indices.has(index));
+        localStorage.setItem("favorites", JSON.stringify(favorites));
+        saveFavoritesToFirestore();
+        renderWishlist();
+        updateFavoriteIcon();
+        showToast(`${indices.size} Wishlist ${indices.size === 1 ? "item" : "items"} removed`, "success");
+    }
+});

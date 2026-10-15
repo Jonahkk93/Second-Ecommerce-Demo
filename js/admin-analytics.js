@@ -16,8 +16,8 @@ function escapeHtml(value = "") {
     return String(value).replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
 }
 
-function money(value) { return `UGX ${Math.round(Number(value) || 0).toLocaleString()}`; }
-function compactMoney(value) { return `UGX ${Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(Number(value) || 0)}`; }
+function money(value) { return `USh${Math.round(Number(value) || 0).toLocaleString("en-UG")}`; }
+function compactMoney(value) { return `USh${Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(Number(value) || 0)}`; }
 
 function showToast(message, type = "success") {
     const toast = $(".admin-products-toast");

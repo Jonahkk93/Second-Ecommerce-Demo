@@ -1,3 +1,5 @@
+import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261015-26";
+
 export function mountMPWRDrawers(target = document.body) {
     if (target.querySelector(":scope > .cart") || target.querySelector(":scope > .wishlist")) return;
     target.insertAdjacentHTML("beforeend", `
@@ -18,7 +20,7 @@ export function mountMPWRDrawers(target = document.body) {
                 <p>Add your favorite products to get started.</p>
                 <button class="continue-shopping" type="button">Continue Shopping</button>
             </div>
-            <div class="total"><div class="total-title">Total</div><div class="total-price">UGX 0</div></div>
+            <div class="total"><div class="total-title">Total</div><div class="total-price">USh0</div></div>
             <button class="btn-buy" type="button">Check Out</button><br><br>
         </div>
         <div class="wishlist">
@@ -49,4 +51,5 @@ export function mountMPWRDrawers(target = document.body) {
             <div class="confirm-overlay delete-item-confirm-overlay"><div class="confirm-box"><h2>Delete Item</h2><p class="delete-item-confirm-message">Are you sure you want to delete this item?</p><div class="confirm-buttons"><button class="confirm-cancel delete-item-cancel" type="button">Cancel</button><button class="confirm-clear delete-item-confirm" type="button">Delete Item</button></div></div></div>`);
     }
     if (!document.querySelector(".toast")) target.insertAdjacentHTML("beforeend",'<div class="toast"></div>');
+    mountMPWRDrawerSelection(target);
 }

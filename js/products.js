@@ -516,8 +516,15 @@ function mpwrPriceDetails(item, regularOverride) {
 
 function mpwrPriceMarkup(item, regularOverride, groupClass = "") {
     const pricing = mpwrPriceDetails(item, regularOverride);
-    if (!pricing.discounted) return `UGX ${pricing.current.toLocaleString()}`;
-    return `<span class="mpwr-price-pair ${groupClass}"><span class="mpwr-sale-price">UGX ${pricing.current.toLocaleString()}</span><span class="mpwr-original-price">UGX ${pricing.regular.toLocaleString()}</span></span>`;
+    if (groupClass.split(/\s+/).includes("is-product-page-price")) {
+        const current = `USh${pricing.current.toLocaleString("en-UG")}`;
+        const discount = pricing.discounted
+            ? `<span class="mpwr-discount-percent">${pricing.percent}% off</span><span class="mpwr-original-price">USh${pricing.regular.toLocaleString("en-UG")}</span>`
+            : "";
+        return `<span class="mpwr-price-pair is-product-page-price"><span class="mpwr-sale-price${pricing.discounted ? "" : " is-regular-price"}">${current}</span>${discount}</span>`;
+    }
+    if (!pricing.discounted) return `USh${pricing.current.toLocaleString("en-UG")}`;
+    return `<span class="mpwr-price-pair ${groupClass}"><span class="mpwr-sale-price">USh${pricing.current.toLocaleString("en-UG")}</span><span class="mpwr-original-price">USh${pricing.regular.toLocaleString("en-UG")}</span></span>`;
 }
 
 window.MPWRPricing = {
@@ -784,6 +791,14 @@ const STOREFRONT_SIDEBAR_CATEGORY_ICONS = {
 const DEFAULT_SIDEBAR_SETTINGS = {
     campaignEnabled: true,
     socialEnabled: true,
+    campaignImage: "",
+    campaignImageKey: "",
+    socials: [
+        { id: "facebook", label: "Facebook", icon: "images/optimized/facebook-icon.png", href: "#" },
+        { id: "instagram", label: "Instagram", icon: "images/optimized/instagram-icon.png", href: "#" },
+        { id: "x", label: "X", icon: "images/optimized/x-icon.png", href: "#" },
+        { id: "threads", label: "Threads", icon: "images/optimized/threads-icon.png", href: "#" }
+    ],
     categoryOrder: DEFAULT_CATALOGUE_CATEGORIES.map(category => category.slug)
 };
 const canonicalSidebarCategoryKey = (category, href) => {
@@ -860,9 +875,23 @@ function normalizeSidebarSettings(value = {}, categoryItems = storefrontCategori
     validSlugs.forEach(slug => {
         if (!order.includes(slug)) order.push(slug);
     });
+    const incomingSocials = Array.isArray(value?.socials) ? value.socials : [];
+    const socialMap = new Map(incomingSocials.map(item => [String(item?.id || "").trim(), item]));
     return {
         campaignEnabled: value?.campaignEnabled !== false,
         socialEnabled: value?.socialEnabled !== false,
+        campaignImage: String(value?.campaignImage || "").trim().slice(0, 500),
+        campaignImageKey: String(value?.campaignImageKey || "").trim(),
+        socials: DEFAULT_SIDEBAR_SETTINGS.socials.map(defaultItem => {
+            const item = socialMap.get(defaultItem.id) || {};
+            const hasIcon = Object.prototype.hasOwnProperty.call(item, "icon");
+            return {
+                id: defaultItem.id,
+                label: String(item.label || defaultItem.label).trim().replace(/\s+/g, " ").slice(0, 30),
+                icon: String(hasIcon ? item.icon || "" : defaultItem.icon).trim().slice(0, 500),
+                href: safeStorefrontLink(String(item.href || defaultItem.href).trim().slice(0, 500), defaultItem.href)
+            };
+        }),
         categoryOrder: order
     };
 }
@@ -1193,16 +1222,37 @@ function applySidebarCampaignCard(value) {
     const body = card.querySelector(".sidebar-campaign-body");
     const image = card.querySelector(".sidebar-campaign-bg");
     const icon = card.querySelector(".sidebar-campaign-icon");
-    const hasCustomImage = Boolean(banner.image && banner.image !== DEFAULT_CAMPAIGN_BANNER.image);
+    const backgroundImage = storefrontSidebarSettings.campaignImage || "";
+    const hasCustomImage = Boolean(backgroundImage);
     if (eyebrow) eyebrow.textContent = banner.eyebrow;
     if (heading) heading.textContent = banner.heading;
     if (body) body.textContent = banner.body;
     if (image) {
-        image.src = hasCustomImage ? banner.image : "";
+        image.src = hasCustomImage ? backgroundImage : "";
         image.alt = "";
     }
-    if (icon) icon.src = DEFAULT_CAMPAIGN_BANNER.image;
+    if (icon) icon.src = banner.image || DEFAULT_CAMPAIGN_BANNER.image;
     card.classList.toggle("has-image", hasCustomImage);
+}
+
+function applySidebarSocialLinks() {
+    const social = document.querySelector(".social_media");
+    if (!social) return;
+    social.hidden = !storefrontSidebarSettings.socialEnabled;
+    social.replaceChildren(...storefrontSidebarSettings.socials.filter(item => item.icon).map(item => {
+        const link = document.createElement("a");
+        link.href = item.href || "#";
+        link.setAttribute("aria-label", item.label || "Social link");
+        if (/^https?:\/\//i.test(item.href || "")) {
+            link.target = "_blank";
+            link.rel = "noopener";
+        }
+        const image = document.createElement("img");
+        image.src = item.icon;
+        image.alt = "";
+        link.appendChild(image);
+        return link;
+    }));
 }
 
 function applyCampaignBanner(value) {
@@ -1301,7 +1351,7 @@ function renderStorefrontSidebarCategories(categories) {
         sidebar.classList.toggle("is-social-hidden", !storefrontSidebarSettings.socialEnabled);
     }
     if (campaignCard) campaignCard.hidden = !storefrontSidebarSettings.campaignEnabled;
-    if (social) social.hidden = !storefrontSidebarSettings.socialEnabled;
+    if (social) applySidebarSocialLinks();
     list.querySelectorAll(":scope > li[data-storefront-category]").forEach(item => item.remove());
     const page = window.location.pathname.split("/").pop().toLowerCase();
     const requestedCategory = String(new URLSearchParams(window.location.search).get("category") || "").trim();
@@ -1343,12 +1393,18 @@ function renderStorefrontSidebarCategories(categories) {
         const label = document.createElement("span");
         label.textContent = canonicalKey === "press-ons" ? "Press-On Nails" : category.label;
         link.append(image, label);
-        if (category.badge === "Hot" || category.badge === "Sale") {
-            const badgeIcon = document.createElement("img");
-            badgeIcon.className = `sidebar-category-badge-icon sidebar-category-${category.badge.toLowerCase()}-icon`;
-            badgeIcon.src = category.badge === "Sale" ? "images/Icon Folder/Sale Icon_Red.PNG" : "images/Icon Folder/Hot Icon.PNG";
-            badgeIcon.alt = category.badge;
-            link.appendChild(badgeIcon);
+        if (["Hot", "Sale", "New", "Trending", "Limited"].includes(category.badge)) {
+            const badge = document.createElement("small");
+            badge.className = "sidebar-category-badge";
+            if (category.badge === "Hot" || category.badge === "Sale") {
+                const badgeIcon = document.createElement("img");
+                badgeIcon.className = `sidebar-category-badge-icon sidebar-category-${category.badge.toLowerCase()}-icon`;
+                badgeIcon.src = category.badge === "Sale" ? "images/Icon Folder/Sale Icon_Red.PNG" : "images/Icon Folder/Hot Icon.PNG";
+                badgeIcon.alt = "";
+                badge.appendChild(badgeIcon);
+            }
+            badge.appendChild(document.createTextNode(category.badge));
+            link.appendChild(badge);
         }
         item.appendChild(link);
         list.appendChild(item);

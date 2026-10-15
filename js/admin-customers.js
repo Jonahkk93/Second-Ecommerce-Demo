@@ -4,7 +4,7 @@ import { adminAuth, adminDb } from "./admin-firebase.js";
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
-const money = value => `UGX ${Math.round(Number(value) || 0).toLocaleString()}`;
+const money = value => `USh${Math.round(Number(value) || 0).toLocaleString("en-UG")}`;
 const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
 const dateValue = value => {
     if (!value) return null;
@@ -183,7 +183,7 @@ function closeBlockConfirm(clearPending = true) {
 }
 
 function exportCsv() {
-    const rows = [["Name", "Email", "Phone", "Orders", "Lifetime spend (UGX)", "Last order", "Segment"], ...filteredCustomers().map(customer => [customer.name, customer.email, customer.phone, customer.orders.length, Math.round(customer.spend), customer.lastOrder?.toISOString() || "", customer.segment])];
+    const rows = [["Name", "Email", "Phone", "Orders", "Lifetime spend (USh)", "Last order", "Segment"], ...filteredCustomers().map(customer => [customer.name, customer.email, customer.phone, customer.orders.length, Math.round(customer.spend), customer.lastOrder?.toISOString() || "", customer.segment])];
     const csv = rows.map(row => row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));

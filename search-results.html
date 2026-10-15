@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
     <title>Search results | MPWR</title>
     <link rel="stylesheet" href="css/Larke.css">
-    <link rel="stylesheet" href="css/CARTNEW.css?v=20261012-9">
+    <link rel="stylesheet" href="css/CARTNEW.css?v=20261014-2">
     <link rel="stylesheet" href="css/discounts.css?v=20260927-5">
-    <link rel="stylesheet" href="css/search-results.css?v=20261001-1">
+    <link rel="stylesheet" href="css/search-results.css?v=20261014-pagination-arrows-333-v5">
     <link rel="stylesheet" href="css/loading-states.css?v=20260825-25">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/storefront-product-modal.css?v=20261008-3">
     <script src="js/loading-states.js?v=20260809-23" defer></script>
     <script src="js/touch-interactions.js" defer></script>
-    <script src="js/products.js?v=20261012-7" defer></script>
+    <script src="js/products.js?v=20261014-2" defer></script>
     <script src="js/discovery-engine.js?v=20260907-1" defer></script>
-    <script type="module" src="js/search-results.js?v=20261008-1"></script>
+    <script type="module" src="js/search-results.js?v=20261015-selection-26"></script>
     </head>
 <body>
     <header class="results-header">
@@ -100,6 +100,7 @@
     <main class="results-main">
         <div class="search-correction" id="search-correction" hidden>Showing results for <button type="button"></button><span>instead of “<span></span>”</span></div>
         <div class="results-grid product-content"></div>
+        <nav class="results-pagination" aria-label="Search results pages" hidden></nav>
         <section class="no-results" hidden><h2>No products found</h2><p>Try a different search or clear the filters.</p></section>
     </main>
 </body>

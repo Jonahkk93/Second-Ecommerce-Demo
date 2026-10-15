@@ -54,7 +54,7 @@ function customerRefundPanel(refund) {
         : status === "refunded" ? `Completed ${refundDate(refund.completedAt)}`
         : `Expected by ${refundDate(refund.expectedBy)}`;
     return `<section class="order-refund refund-${safeText(status)}">
-        <div class="order-refund-heading"><div><small>Buyer protection</small><h3>${safeText(labels[status] || status)}</h3></div><strong>UGX ${Number(refund.amount || 0).toLocaleString()}</strong></div>
+        <div class="order-refund-heading"><div><small>Buyer protection</small><h3>${safeText(labels[status] || status)}</h3></div><strong>USh${Number(refund.amount || 0).toLocaleString("en-UG")}</strong></div>
         <p>${safeText(descriptions[status] || "Your refund is being handled by MPWR.")}</p>
         <div class="refund-progress" aria-label="Refund progress">${steps.map((step, index) => `<i class="${index <= activeIndex && status !== "failed" ? "complete" : ""}"></i>`).join("")}</div>
         <div class="order-refund-meta"><span>${safeText(refund.destination || "Original payment method")}</span><span>${safeText(arrival)}</span></div>
@@ -288,10 +288,10 @@ orderCard.innerHTML = `
     </div>
 
     <div class="order-price-breakdown">
-        <p class="order-subtotal-row"><span>Subtotal</span><strong>UGX ${orderSubtotal.toLocaleString()}</strong></p>
-        <p class="order-delivery-row"><span>${deliveryDestination || deliveryLabel}</span><strong>UGX ${deliveryFee.toLocaleString()}</strong></p>
+        <p class="order-subtotal-row"><span>Subtotal</span><strong>USh${orderSubtotal.toLocaleString("en-UG")}</strong></p>
+        <p class="order-delivery-row"><span>${deliveryDestination || deliveryLabel}</span><strong>USh${deliveryFee.toLocaleString("en-UG")}</strong></p>
         ${order.delivery?.etaLabel ? `<small>Estimated delivery: ${order.delivery.etaLabel}</small>` : ""}
-        <p class="order-total"><span>Total</span><strong>UGX ${orderTotal.toLocaleString()}</strong></p>
+        <p class="order-total"><span>Total</span><strong>USh${orderTotal.toLocaleString("en-UG")}</strong></p>
     </div>
 
     ${trackingPanel}

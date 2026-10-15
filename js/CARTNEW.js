@@ -20,7 +20,7 @@
    NAVIGATION
 ============================================================ */
 
-import { mountMPWRDrawers } from "./drawer-component.js?v=20260924-7";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20261015-selection-26";
 
 mountMPWRDrawers(document.body);
 
@@ -587,41 +587,31 @@ if (flashToast) {
 ============================================================ */
 
 function updateCartCount() {
-
     const badge = document.querySelector(".cart-item-count");
     const titleCount = document.querySelector(".cart-title-count");
-
     cartItemCount = cartItems.length;
+    const countText = cartItemCount > 0 ? String(cartItemCount) : "";
 
     if (titleCount) {
-        titleCount.textContent = cartItemCount > 0 ? String(cartItemCount) : "";
+        if (titleCount.textContent !== countText) titleCount.textContent = countText;
         titleCount.hidden = cartItemCount === 0;
     }
-
     if (!badge) return;
 
-    if (cartItemCount > 0) {
+    const previousCount = badge.dataset.cartCount;
+    const currentCount = String(cartItemCount);
+    if (previousCount === currentCount) return;
+    badge.dataset.cartCount = currentCount;
+    badge.textContent = countText;
+    badge.style.display = cartItemCount > 0 ? "flex" : "none";
+    badge.style.visibility = cartItemCount > 0 ? "visible" : "hidden";
+    badge.classList.remove("badge-pop");
 
-        badge.style.display = "flex";
-        badge.style.visibility = "visible";
-
-        badge.textContent = cartItemCount;
-
-        badge.classList.remove("badge-pop");
-
+    // Initial hydration and unchanged refreshes should leave the badge steady.
+    if (cartItemCount > 0 && previousCount !== undefined) {
         void badge.offsetWidth;
-
         badge.classList.add("badge-pop");
-
-    } else {
-
-        badge.style.display = "none";
-        badge.style.visibility = "hidden";
-
-        badge.textContent = "";
-
     }
-
 }
 
 
@@ -647,7 +637,7 @@ function updateTotalPrice() {
 
     });
 
-    totalPriceElement.textContent = `UGX ${total.toLocaleString()}`;
+    totalPriceElement.textContent = `USh${total.toLocaleString("en-UG")}`;
 
 }
 
@@ -2807,4 +2797,24 @@ document.querySelector(".wishlist-share-all").addEventListener("click",async () 
 });
 document.addEventListener("click",event => { if (!event.target.closest(".wishlist-header-actions")) closeWishlistActionsMenu(); });
 document.addEventListener("keydown",event => { if (event.key === "Escape" && !wishlistActionsMenu.hidden) closeWishlistActionsMenu(); });
+
+document.addEventListener("mpwr:drawer-remove-selected", event => {
+    const indices = new Set(event.detail?.indices || []);
+    if (!indices.size) return;
+    if (event.detail.drawer === "cart") {
+        cartItems = (window.MPWRCartStorage?.current() || cartItems)
+            .filter((item, index) => !indices.has(index));
+        saveCart();
+        renderSavedCart();
+        showToast(`${indices.size} cart ${indices.size === 1 ? "item" : "items"} removed`, "success");
+        return;
+    }
+    if (event.detail.drawer === "wishlist") {
+        favorites = favorites.filter((item, index) => !indices.has(index));
+        saveWishlist();
+        renderWishlist();
+        updateWishlistButtons();
+        showToast(`${indices.size} Wishlist ${indices.size === 1 ? "item" : "items"} removed`, "success");
+    }
+});
 

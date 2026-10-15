@@ -1,4 +1,4 @@
-import { mountMPWRDrawers } from "./drawer-component.js?v=20260924-7";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20261015-selection-26";
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from "./firestore-api.js";
 import { onAuthStateChanged } from "./auth-api.js";
 
@@ -279,7 +279,7 @@ function renderCart() {
 }
 
 function updateCartTotal(cart = getCart()) {
-    cartDrawer.querySelector(".total-price").textContent = `UGX ${cart.reduce((total,item) => total + cartPrice(item) * Math.max(1,Number(item.quantity) || 1),0).toLocaleString()}`;
+    cartDrawer.querySelector(".total-price").textContent = `USh${cart.reduce((total,item) => total + cartPrice(item) * Math.max(1,Number(item.quantity) || 1),0).toLocaleString("en-UG")}`;
 }
 
 function attachCartSwipe(cartBox) {
@@ -963,7 +963,7 @@ cartDrawer.querySelector(".cart-share-all").addEventListener("click",async() => 
     closeCartMenu();
     const cart = getCart();
     if (!cart.length) return;
-    const text = cart.map(item => `${Math.max(1,Number(item.quantity) || 1)} × ${cartTitle(item)} — UGX ${cartPrice(item).toLocaleString()}`).join("\n");
+    const text = cart.map(item => `${Math.max(1,Number(item.quantity) || 1)} × ${cartTitle(item)} — USh${cartPrice(item).toLocaleString("en-UG")}`).join("\n");
     try {
         if (navigator.share) await navigator.share({ title:"My MPWR cart", text });
         else await navigator.clipboard.writeText(text);
@@ -1063,3 +1063,17 @@ wishlistDrawer.querySelector(".wishlist-share-all").addEventListener("click",asy
     } catch {}
 });
 document.addEventListener("click",event => { if (!event.target.closest(".wishlist-header-actions")) closeWishlistActionsMenu(); });
+
+document.addEventListener("mpwr:drawer-remove-selected", event => {
+    const indices = new Set(event.detail?.indices || []);
+    if (!indices.size) return;
+    if (event.detail.drawer === "cart") {
+        saveCart(getCart().filter((item, index) => !indices.has(index)));
+        showToast(`${indices.size} cart ${indices.size === 1 ? "item" : "items"} removed`, "success");
+        return;
+    }
+    if (event.detail.drawer === "wishlist") {
+        saveFavorites(getFavorites().filter((item, index) => !indices.has(index)));
+        showToast(`${indices.size} Wishlist ${indices.size === 1 ? "item" : "items"} removed`, "success");
+    }
+});

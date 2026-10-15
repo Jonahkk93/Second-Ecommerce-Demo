@@ -612,6 +612,12 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 
 @media(min-width:1200px){.homepage-hero-categories{bottom:49px}}
 
+@media (min-width:761px) and (max-width:1199px){
+    .homepage-hero-categories .hero-category-desktop-only{display:none}
+    .homepage-hero-categories .hero-category-all{display:none}
+    .homepage-hero-categories .hero-category-all.is-mobile-visible{display:inline-flex}
+}
+
 .homepage-hero-media{
     position:absolute;
     inset:0;
@@ -1145,7 +1151,7 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 
 .sidebar-header > span{
     position: static;
-    margin-left: 8px;
+    margin-left: 0;
     transform: translateY(10px);
     font-size: 32px;
     color: #E5A484;
@@ -1164,7 +1170,7 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     border-radius: 14px;
     color: #fff;
     text-decoration: none;
-    background: linear-gradient(135deg, #201b19 0%, #3c241d 100%);
+    background: linear-gradient(135deg, #201b19, #4f3227);
     box-shadow: 0 14px 34px rgba(32, 27, 25, .14);
     transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
 }
@@ -1311,25 +1317,23 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 }
 
 .menu2{
+    display: flex;
+    flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
     margin-top: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    overflow: hidden;
 }
 
-.menu2::-webkit-scrollbar{
+.menu2 > ul::-webkit-scrollbar{
     display: none;
     width: 0;
     height: 0;
 }
 
 .sidebar-section-title{
-    margin: 0 16px 10px 24px;
+    flex: 0 0 auto;
+    margin: 0 16px 10px 16px;
     color: #999;
     font-size: 12px;
     font-weight: 700;
@@ -1338,6 +1342,14 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 }
 
 .menu2 ul{
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
     list-style: none;
 }
 
@@ -1364,7 +1376,7 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     width: 13px;
     height: 13px;
     flex: 0 0 13px;
-    margin-left: 2px;
+    margin-left: auto;
     background: url("../images/Icon Folder/Back Icon Right_Gray.PNG") center / contain no-repeat;
     opacity: .55;
     transition: opacity .2s ease, transform .2s ease;
@@ -1378,7 +1390,7 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 .menu2 a span{
     display: flex;
     align-items: center;
-    margin-right: auto;
+    margin-right: 0;
     line-height: 20px;
     min-width: 0;
 }
@@ -1389,16 +1401,37 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     width: 17px;
     height: 17px;
     flex: 0 0 17px;
-    margin-left: auto;
+    margin-left: 0;
     object-fit: contain;
+}
+
+.sidebar-category-badge{
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 2px 7px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: rgba(229, 164, 132, .12);
+    color: #333;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    white-space: nowrap;
 }
 
 .sidebar-category-sale-icon{
     width: 42px;
-    height: auto;
-    flex-basis: 42px;
+    height: 18px;
+    flex: 0 0 42px;
+    max-width: 42px;
     transform: none;
 }
+
+.sidebar-category-badge .sidebar-category-badge-icon{width:14px;height:14px;flex:0 0 14px;margin:0}
+.sidebar-category-badge .sidebar-category-sale-icon{width:24px;max-width:24px;flex-basis:24px}
 
 .sidebar-item-icon{
     display: block;
@@ -1412,10 +1445,10 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 }
 
 .sidebar-item-icon.custom-category-image{
-    border-radius:10px;
-    background:#f3efed;
+    border-radius:0;
+    background:transparent;
     filter:none;
-    object-fit:cover;
+    object-fit:contain;
 }
 
 .category-sidebar-home .sidebar-item-icon{
@@ -1454,11 +1487,13 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
 .menu2 a[aria-current="page"] .sidebar-item-icon{filter:none}
 
 .menu2 a[aria-current="page"][href="index.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Home Icon_E5A484.PNG")}
-.menu2 a[aria-current="page"][href="Nails.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Nails 3 Icon_Black.PNG")}
+.menu2 a[aria-current="page"][href="Nails.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Nails 3 Icon_E5A484.PNG")}
 .menu2 a[aria-current="page"][href="Wigs.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Wigs Icon_E5A484.PNG")}
 .menu2 a[aria-current="page"][href="ProductsPage.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Products 2 Icon_E5A484.PNG")}
-.menu2 a[aria-current="page"][href="ProductsPage.html?category=all"] .sidebar-item-icon{content:url("../images/Icon Folder/Categories Icon_Black.PNG")}
+.menu2 a[aria-current="page"][href="ProductsPage.html?category=all"] .sidebar-item-icon{content:url("../images/Icon Folder/Categories Icon_E5A484.PNG")}
 .menu2 a[aria-current="page"][href="Lashes.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Lashes Icon_E5A484.PNG")}
+.menu2 a[aria-current="page"] .sidebar-item-icon[src$="Products 2 Icon_333.PNG"]{content:url("../images/Icon Folder/Products 2 Icon_E5A484.PNG")}
+.menu2 a[aria-current="page"][href="Discounts.html"] .sidebar-item-icon{content:url("../images/Icon Folder/Discount Icon_E5A484.PNG")}
 .menu2 :is(.sidebar-campaign-item,.sidebar-discounts-item) .sidebar-item-icon{
     filter:none;
 }
@@ -1471,6 +1506,13 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     margin-top: auto;
     padding-top: 18px;
     background: #fff;
+}
+
+.sidebar_menu.is-campaign-hidden .sidebar-campaign-card,
+.sidebar-campaign-card[hidden],
+.sidebar_menu.is-social-hidden .social_media,
+.social_media[hidden]{
+    display: none !important;
 }
 
 .social_media a{
@@ -1507,7 +1549,7 @@ body:not(.has-homepage-hero) .homepage-campaign-banner{
     }
 
     .sidebar_menu{
-        width: min(260px, 72vw);
+        width: min(330px, 86vw);
         padding:
             max(16px, env(safe-area-inset-top, 0px))
             16px

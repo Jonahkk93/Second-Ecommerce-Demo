@@ -131,9 +131,18 @@ const HOMEPAGE_SECTION_DETAILS = {
     discounts: { label: "Discount Campaign", description: "Current discount campaign section" }
 };
 const SIDEBAR_FIXED_ITEMS = new Set(["all"]);
+const DEFAULT_SIDEBAR_SOCIALS = [
+    { id: "facebook", label: "Facebook", icon: "images/optimized/facebook-icon.png", href: "" },
+    { id: "instagram", label: "Instagram", icon: "images/optimized/instagram-icon.png", href: "" },
+    { id: "x", label: "X", icon: "images/optimized/x-icon.png", href: "" },
+    { id: "threads", label: "Threads", icon: "images/optimized/threads-icon.png", href: "" }
+];
 const DEFAULT_SIDEBAR_SETTINGS = {
     campaignEnabled: true,
     socialEnabled: true,
+    campaignImage: "",
+    campaignImageKey: "",
+    socials: DEFAULT_SIDEBAR_SOCIALS.map(item => ({ ...item })),
     categoryOrder: DEFAULT_CATEGORIES.map(category => category.slug)
 };
 
@@ -168,9 +177,24 @@ function normalizeSidebarSettings(value = {}, categoryItems = categories) {
     validSlugs.forEach(slug => {
         if (!order.includes(slug)) order.push(slug);
     });
+    const incomingSocials = Array.isArray(value?.socials) ? value.socials : [];
+    const socialMap = new Map(incomingSocials.map(item => [String(item?.id || "").trim(), item]));
     return {
         campaignEnabled: value?.campaignEnabled !== false,
         socialEnabled: value?.socialEnabled !== false,
+        campaignImage: String(value?.campaignImage || "").trim().slice(0, 500),
+        campaignImageKey: String(value?.campaignImageKey || "").trim(),
+        socials: DEFAULT_SIDEBAR_SOCIALS.map(defaultItem => {
+            const item = socialMap.get(defaultItem.id) || {};
+            const hasIcon = Object.prototype.hasOwnProperty.call(item, "icon");
+            return {
+                id: defaultItem.id,
+                label: String(item.label || defaultItem.label).trim().replace(/\s+/g, " ").slice(0, 30),
+                icon: String(hasIcon ? item.icon || "" : defaultItem.icon).trim().slice(0, 500),
+                iconKey: String(item.iconKey || "").trim(),
+                href: String(item.href || defaultItem.href).trim().slice(0, 500)
+            };
+        }),
         categoryOrder: order
     };
 }
@@ -318,11 +342,22 @@ function syncHomepageTabVisibility(input, enabled, sectionName) {
     control.title = `${action} ${sectionName}`;
     input.setAttribute("aria-label", `${action} ${sectionName}`);
     const icon = control.querySelector("img");
-    if (icon) icon.src = `images/Icon Folder/Shutdown Icon_${enabled ? "E5A484" : "Gray"}.PNG?v=20261003-2`;
+    if (icon) icon.src = `images/Icon Folder/Shutdown Icon_${enabled ? "E5A484" : "333"}.PNG?v=20261003-2`;
 }
 
 function syncSearchVisibilityIcon(input, enabled, sectionName) {
     const control = input?.closest(".search-visibility-toggle");
+    if (!control) return;
+    const action = enabled ? "Hide" : "Show";
+    control.classList.toggle("is-off", !enabled);
+    control.title = `${action} ${sectionName}`;
+    input.setAttribute("aria-label", `${action} ${sectionName}`);
+    const icon = control.querySelector("img");
+    if (icon) icon.src = `images/Icon Folder/Shutdown Icon_${enabled ? "E5A484" : "Gray"}.PNG?v=20261003-2`;
+}
+
+function syncSidebarSectionSwitch(input, enabled, sectionName) {
+    const control = input?.closest(".sidebar-section-switch");
     if (!control) return;
     const action = enabled ? "Hide" : "Show";
     control.classList.toggle("is-off", !enabled);
@@ -478,8 +513,8 @@ function syncHomepageHeroUrlFields(images) {
         field.disabled = filledByPhoto;
         field.value = filledByPhoto ? "" : (item?.url || "");
         field.placeholder = filledByPhoto ? "Image slot is already filled" : "Paste image URL here";
-        const previewButton = field.closest(".hero-url-control")?.querySelector("[data-hero-url-preview]");
-        if (previewButton) previewButton.disabled = filledByPhoto;
+        const clearButton = field.closest(".hero-url-control")?.querySelector("[data-hero-url-clear]");
+        if (clearButton) clearButton.disabled = filledByPhoto;
     });
 }
 
@@ -1059,7 +1094,7 @@ function syncBannerUrlField(prefix) {
     if (!container) return;
     const urlInput = $(`#homepage-${prefix}-image`);
     const keyInput = $(`#homepage-${prefix}-image-key`);
-    const previewButton = container.querySelector("[data-banner-url-preview]");
+    const clearButton = container.querySelector("[data-banner-url-clear]");
     const filledByPhoto = Boolean(keyInput?.value);
     if (filledByPhoto) {
         if (urlInput.value) urlInput.dataset.filledUrl = urlInput.value;
@@ -1070,7 +1105,7 @@ function syncBannerUrlField(prefix) {
         urlInput.disabled = false;
         urlInput.placeholder = "Paste image URL here";
     }
-    if (previewButton) previewButton.disabled = filledByPhoto;
+    if (clearButton) clearButton.disabled = filledByPhoto;
 }
 
 function syncBannerMediaControl(prefix, imageUrl, statusText = "Current image") {
@@ -1120,7 +1155,9 @@ function initializeHeroMediaUploader() {
     const dropzone = container.querySelector(".banner-media-dropzone");
     const previews = container.querySelector(".banner-media-previews");
     const status = container.querySelector(".banner-media-status");
-    const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    const acceptedTypes = new Set(["image/png", "image/webp", "image/svg+xml", "image/avif", "image/gif", "image/tiff", "image/vnd.adobe.photoshop"]);
+    const acceptedExtensions = new Set(["png", "webp", "svg", "avif", "gif", "tif", "tiff", "psd"]);
+    const acceptsBannerFile = file => acceptedTypes.has(file.type) || acceptedExtensions.has(String(file.name || "").split(".").pop()?.toLowerCase() || "");
     const imagesFromUrlFields = (existingImages = []) => {
         const seen = new Set();
         const imagesBySlot = new Map(existingImages.map((item, index) => [item.slot || index + 1, item]));
@@ -1450,15 +1487,15 @@ function initializeHeroMediaUploader() {
     });
     urlGrid.addEventListener("dragend", clearHeroUrlDragState);
     urlGrid.addEventListener("click", event => {
-        const previewButton = event.target.closest("[data-hero-url-preview]");
-        if (!previewButton) return;
-        const index = Number(previewButton.dataset.heroUrlPreview);
-        const pastedUrl = urlInputs[index]?.value.trim() || "";
-        if (isGooglePageLink(pastedUrl)) return showToast("That is a Google webpage link. In Google Images, choose Copy Image Address instead.", "warning");
-        const imageUrl = normalizePastedImageUrl(pastedUrl);
-        if (!imageUrl) return showToast(`Paste a URL for Image ${index + 1} first.`, "warning");
-        showHomepageHeroPreviewImage(imageUrl);
-        status.textContent = `Previewing Image ${index + 1}`;
+        const clearButton = event.target.closest("[data-hero-url-clear]");
+        if (!clearButton) return;
+        const index = Number(clearButton.dataset.heroUrlClear);
+        const input = urlInputs[index];
+        if (!input || input.disabled) return;
+        input.value = "";
+        const slot = index + 1;
+        const next = currentImages().filter(item => !(Number(item.slot) === slot && isUrlHeroImage(item)));
+        setImages(next, "Hero image URL deleted · Save homepage to publish");
     });
 }
 
@@ -1470,12 +1507,14 @@ function initializeBannerMediaUploader({ prefix, defaultImage, render }) {
     const dropzone = container.querySelector(".banner-media-dropzone");
     const status = container.querySelector(".banner-media-status");
     const resetButton = container.querySelector(".banner-media-reset");
-    const previewButton = container.querySelector("[data-banner-url-preview]");
-    const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    const clearButton = container.querySelector("[data-banner-url-clear]");
+    const acceptedTypes = new Set(["image/png", "image/webp", "image/svg+xml", "image/avif", "image/gif", "image/tiff", "image/vnd.adobe.photoshop"]);
+    const acceptedExtensions = new Set(["png", "webp", "svg", "avif", "gif", "tif", "tiff", "psd"]);
+    const acceptsBannerFile = file => acceptedTypes.has(file.type) || acceptedExtensions.has(String(file.name || "").split(".").pop()?.toLowerCase() || "");
 
     async function uploadBannerFile(file) {
         if (!file) return;
-        if (!acceptedTypes.has(file.type)) return showToast("Choose a JPG, PNG, WebP or GIF image.", "error");
+        if (!acceptsBannerFile(file)) return showToast("Choose a PNG, WebP, SVG, AVIF, GIF, TIFF, or PSD image.", "error");
         if (file.size > 10 * 1024 * 1024) return showToast("Banner images must be 10 MB or smaller.", "error");
 
         const previousUrl = urlInput.disabled ? (urlInput.dataset.filledUrl || "") : urlInput.value;
@@ -1540,15 +1579,13 @@ function initializeBannerMediaUploader({ prefix, defaultImage, render }) {
         urlInput.dispatchEvent(new Event("input", { bubbles: true }));
     });
     urlInput.addEventListener("input", stageUrlImage);
-    previewButton?.addEventListener("click", () => {
-        const pastedUrl = urlInput.value.trim();
-        if (isGooglePageLink(pastedUrl)) return showToast("That is a Google webpage link. In Google Images, choose Copy Image Address instead.", "warning");
-        const imageUrl = normalizePastedImageUrl(pastedUrl);
-        if (!imageUrl) return showToast("Paste a URL for Image 1 first.", "warning");
-        urlInput.value = imageUrl;
+    clearButton?.addEventListener("click", () => {
+        urlInput.value = "";
+        delete urlInput.dataset.filledUrl;
+        urlInput.disabled = false;
         keyInput.value = "";
         render();
-        syncBannerMediaControl(prefix, imageUrl, "Previewing Image 1");
+        syncBannerMediaControl(prefix, defaultImage, "Image URL deleted · Save homepage to publish");
     });
     resetButton.addEventListener("click", () => {
         const clearsToEmptyPreview = prefix === "campaign" && defaultImage === DEFAULT_CAMPAIGN_BANNER.image;
@@ -2147,6 +2184,121 @@ function orderedSidebarCategories() {
     return sidebarSettings.categoryOrder.map(slug => bySlug.get(slug)).filter(Boolean);
 }
 
+function renderSidebarSocialEditor() {
+    const editor = $("#sidebar-social-editor");
+    if (!editor) return;
+    sidebarSettings = normalizeSidebarSettings(sidebarSettings, categories);
+    editor.innerHTML = sidebarSettings.socials.map((item, index) => {
+        const hrefValue = item.href === "#" ? "" : item.href;
+        const iconValue = String(item.icon || "").trim();
+        return `
+        <article class="sidebar-social-row" data-sidebar-social-id="${escapeHtml(item.id)}">
+            <div class="sidebar-social-card-head">
+                <span class="sidebar-social-live-icon${iconValue ? "" : " is-empty"}"><img src="${escapeHtml(iconValue || "images/Icon Folder/Image Icon_Gray.PNG")}" alt=""></span>
+                <strong>Social Media Icon ${index + 1}</strong>
+                <button type="button" class="sidebar-social-card-delete url-delete-button" aria-label="Clear ${escapeHtml(item.label)} social media item"><img src="images/Icon Folder/Delete Icon_E5A484.PNG" alt=""></button>
+            </div>
+            <div class="sidebar-social-fields">
+                <div class="sidebar-media-method" data-active="${item.iconKey ? "photo" : "url"}" data-sidebar-media-method="social-${escapeHtml(item.id)}">
+                    <button class="${item.iconKey ? "" : "is-active"}" type="button" data-sidebar-media-option="url"><img src="${item.iconKey ? "images/Icon Folder/Link Icon_333.PNG" : "images/Icon Folder/Link Icon_White.PNG"}" alt=""><span>Image URL</span></button>
+                    <button class="${item.iconKey ? "is-active" : ""}" type="button" data-sidebar-media-option="photo"><img src="${item.iconKey ? "images/Icon Folder/Image Icon_White.PNG" : "images/Icon Folder/Image Icon_333.PNG"}" alt=""><span>Choose Photo</span></button>
+                </div>
+                <div class="sidebar-media-panels">
+                    <div data-sidebar-media-panel="url" ${item.iconKey ? "hidden" : ""}>
+                        <label class="field"><span>Social Media Icon ${index + 1}</span><span class="sidebar-media-control"><input class="sidebar-social-icon-url" value="${escapeHtml(iconValue)}" maxlength="500" placeholder="Paste icon image URL"><button type="button" class="sidebar-social-icon-clear-button url-delete-button" aria-label="Delete ${escapeHtml(item.label)} icon URL"><img src="images/Icon Folder/Delete Icon_E5A484.PNG" alt=""></button></span></label>
+                    </div>
+                    <input class="sidebar-social-icon-key" type="hidden" value="${escapeHtml(item.iconKey || "")}">
+                    <div class="banner-media-field sidebar-photo-picker" data-sidebar-media-panel="photo" ${item.iconKey ? "" : "hidden"}>
+                        <span class="banner-upload-heading">Choose Photo</span>
+                        <div class="banner-media-row">
+                            <button class="banner-media-dropzone banner-file-button sidebar-social-icon-file-trigger" type="button" aria-label="Choose ${escapeHtml(item.label)} icon"><img src="images/Icon Folder/Plus Icon_Gray.PNG" alt=""></button><input class="sidebar-social-icon-file" type="file" accept="image/png,image/webp,image/svg+xml,image/avif,image/gif,image/tiff,.tif,.tiff,.psd">
+                            <div class="banner-media-preview sidebar-social-icon-preview${iconValue ? "" : " is-empty"}" ${iconValue ? "" : "hidden"}><img class="banner-media-thumbnail" src="${escapeHtml(iconValue)}" alt=""><button class="banner-media-reset sidebar-social-icon-remove" type="button" aria-label="Remove ${escapeHtml(item.label)} icon"><img src="images/Icon Folder/Close Icon_333.PNG" alt=""></button></div>
+                        </div>
+                        <p class="banner-image-limit">PNG, WebP, SVG, AVIF, GIF, TIFF, or PSD · Maximum 1 photo · 5 MB per image</p>
+                    </div>
+                </div>
+                <label class="field"><span>Social Media Link</span><span class="sidebar-media-control"><input class="sidebar-social-link" value="${escapeHtml(hrefValue)}" maxlength="500" placeholder="Paste social media link here"><button type="button" class="sidebar-social-link-clear-button url-delete-button" aria-label="Delete ${escapeHtml(item.label)} social media link"><img src="images/Icon Folder/Delete Icon_E5A484.PNG" alt=""></button></span></label>
+            </div>
+        </article>
+    `;
+    }).join("");
+}
+
+function syncSidebarSocialSettingsFromEditor() {
+    const rows = $$("#sidebar-social-editor .sidebar-social-row");
+    if (!rows.length) return;
+    const byId = new Map(sidebarSettings.socials.map(item => [item.id, item]));
+    sidebarSettings.socials = rows.map(row => {
+        const id = row.dataset.sidebarSocialId;
+        const fallback = byId.get(id) || DEFAULT_SIDEBAR_SOCIALS.find(item => item.id === id) || {};
+        return {
+            id,
+            label: fallback.label || id,
+            icon: (() => {
+                const raw = row.querySelector(".sidebar-social-icon-url")?.value || "";
+                return String(raw).startsWith("blob:") ? raw : normalizePastedImageUrl(raw);
+            })(),
+            iconKey: row.querySelector(".sidebar-social-icon-key")?.value || "",
+            href: (row.querySelector(".sidebar-social-link")?.value || fallback.href || "").trim()
+        };
+    });
+    sidebarSettings = normalizeSidebarSettings(sidebarSettings, categories);
+}
+
+function setSidebarImageTile(tile, image, value) {
+    if (!tile || !image) return;
+    const src = String(value || "").trim();
+    tile.hidden = !src;
+    tile.classList.toggle("is-empty", !src);
+    if (src) image.src = src;
+    else image.removeAttribute("src");
+}
+
+function setSidebarMediaMethod(methodShell, option = "url", animate = false) {
+    if (!methodShell) return;
+    const selected = option === "photo" ? "photo" : "url";
+    methodShell.dataset.active = selected;
+    methodShell.querySelectorAll("[data-sidebar-media-option]").forEach(button => {
+        const active = button.dataset.sidebarMediaOption === selected;
+        button.classList.toggle("is-active", active);
+        const icon = button.querySelector("img");
+        if (!icon) return;
+        const iconName = button.dataset.sidebarMediaOption === "photo" ? "Image Icon" : "Link Icon";
+        icon.src = `images/Icon Folder/${iconName}_${active ? "White" : "333"}.PNG`;
+    });
+    const panelShell = methodShell.parentElement.querySelector(":scope > .sidebar-media-panels") || methodShell.parentElement;
+    const panels = [...panelShell.children].filter(panel => panel.matches("[data-sidebar-media-panel]"));
+    const nextPanel = panels.find(panel => panel.dataset.sidebarMediaPanel === selected);
+    const currentPanel = panels.find(panel => !panel.hidden && panel !== nextPanel);
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if (!nextPanel) return;
+    if (!animate || prefersReducedMotion || !currentPanel || currentPanel === nextPanel) {
+        panels.forEach(panel => {
+            panel.hidden = panel !== nextPanel;
+            panel.classList.remove("is-sidebar-media-entering", "is-sidebar-media-leaving");
+        });
+        return;
+    }
+    const direction = selected === "photo" ? 1 : -1;
+    panels.forEach(panel => panel.classList.remove("is-sidebar-media-entering", "is-sidebar-media-leaving"));
+    nextPanel.hidden = false;
+    nextPanel.classList.add("is-sidebar-media-entering");
+    currentPanel.classList.add("is-sidebar-media-leaving");
+    currentPanel.animate([
+        { opacity: 1, transform: "translate3d(0,0,0)" },
+        { opacity: .72, transform: `translate3d(${-100 * direction}%,0,0)` }
+    ], { duration: 300, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" }).finished.catch(() => {}).then(() => {
+        currentPanel.hidden = true;
+        currentPanel.classList.remove("is-sidebar-media-leaving");
+    });
+    nextPanel.animate([
+        { opacity: .72, transform: `translate3d(${100 * direction}%,0,0)` },
+        { opacity: 1, transform: "translate3d(0,0,0)" }
+    ], { duration: 360, easing: "cubic-bezier(.16,1,.3,1)" }).finished.catch(() => {}).then(() => {
+        nextPanel.classList.remove("is-sidebar-media-entering");
+    });
+}
+
 function renderSidebarPreview() {
     const preview = $("#sidebar-preview");
     const menu = $("#sidebar-preview-menu");
@@ -2157,9 +2309,11 @@ function renderSidebarPreview() {
     const campaign = normalizeCampaignBanner(campaignBanner);
     const campaignCard = $("#sidebar-preview .sidebar-preview-campaign");
     if (campaignCard) {
-        const hasImage = Boolean(campaign.image && campaign.image !== DEFAULT_CAMPAIGN_BANNER.image);
+        campaignCard.hidden = !sidebarSettings.campaignEnabled;
+        const backgroundImage = sidebarSettings.campaignImage || "";
+        const hasImage = Boolean(backgroundImage);
         campaignCard.classList.toggle("has-image", hasImage);
-        $("#sidebar-preview-campaign-bg").src = hasImage ? campaign.image : "";
+        $("#sidebar-preview-campaign-bg").src = hasImage ? backgroundImage : "";
         $("#sidebar-preview-campaign-eyebrow").textContent = campaign.eyebrow;
         $("#sidebar-preview-campaign-heading").textContent = campaign.heading;
         $("#sidebar-preview-campaign-body").textContent = campaign.body;
@@ -2169,11 +2323,14 @@ function renderSidebarPreview() {
         `<li class="sidebar-all-item"><a href="ProductsPage.html?category=all" tabindex="-1" aria-disabled="true"><img src="images/Icon Folder/Categories Icon_Black.PNG" class="sidebar-item-icon" alt=""><span>All</span></a></li>`,
         ...orderedSidebarCategories().map(category => {
             const canonicalSlug = category.slug === "press-ons" ? "press-ons" : category.slug;
-            const badge = category.badge === "Sale"
-                ? `<img class="sidebar-category-badge-icon sidebar-category-sale-icon" src="images/Icon Folder/Sale Icon_Red.PNG" alt="Sale">`
+            const badgeIcon = category.badge === "Sale"
+                ? `<img class="sidebar-category-badge-icon sidebar-category-sale-icon" src="images/Icon Folder/Sale Icon_Red.PNG" alt="">`
                 : category.badge === "Hot"
-                    ? `<img class="sidebar-category-badge-icon sidebar-category-hot-icon" src="images/Icon Folder/Hot Icon.PNG" alt="Hot">`
+                    ? `<img class="sidebar-category-badge-icon sidebar-category-hot-icon" src="images/Icon Folder/Hot Icon.PNG" alt="">`
                     : "";
+            const badge = ["Hot", "Sale", "New", "Trending", "Limited"].includes(category.badge)
+                ? `<small class="sidebar-category-badge">${badgeIcon}${escapeHtml(category.badge)}</small>`
+                : "";
             const iconClass = `sidebar-item-icon${STOREFRONT_CATEGORY_PAGES[canonicalSlug] ? "" : " custom-category-image"}`;
             const iconSrc = STOREFRONT_SIDEBAR_CATEGORY_ICONS[canonicalSlug] || category.image || "images/Icon Folder/Products 2 Icon_333.PNG";
             const label = canonicalSlug === "press-ons" ? "Press-On Nails" : category.label;
@@ -2181,6 +2338,15 @@ function renderSidebarPreview() {
         })
     ];
     menu.innerHTML = rows.join("");
+    const social = $("#sidebar-preview-social");
+    if (social) {
+        social.hidden = !sidebarSettings.socialEnabled;
+        social.innerHTML = sidebarSettings.socials.map(item => `
+            <a href="${escapeHtml(item.href || "#")}" aria-label="${escapeHtml(item.label)}" tabindex="-1" aria-disabled="true">
+                <img src="${escapeHtml(item.icon)}" alt="">
+            </a>
+        `).join("");
+    }
 }
 
 function initializeSidebarPreviewDisplayOnly() {
@@ -2208,7 +2374,7 @@ function renderSidebarOrder() {
         ...ordered.map((category, index) => `
         <article class="category-order-item sidebar-order-item" draggable="true" data-sidebar-order-key="${escapeHtml(category.slug)}" aria-label="${escapeHtml(category.label)}, position ${index + 2}">
             <span class="category-order-drag" aria-hidden="true"><img src="images/Icon Folder/Menu Bar Icon_Gray.PNG" alt=""></span>
-            <div><strong>${escapeHtml(category.label)}</strong><small>${escapeHtml(sidebarCategoryHref(category))}</small></div>
+            <div><strong>${escapeHtml(category.label)}</strong><small>Category</small></div>
             <span class="homepage-order-status is-movable">Drag</span>
         </article>`)
     ].join("");
@@ -2217,9 +2383,18 @@ function renderSidebarOrder() {
 function renderSidebarManagement() {
     const campaignToggle = $("#sidebar-campaign-enabled");
     const socialToggle = $("#sidebar-social-enabled");
+    const campaignImage = $("#sidebar-campaign-background");
+    const campaignImageKey = $("#sidebar-campaign-background-key");
     sidebarSettings = normalizeSidebarSettings(sidebarSettings, categories);
     if (campaignToggle) campaignToggle.checked = sidebarSettings.campaignEnabled;
     if (socialToggle) socialToggle.checked = sidebarSettings.socialEnabled;
+    syncSidebarSectionSwitch(campaignToggle, sidebarSettings.campaignEnabled, "Campaign card");
+    syncSidebarSectionSwitch(socialToggle, sidebarSettings.socialEnabled, "Social Media Links");
+    if (campaignImage) campaignImage.value = sidebarSettings.campaignImage;
+    if (campaignImageKey) campaignImageKey.value = sidebarSettings.campaignImageKey;
+    setSidebarImageTile($("#sidebar-campaign-background-tile"), $("#sidebar-campaign-background-thumb"), sidebarSettings.campaignImage);
+    setSidebarMediaMethod($('[data-sidebar-media-method="campaign"]'), sidebarSettings.campaignImageKey ? "photo" : "url");
+    renderSidebarSocialEditor();
     renderSidebarOrder();
     renderSidebarPreview();
 }
@@ -2246,6 +2421,243 @@ function initializeSidebarPreviewDrawer() {
     });
     window.addEventListener("resize", () => {
         if (window.matchMedia("(min-width: 1201px)").matches) closeSidebarPreviewDrawer();
+    });
+}
+
+function initializeSidebarMediaControls() {
+    const acceptedTypes = new Set(["image/png", "image/webp", "image/svg+xml", "image/avif", "image/gif", "image/tiff", "image/vnd.adobe.photoshop"]);
+    const acceptedExtensions = new Set(["png", "webp", "svg", "avif", "gif", "tif", "tiff", "psd"]);
+    const acceptsCampaignFile = file => acceptedTypes.has(file.type) || acceptedExtensions.has(String(file.name || "").split(".").pop()?.toLowerCase() || "");
+    const socialIconTypes = new Set(["image/png", "image/webp", "image/svg+xml", "image/avif", "image/gif", "image/tiff", "image/vnd.adobe.photoshop"]);
+    const socialIconExtensions = new Set(["png", "webp", "svg", "avif", "gif", "tif", "tiff", "psd"]);
+    const acceptsSocialIconFile = file => socialIconTypes.has(file.type) || socialIconExtensions.has(String(file.name || "").split(".").pop()?.toLowerCase() || "");
+    const campaignInput = $("#sidebar-campaign-background");
+    const campaignKeyInput = $("#sidebar-campaign-background-key");
+    const campaignFileInput = $("#sidebar-campaign-background-file");
+    const campaignTile = $("#sidebar-campaign-background-tile");
+    const campaignThumb = $("#sidebar-campaign-background-thumb");
+    const updateCampaignTile = () => setSidebarImageTile(campaignTile, campaignThumb, campaignInput?.value || "");
+    const clearCampaignImage = () => {
+        if (campaignInput) campaignInput.value = "";
+        if (campaignKeyInput) campaignKeyInput.value = "";
+        sidebarSettings.campaignImage = "";
+        sidebarSettings.campaignImageKey = "";
+        updateCampaignTile();
+        renderSidebarPreview();
+    };
+    const stageCampaignImage = () => {
+        if (!campaignInput) return;
+        campaignInput.value = normalizePastedImageUrl(campaignInput.value);
+        if (campaignKeyInput) campaignKeyInput.value = "";
+        sidebarSettings.campaignImage = campaignInput.value.trim();
+        sidebarSettings.campaignImageKey = "";
+        updateCampaignTile();
+        renderSidebarPreview();
+    };
+    campaignInput?.addEventListener("input", stageCampaignImage);
+    campaignInput?.addEventListener("paste", event => {
+        const pasted = event.clipboardData?.getData("text") || "";
+        const normalized = normalizePastedImageUrl(pasted);
+        if (!normalized || normalized === pasted.trim()) return;
+        event.preventDefault();
+        campaignInput.value = normalized;
+        campaignInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    $("#sidebar-campaign-background-clear")?.addEventListener("click", clearCampaignImage);
+    $("#sidebar-campaign-background-remove")?.addEventListener("click", clearCampaignImage);
+    campaignFileInput?.addEventListener("change", async () => {
+        const file = campaignFileInput.files?.[0];
+        if (!file) return;
+        if (!acceptsCampaignFile(file)) return showToast("Choose a PNG, WebP, SVG, AVIF, GIF, TIFF, or PSD image.", "error");
+        if (file.size > 10 * 1024 * 1024) return showToast("Sidebar images must be 10 MB or smaller.", "error");
+        const previousUrl = campaignInput?.value || "";
+        const previousKey = campaignKeyInput?.value || "";
+        const localPreview = URL.createObjectURL(file);
+        if (campaignInput) campaignInput.value = localPreview;
+        if (campaignKeyInput) campaignKeyInput.value = "";
+        sidebarSettings.campaignImage = localPreview;
+        sidebarSettings.campaignImageKey = "";
+        updateCampaignTile();
+        renderSidebarPreview();
+        try {
+            const uploaded = await uploadImage(file, "banner");
+            if (campaignInput) campaignInput.value = uploaded.url;
+            if (campaignKeyInput) campaignKeyInput.value = uploaded.key || "";
+            sidebarSettings.campaignImage = uploaded.url;
+            sidebarSettings.campaignImageKey = uploaded.key || "";
+            updateCampaignTile();
+            renderSidebarPreview();
+            showToast("Sidebar campaign background uploaded.");
+        } catch (error) {
+            if (campaignInput) campaignInput.value = previousUrl;
+            if (campaignKeyInput) campaignKeyInput.value = previousKey;
+            sidebarSettings.campaignImage = previousUrl;
+            sidebarSettings.campaignImageKey = previousKey;
+            updateCampaignTile();
+            renderSidebarPreview();
+            showToast(error?.message || "Unable to upload the sidebar background.", "error");
+        } finally {
+            URL.revokeObjectURL(localPreview);
+            campaignFileInput.value = "";
+        }
+    });
+
+    const socialEditor = $("#sidebar-social-editor");
+    document.addEventListener("click", event => {
+        const fileButton = event.target.closest("[data-sidebar-file-trigger],.sidebar-social-icon-file-trigger");
+        if (fileButton) {
+            event.preventDefault();
+            const input = fileButton.dataset.sidebarFileTrigger
+                ? document.getElementById(fileButton.dataset.sidebarFileTrigger)
+                : fileButton.parentElement?.querySelector("input[type='file']");
+            input?.click();
+            return;
+        }
+        const optionButton = event.target.closest("[data-sidebar-media-option]");
+        if (!optionButton) return;
+        const methodShell = optionButton.closest("[data-sidebar-media-method]");
+        if (!methodShell) return;
+        setSidebarMediaMethod(methodShell, optionButton.dataset.sidebarMediaOption, true);
+    });
+    socialEditor?.addEventListener("input", event => {
+        if (!event.target.matches(".sidebar-social-link,.sidebar-social-icon-url")) return;
+        if (event.target.matches(".sidebar-social-icon-url")) event.target.value = normalizePastedImageUrl(event.target.value);
+        syncSidebarSocialSettingsFromEditor();
+        renderSidebarPreview();
+        const row = event.target.closest(".sidebar-social-row");
+        const tile = row?.querySelector(".sidebar-social-icon-preview");
+        const img = row?.querySelector(".sidebar-social-icon-preview .banner-media-thumbnail");
+        const icon = row?.querySelector(".sidebar-social-icon-url")?.value;
+        const liveIcon = row?.querySelector(".sidebar-social-live-icon img");
+        const liveIconShell = row?.querySelector(".sidebar-social-live-icon");
+        if (liveIcon) {
+            liveIcon.src = icon || "images/Icon Folder/Image Icon_Gray.PNG";
+            liveIcon.hidden = false;
+        }
+        liveIconShell?.classList.toggle("is-empty", !icon);
+        setSidebarImageTile(tile, img, icon);
+    });
+    socialEditor?.addEventListener("paste", event => {
+        if (!event.target.matches(".sidebar-social-icon-url")) return;
+        const pasted = event.clipboardData?.getData("text") || "";
+        const normalized = normalizePastedImageUrl(pasted);
+        if (!normalized || normalized === pasted.trim()) return;
+        event.preventDefault();
+        event.target.value = normalized;
+        event.target.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    socialEditor?.addEventListener("click", event => {
+        const linkClearButton = event.target.closest(".sidebar-social-link-clear-button");
+        if (linkClearButton) {
+            const row = linkClearButton.closest(".sidebar-social-row");
+            const linkInput = row?.querySelector(".sidebar-social-link");
+            if (linkInput) linkInput.value = "";
+            syncSidebarSocialSettingsFromEditor();
+            renderSidebarPreview();
+            return;
+        }
+        const cardClearButton = event.target.closest(".sidebar-social-card-delete");
+        if (cardClearButton) {
+            const row = cardClearButton.closest(".sidebar-social-row");
+            const iconInput = row?.querySelector(".sidebar-social-icon-url");
+            const keyInput = row?.querySelector(".sidebar-social-icon-key");
+            const linkInput = row?.querySelector(".sidebar-social-link");
+            const tile = row?.querySelector(".sidebar-social-icon-preview");
+            const image = row?.querySelector(".sidebar-social-icon-preview .banner-media-thumbnail");
+            const liveIcon = row?.querySelector(".sidebar-social-live-icon img");
+            const liveIconShell = row?.querySelector(".sidebar-social-live-icon");
+            if (iconInput) iconInput.value = "";
+            if (keyInput) keyInput.value = "";
+            if (linkInput) linkInput.value = "";
+            if (liveIcon) {
+                liveIcon.src = "images/Icon Folder/Image Icon_Gray.PNG";
+                liveIcon.hidden = false;
+            }
+            liveIconShell?.classList.add("is-empty");
+            setSidebarImageTile(tile, image, "");
+            syncSidebarSocialSettingsFromEditor();
+            renderSidebarPreview();
+            renderSidebarSocialEditor();
+            return;
+        }
+        const removeButton = event.target.closest(".sidebar-social-icon-remove,.sidebar-social-icon-clear-button");
+        if (removeButton) {
+            const row = removeButton.closest(".sidebar-social-row");
+            const iconInput = row?.querySelector(".sidebar-social-icon-url");
+            const keyInput = row?.querySelector(".sidebar-social-icon-key");
+            const tile = row?.querySelector(".sidebar-social-icon-preview");
+            const image = row?.querySelector(".sidebar-social-icon-preview .banner-media-thumbnail");
+            const liveIcon = row?.querySelector(".sidebar-social-live-icon img");
+            const liveIconShell = row?.querySelector(".sidebar-social-live-icon");
+            if (iconInput) iconInput.value = "";
+            if (keyInput) keyInput.value = "";
+            if (liveIcon) {
+                liveIcon.src = "images/Icon Folder/Image Icon_Gray.PNG";
+                liveIcon.hidden = false;
+            }
+            liveIconShell?.classList.add("is-empty");
+            setSidebarImageTile(tile, image, "");
+            syncSidebarSocialSettingsFromEditor();
+            renderSidebarPreview();
+            return;
+        }
+    });
+    socialEditor?.addEventListener("change", async event => {
+        if (!event.target.matches(".sidebar-social-icon-file")) return;
+        const input = event.target;
+        const file = input.files?.[0];
+        if (!file) return;
+        if (!acceptsSocialIconFile(file)) return showToast("Choose a PNG, WebP, SVG, AVIF, GIF, TIFF, or PSD icon.", "error");
+        if (file.size > 5 * 1024 * 1024) return showToast("Social icons must be 5 MB or smaller.", "error");
+        const row = input.closest(".sidebar-social-row");
+        const iconInput = row?.querySelector(".sidebar-social-icon-url");
+        const keyInput = row?.querySelector(".sidebar-social-icon-key");
+        const previewTile = row?.querySelector(".sidebar-social-icon-preview");
+        const previewImage = row?.querySelector(".sidebar-social-icon-preview .banner-media-thumbnail");
+        const liveIcon = row?.querySelector(".sidebar-social-live-icon img");
+        const liveIconShell = row?.querySelector(".sidebar-social-live-icon");
+        const previousUrl = iconInput?.value || "";
+        const previousKey = keyInput?.value || "";
+        const localPreview = URL.createObjectURL(file);
+        if (iconInput) iconInput.value = localPreview;
+        if (keyInput) keyInput.value = "";
+        if (liveIcon) {
+            liveIcon.src = localPreview;
+            liveIcon.hidden = false;
+        }
+        liveIconShell?.classList.remove("is-empty");
+        setSidebarImageTile(previewTile, previewImage, localPreview);
+        syncSidebarSocialSettingsFromEditor();
+        renderSidebarPreview();
+        try {
+            const uploaded = await uploadImage(file, "category");
+            if (iconInput) iconInput.value = uploaded.url;
+            if (keyInput) keyInput.value = uploaded.key || "";
+            if (liveIcon) {
+                liveIcon.src = uploaded.url;
+                liveIcon.hidden = false;
+            }
+            liveIconShell?.classList.remove("is-empty");
+            setSidebarImageTile(previewTile, previewImage, uploaded.url);
+            syncSidebarSocialSettingsFromEditor();
+            renderSidebarPreview();
+            showToast("Social icon uploaded.");
+        } catch (error) {
+            if (iconInput) iconInput.value = previousUrl;
+            if (keyInput) keyInput.value = previousKey;
+            if (liveIcon) {
+                liveIcon.src = previousUrl || "images/Icon Folder/Image Icon_Gray.PNG";
+                liveIcon.hidden = false;
+            }
+            liveIconShell?.classList.toggle("is-empty", !previousUrl);
+            setSidebarImageTile(previewTile, previewImage, previousUrl);
+            syncSidebarSocialSettingsFromEditor();
+            renderSidebarPreview();
+            showToast(error?.message || "Unable to upload the social icon.", "error");
+        } finally {
+            URL.revokeObjectURL(localPreview);
+            input.value = "";
+        }
     });
 }
 
@@ -2627,7 +3039,7 @@ function formatCompactStat(value) {
 }
 
 function formatMoney(value) {
-    return `UGX ${Math.max(0, Number(value) || 0).toLocaleString()}`;
+    return `USh${Math.max(0, Number(value) || 0).toLocaleString("en-UG")}`;
 }
 
 function enhanceProductDropdown(select) {
@@ -5944,12 +6356,15 @@ function bindEvents() {
     initializeSidebarCategoryReorder();
     initializeSidebarPreviewDisplayOnly();
     initializeSidebarPreviewDrawer();
+    initializeSidebarMediaControls();
     $("#sidebar-campaign-enabled")?.addEventListener("change", event => {
         sidebarSettings.campaignEnabled = event.target.checked;
+        syncSidebarSectionSwitch(event.target, sidebarSettings.campaignEnabled, "Campaign card");
         renderSidebarPreview();
     });
     $("#sidebar-social-enabled")?.addEventListener("change", event => {
         sidebarSettings.socialEnabled = event.target.checked;
+        syncSidebarSectionSwitch(event.target, sidebarSettings.socialEnabled, "Social Media Links");
         renderSidebarPreview();
     });
     $("#save-sidebar")?.addEventListener("click", async event => {
@@ -5957,6 +6372,11 @@ function bindEvents() {
         button.disabled = true;
         button.textContent = "Saving...";
         try {
+            const campaignImage = $("#sidebar-campaign-background");
+            const campaignImageKey = $("#sidebar-campaign-background-key");
+            sidebarSettings.campaignImage = normalizePastedImageUrl(campaignImage?.value || "");
+            sidebarSettings.campaignImageKey = campaignImageKey?.value || "";
+            syncSidebarSocialSettingsFromEditor();
             await saveSidebarSettings();
             notifyStorefrontChange();
             showToast("Sidebar changes saved.");
