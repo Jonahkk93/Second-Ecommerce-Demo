@@ -1,4 +1,4 @@
-import { mountMPWRDrawers } from "./drawer-component.js?v=20261015-selection-26";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20261015-selection-28";
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from "./firestore-api.js";
 import { onAuthStateChanged } from "./auth-api.js";
 

@@ -20,7 +20,7 @@
    NAVIGATION
 ============================================================ */
 
-import { mountMPWRDrawers } from "./drawer-component.js?v=20261015-selection-26";
+import { mountMPWRDrawers } from "./drawer-component.js?v=20261015-selection-28";
 
 mountMPWRDrawers(document.body);
 

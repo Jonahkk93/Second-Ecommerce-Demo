@@ -15,7 +15,7 @@ import {
 } from "./firestore-api.js";
 import { openReviewLightbox } from "./review-lightbox.js";
 import { deleteImage, uploadImage } from "./media-api.js";
-import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261015-26";
+import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261015-28";
 
 await (window.MPWRCatalogueReady || Promise.resolve(window.products));
 

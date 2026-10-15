@@ -1,4 +1,4 @@
-import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261015-26";
+import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261015-28";
 
 export function mountMPWRDrawers(target = document.body) {
     if (target.querySelector(":scope > .cart") || target.querySelector(":scope > .wishlist")) return;

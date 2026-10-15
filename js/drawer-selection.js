@@ -5,7 +5,7 @@ function addSelectionStylesheet() {
     if (document.querySelector('link[data-mpwr-drawer-selection]')) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "css/drawer-selection.css?v=20261015-26";
+    link.href = "css/drawer-selection.css?v=20261015-28";
     link.dataset.mpwrDrawerSelection = "";
     document.head.appendChild(link);
 }
