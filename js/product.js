@@ -15,7 +15,7 @@ import {
 } from "./firestore-api.js";
 import { openReviewLightbox } from "./review-lightbox.js";
 import { deleteImage, uploadImage } from "./media-api.js";
-import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261015-28";
+import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261016-53";
 
 await (window.MPWRCatalogueReady || Promise.resolve(window.products));
 
@@ -646,7 +646,7 @@ let currentReviewAttachments = [];
 let initialReviewAttachments = [];
 let reviewAttachmentsChanged = false;
 let reviewPreviewUrls = [];
-const REVIEW_PREVIEW_LIMIT = 2;
+const REVIEW_PREVIEW_LIMIT = 4;
 const REVIEW_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 let selectedModalProduct = null;
 let selectedModalOptions = {};
@@ -921,40 +921,25 @@ document.addEventListener("keydown", event => {
 
 function positionReviews() {
     const isTabletOrLaptop = window.matchMedia("(min-width: 601px)").matches;
-    const isLaptop = window.matchMedia("(min-width: 901px)").matches;
+    const description = productDescription.closest(".product-description-section");
 
     if (isTabletOrLaptop) {
-        if (productBenefits.parentElement !== productGallery) {
-            productGallery.appendChild(productBenefits);
-        }
-
-        if (isLaptop) {
-            if (relatedProducts.parentElement !== productLayout) {
-                productLayout.appendChild(relatedProducts);
-            }
-            if (productReviews.parentElement !== productInfo) {
-                productInfo.appendChild(productReviews);
-            }
-        } else {
-            if (productReviews.parentElement !== productLayout) {
-                productLayout.appendChild(productReviews);
-            }
-            if (relatedProducts.parentElement !== productReviewsInner) {
-                productReviewsInner.appendChild(relatedProducts);
-            }
-        }
+        // Keep only the heading and options beside the image. Everything below
+        // the hero flows across both columns, independently of review length.
+        if (productReviews.parentElement !== productLayout) productLayout.appendChild(productReviews);
+        productLayout.insertBefore(productBenefits, productReviews);
+        productLayout.insertBefore(productVideosContainer, productReviews);
+        productLayout.insertBefore(description, productReviews);
+        if (relatedProducts.parentElement !== productLayout) productLayout.appendChild(relatedProducts);
         return;
     }
 
-    if (productBenefits.parentElement !== productInfo) {
-        productInfo.appendChild(productBenefits);
-    }
-    if (productReviews.parentElement !== productLayout) {
-        productLayout.appendChild(productReviews);
-    }
-    if (relatedProducts.parentElement !== productReviewsInner) {
-        productReviewsInner.appendChild(relatedProducts);
-    }
+    // Restore the original phone reading order when crossing the breakpoint.
+    productInfo.appendChild(description);
+    productInfo.appendChild(productBenefits);
+    productGallery.appendChild(productVideosContainer);
+    if (productReviews.parentElement !== productLayout) productLayout.appendChild(productReviews);
+    if (relatedProducts.parentElement !== productReviewsInner) productReviewsInner.appendChild(relatedProducts);
 }
 
 positionReviews();
@@ -1082,14 +1067,12 @@ function clampReviewPreview(body) {
     if (!bodyText || !moreLink) return;
 
     bodyText.textContent = fullText;
-    moreLink.hidden = false;
+    moreLink.hidden = true;
 
     const lineHeight = Number.parseFloat(getComputedStyle(body).lineHeight);
-    const maxHeight = lineHeight * 2 + 1;
-    if (body.scrollHeight <= maxHeight) {
-        moreLink.hidden = true;
-        return;
-    }
+    const maxHeight = lineHeight + 1;
+    if (body.scrollHeight <= maxHeight) return;
+    moreLink.hidden = false;
 
     let low = 0;
     let high = fullText.length;
@@ -1168,8 +1151,11 @@ function renderReviewList(reviews) {
         bodyText.textContent = reviewTextValue;
         const moreLink = document.createElement("a");
         moreLink.className = "review-more-link";
-        moreLink.href = `product-reviews.html?id=${encodeURIComponent(product.id)}`;
-        moreLink.textContent = " ...more";
+        const fullReviewUrl = `product-reviews.html?id=${encodeURIComponent(product.id)}`;
+        const reviewAnchor = encodeURIComponent(String(review.id));
+        moreLink.href = `${fullReviewUrl}#review-${reviewAnchor}`;
+        moreLink.textContent = " …Read more";
+        moreLink.setAttribute("aria-label", `Read the full review by ${customer.textContent}`);
         body.append(bodyText, moreLink);
 
         const date = document.createElement("time");
@@ -1255,25 +1241,19 @@ function renderReviewList(reviews) {
         }
 
         if (String(review.adminReply || "").trim()) {
-            const reply = document.createElement("div");
-            reply.className = "review-admin-reply";
-            const replyHeading = document.createElement("div");
-            const replyAuthor = document.createElement("strong");
-            replyAuthor.className = "review-admin-reply-author";
-            const replyAuthorLabel = document.createElement("span");
-            replyAuthorLabel.textContent = "Response from MPWR";
-            const replyVerified = document.createElement("img");
-            replyVerified.className = "review-admin-reply-verified";
-            replyVerified.src = "images/Icon Folder/Verified Purchase Icon_333.PNG";
-            replyVerified.alt = "Verified MPWR";
-            replyAuthor.append(replyAuthorLabel, replyVerified);
-            const replyDate = document.createElement("time");
-            replyDate.textContent = reviewDate(review.adminRepliedAt);
-            replyHeading.append(replyAuthor, replyDate);
-            const replyText = document.createElement("p");
-            replyText.textContent = review.adminReply;
-            reply.append(replyHeading, replyText);
-            card.appendChild(reply);
+            const replyLink = document.createElement("a");
+            replyLink.className = "review-response-link";
+            replyLink.href = `${fullReviewUrl}#response-${reviewAnchor}`;
+            replyLink.setAttribute("aria-label", `View MPWR's response to ${customer.textContent}'s review`);
+            const label = document.createElement("span");
+            label.textContent = "Response from MPWR";
+            const separator = document.createElement("span");
+            separator.textContent = " · ";
+            separator.setAttribute("aria-hidden", "true");
+            const action = document.createElement("strong");
+            action.textContent = "View response";
+            replyLink.append(label, separator, action);
+            card.appendChild(replyLink);
         }
 
         reviewList.appendChild(card);

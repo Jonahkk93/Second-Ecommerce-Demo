@@ -5,7 +5,7 @@ function addSelectionStylesheet() {
     if (document.querySelector('link[data-mpwr-drawer-selection]')) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "css/drawer-selection.css?v=20261015-28";
+    link.href = "css/drawer-selection.css?v=20261016-53";
     link.dataset.mpwrDrawerSelection = "";
     document.head.appendChild(link);
 }
@@ -13,9 +13,7 @@ function addSelectionStylesheet() {
 function selectionMarkup(kind) {
     const noun = kind === "cart" ? "cart" : "wishlist";
     const buttonClass = kind === "cart" ? "drawer-selection-delete btn-buy" : "drawer-selection-delete";
-    const deleteIcon = kind === "wishlist"
-        ? "images/optimized/delete.png"
-        : "images/Icon Folder/Delete Icon_d9534f.PNG";
+    const deleteIcon = "images/Icon Folder/Delete Icon_333.PNG";
     return `
         <div class="drawer-selection-toolbar" hidden>
             <button class="drawer-selection-cancel" type="button" aria-label="Cancel selection">
@@ -53,6 +51,7 @@ function createDrawerSelection(drawer, kind) {
     let startX = 0;
     let startY = 0;
     let pressRow = null;
+    let pressPointerId = null;
     let suppressNextClick = false;
     let pendingRemoval = false;
 
@@ -99,7 +98,9 @@ function createDrawerSelection(drawer, kind) {
     }
 
     function exitSelection() {
-        clearTimeout(pressTimer);
+        if (pendingRemoval) closeRemovalConfirmation();
+        cancelPress();
+        suppressNextClick = false;
         selected.clear();
         drawer.classList.remove("is-selecting-items");
         rows().forEach(row => {
@@ -121,6 +122,15 @@ function createDrawerSelection(drawer, kind) {
     }
 
     function enterSelection(row) {
+        // End a swipe before hiding its actions or changing the row layout.
+        const main = row.querySelector(".cart-box-main");
+        if (main && pressPointerId !== null) {
+            const pointerId = pressPointerId;
+            main.dispatchEvent(new PointerEvent("pointercancel", {
+                pointerId, clientX: startX, clientY: startY
+            }));
+            if (main.hasPointerCapture(pointerId)) main.releasePointerCapture(pointerId);
+        }
         matchDrawerTitleHeight();
         rows().forEach(item => {
             item.classList.remove("is-selection-press", "is-swiped", "swipe-dragging", "delete-armed");
@@ -133,17 +143,20 @@ function createDrawerSelection(drawer, kind) {
         navigator.vibrate?.(20);
     }
 
-    function cancelPress() {
+    function cancelPress(event) {
+        if (event && pressPointerId !== null && event.pointerId !== pressPointerId) return;
         pressRow?.classList.remove("is-selection-press");
         clearTimeout(pressTimer);
         pressTimer = 0;
         pressRow = null;
+        pressPointerId = null;
     }
 
     content.addEventListener("pointerdown", event => {
         const row = event.target.closest(rowSelector);
-        if (!row || event.button > 0) return;
+        if (!row || (event.pointerType === "mouse" && event.button !== 0)) return;
         if (event.target.closest('button, [role="button"], input, select, textarea')) return;
+        suppressNextClick = false;
         if (drawer.classList.contains("is-selecting-items")) {
             event.stopImmediatePropagation();
             return;
@@ -151,22 +164,23 @@ function createDrawerSelection(drawer, kind) {
         startX = event.clientX;
         startY = event.clientY;
         pressRow = row;
+        pressPointerId = event.pointerId;
         row.classList.add("is-selection-press");
         pressTimer = window.setTimeout(() => {
-            if (pressRow === row) enterSelection(row);
+            if (pressRow === row && pressPointerId === event.pointerId) enterSelection(row);
             pressTimer = 0;
         }, LONG_PRESS_DELAY);
     }, true);
 
     content.addEventListener("pointermove", event => {
-        if (!pressTimer) return;
+        if (drawer.classList.contains("is-selecting-items")) event.stopImmediatePropagation();
+        if (!pressTimer || event.pointerId !== pressPointerId) return;
         if (Math.hypot(event.clientX - startX, event.clientY - startY) > MOVE_TOLERANCE) cancelPress();
     }, true);
     content.addEventListener("pointerup", cancelPress, true);
     content.addEventListener("pointercancel", cancelPress, true);
-    content.addEventListener("pointerleave", cancelPress, true);
     content.addEventListener("contextmenu", event => {
-        if (!drawer.classList.contains("is-selecting-items")) return;
+        if (!pressTimer && !drawer.classList.contains("is-selecting-items")) return;
         event.preventDefault();
     });
 
@@ -182,6 +196,26 @@ function createDrawerSelection(drawer, kind) {
         }
         toggle(row);
     }, true);
+
+    // Native image/link dragging otherwise cancels the long-press gesture.
+    content.addEventListener("dragstart", event => event.preventDefault());
+    const menu = drawer.querySelector(`.${kind}-actions-menu`);
+    if (menu) {
+        const selectItems = document.createElement("button");
+        selectItems.type = "button";
+        selectItems.className = "drawer-selection-start";
+        selectItems.setAttribute("role", "menuitem");
+        selectItems.textContent = "Select items";
+        menu.prepend(selectItems);
+        selectItems.addEventListener("click", () => {
+            const firstRow = rows()[0];
+            if (!firstRow) return;
+            enterSelection(firstRow);
+            suppressNextClick = false;
+            menu.hidden = true;
+            drawer.querySelector(`.${kind}-menu-toggle`)?.setAttribute("aria-expanded", "false");
+        });
+    }
 
     cancel.addEventListener("click", exitSelection);
     selectAll.addEventListener("click", () => {
@@ -200,6 +234,7 @@ function createDrawerSelection(drawer, kind) {
 
     function closeRemovalConfirmation() {
         pendingRemoval = false;
+        remove.classList.remove("is-confirming");
         overlay?.classList.remove("active");
         overlay?.setAttribute("aria-hidden", "true");
         if (overlayHeading) overlayHeading.textContent = "Delete Item";
@@ -216,6 +251,7 @@ function createDrawerSelection(drawer, kind) {
             ? `Remove ${total === 1 ? "this item" : `these ${total} items`} from your cart?`
             : `Remove ${total === 1 ? "this item" : `these ${total} items`} from your Wishlist?`;
         overlayConfirm.textContent = total === 1 ? "Remove Item" : `Remove ${total} Items`;
+        remove.classList.add("is-confirming");
         overlay.classList.add("active");
         overlay.setAttribute("aria-hidden", "false");
     });
@@ -244,16 +280,29 @@ function createDrawerSelection(drawer, kind) {
         exitSelection();
     }, true);
 
+    overlay?.addEventListener("click", event => {
+        if (!pendingRemoval || event.target !== overlay) return;
+        event.stopImmediatePropagation();
+        closeRemovalConfirmation();
+    }, true);
+
     const closeButton = drawer.querySelector(kind === "cart" ? ".cart-close-button" : ".wishlist-close-button");
     closeButton?.addEventListener("click", event => {
         exitSelection();
         if (event.target === closeButton) closeButton.querySelector("img")?.click();
     });
     document.addEventListener("keydown", event => {
-        if (event.key !== "Escape" || !drawer.classList.contains("is-selecting-items")) return;
-        event.preventDefault();
-        exitSelection();
-    });
+        if (event.key !== "Escape") return;
+        if (pendingRemoval) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            closeRemovalConfirmation();
+        } else if (drawer.classList.contains("is-selecting-items")) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            exitSelection();
+        }
+    }, true);
 
     const rowObserver = new MutationObserver(() => {
         if (drawer.classList.contains("is-selecting-items")) exitSelection();
@@ -262,7 +311,10 @@ function createDrawerSelection(drawer, kind) {
     rowObserver.observe(content, { childList: true });
 
     const drawerObserver = new MutationObserver(() => {
-        if (!drawer.classList.contains("active") && drawer.classList.contains("is-selecting-items")) exitSelection();
+        if (!drawer.classList.contains("active") && drawer.classList.contains("is-selecting-items")) {
+            if (pendingRemoval) closeRemovalConfirmation();
+            exitSelection();
+        }
     });
     drawerObserver.observe(drawer, { attributes: true, attributeFilter: ["class"] });
 

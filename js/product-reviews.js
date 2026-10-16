@@ -151,6 +151,8 @@ function renderReviewList(reviews) {
     reviews.forEach(review => {
         const card = document.createElement("article");
         card.className = "review-card";
+        card.id = `review-${review.id}`;
+        card.tabIndex = -1;
 
         const header = document.createElement("div");
         header.className = "review-card-header";
@@ -240,6 +242,8 @@ function renderReviewList(reviews) {
         if (String(review.adminReply || "").trim()) {
             const reply = document.createElement("div");
             reply.className = "review-admin-reply";
+            reply.id = `response-${review.id}`;
+            reply.tabIndex = -1;
             const replyHeading = document.createElement("div");
             const replyAuthor = document.createElement("strong");
             replyAuthor.className = "review-admin-reply-author";
@@ -264,7 +268,21 @@ function renderReviewList(reviews) {
 
     productReviews.classList.remove("reviews-loading-state");
     productReviews.querySelector(".reviews-loading-placeholder")?.remove();
+    requestAnimationFrame(focusLinkedReview);
 }
+
+function focusLinkedReview() {
+    let anchor;
+    try { anchor = decodeURIComponent(window.location.hash.slice(1)); }
+    catch { return; }
+    if (!anchor.startsWith("review-") && !anchor.startsWith("response-")) return;
+    const target = document.getElementById(anchor);
+    if (!target || !reviewList.contains(target)) return;
+    target.scrollIntoView({ block: "start" });
+    target.focus({ preventScroll: true });
+}
+
+window.addEventListener("hashchange", focusLinkedReview);
 
 window.addEventListener("storage", event => { if (event.key === "mpwrReviewRevision" && event.newValue) window.location.reload(); });
 if ("BroadcastChannel" in window) new BroadcastChannel("mpwr-reviews").addEventListener("message", event => { if (event.data?.type === "reviews-changed") window.location.reload(); });

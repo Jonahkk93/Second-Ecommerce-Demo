@@ -43,9 +43,9 @@ html.account-modal-open,body.account-modal-open{overflow:hidden;overscroll-behav
 .register-name-row input{width:100%;min-width:0}
 .terms-check{display:flex;align-items:flex-start;gap:10px;margin:18px 0;font-size:14px;color:#666}
 .register-btn,.back-to-signin-btn{width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:.25s ease}
-.register-btn{background:#E5A484;color:#fff;border:none;margin-top:20px}
+.register-btn{background:#E5A484;color:#fff;border:none;margin-top:0}
 .register-btn:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(229,164,132,.35)}
-.back-to-signin-btn{margin-top:18px;padding:14px;border:1px solid #E5A484;border-radius:12px;background:white;color:#E5A484;font-size:15px;font-weight:600;cursor:pointer;transition:.25s ease}
+.back-to-signin-btn{margin-top:0;padding:14px;border:1px solid #E5A484;border-radius:12px;background:white;color:#E5A484;font-size:15px;font-weight:600;cursor:pointer;transition:.25s ease}
 .back-to-signin-btn:hover{background:#E5A484;color:white}
 #account-panel[hidden]{display:none}
 
@@ -68,13 +68,23 @@ html.account-modal-open,body.account-modal-open{overflow:hidden;overscroll-behav
     .register-form .input-group{gap:4px}
     .register-form .input-group input{padding:10px 12px}
     .register-form .terms-check{margin:6px 0}
-    .register-btn{margin-top:4px;padding:12px}
+    .register-btn{margin-top:0;padding:12px}
     .register-view > .account-divider{margin:14px 0}
     .back-to-signin-btn{margin-top:0;padding:12px}
 }
 
 @media screen and (max-width:380px){
     .register-name-row{grid-template-columns:1fr;gap:10px}
+}
+
+/* Keep the Create Account identity panel fixed while its form scrolls below. */
+.account-modal:has(.register-view.active){display:flex;flex-direction:column;overflow:hidden}
+.account-modal:has(.register-view.active) .register-view.active{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch}
+.account-modal:has(.register-view.active) .register-view.active::-webkit-scrollbar{display:none;width:0;height:0}
+.register-view.active > .account-header{position:sticky;top:0;z-index:3;margin:0 0 12px;padding-bottom:18px;background:#fff}
+
+@media screen and (max-width:600px){
+    .register-view.active > .account-header{margin-bottom:4px;padding-bottom:10px}
 }
 
 /* High-specificity option-panel constraints that resist later generic rules. */
@@ -5750,3 +5760,165 @@ html.site-loading-enabled :is(
 
 .cart-title-count{display:inline-grid;min-width:24px;height:24px;padding:1px 7px 0;border-radius:999px;background:#e7e7e7;color:#555;font-family:Arial,sans-serif;font-size:12px!important;font-variant-numeric:tabular-nums;font-weight:500;line-height:1;letter-spacing:0;place-items:center}
 .cart-title-count[hidden]{display:none}
+
+
+/* Aligned product hero and full-width benefits on tablets and laptops. */
+@media (min-width:601px){
+    .product-layout{
+        grid-template-columns:minmax(0, 1.2fr) minmax(0, 1fr);
+        column-gap:clamp(24px, 5vw, 80px);
+        row-gap:32px;
+    }
+
+    .product-layout > .product-gallery{
+        grid-column:1;
+        grid-row:1;
+        align-self:stretch;
+        min-width:0;
+        max-width:none;
+    }
+
+    .product-gallery-wrapper{
+        height:100%;
+        min-height:clamp(440px, 43vw, 620px);
+        align-items:stretch;
+    }
+
+    .product-gallery .product-image-container{
+        height:100%;
+        max-width:none;
+        aspect-ratio:auto;
+    }
+
+    .product-gallery .product-slider-track{
+        position:absolute;
+        inset:0;
+        height:100%;
+    }
+
+    .product-gallery .product-slide img,
+    .product-gallery .product-image-container.show-full-gallery-image .product-slide img{
+        height:100%;
+        max-height:none;
+        object-fit:cover;
+    }
+
+    .product-layout > .product-info{
+        grid-column:2;
+        grid-row:1;
+        align-self:stretch;
+        min-width:0;
+    }
+
+    .product-info > .product-options-panel{
+        display:flex;
+        flex-direction:column;
+        flex:1 0 auto;
+        margin:16px 0 0;
+    }
+
+    .product-info .product-options-dynamic{
+        display:flex;
+        flex:1;
+        flex-direction:column;
+        justify-content:space-evenly;
+    }
+
+    .product-layout > :is(.product-benefits, .product-videos, .product-description-section, .product-reviews, .related-products){
+        grid-column:1 / -1;
+        grid-row:auto;
+        width:100%;
+        min-width:0;
+        margin:0;
+    }
+
+    .product-layout > .product-benefits{
+        display:grid;
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+        gap:18px;
+        padding:0;
+    }
+
+    .product-layout > .product-description-section{
+        padding:0;
+    }
+
+    .product-layout > .product-reviews{
+        padding:0;
+    }
+
+    .product-layout > .related-products{
+        padding-bottom:150px;
+    }
+}
+
+@media (min-width:601px) and (max-width:900px){
+    .product-title-section{padding:0;}
+    .product-title-row .product-page-title{font-size:clamp(24px, 3.6vw, 32px);}
+    .product-page-price{font-size:30px;}
+    .product-title-row .product-bottom-share{margin-left:8px;}
+    .product-layout > .product-benefits{gap:12px;}
+    .product-layout > .product-benefits .benefit-item{gap:10px;padding:14px;}
+}
+
+
+/* Use the full review section width while keeping phone reviews stacked. */
+@media (min-width:601px){
+    .product-details .review-list{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        grid-auto-rows:1fr;
+        align-items:stretch;
+        gap:24px;
+    }
+
+    .product-details .reviews-panel{
+        padding:0;
+        border:0;
+        border-radius:0;
+        background:transparent;
+        box-shadow:none;
+    }
+
+    .product-details .review-list > .review-card{
+        min-width:0;
+        padding:24px;
+        border:1px solid #e8e8e8;
+        border-radius:24px;
+        background:#fff;
+        box-shadow:0 12px 30px rgba(0,0,0,.04);
+    }
+
+    .product-details .review-list > .review-card:only-child{
+        grid-column:1 / -1;
+    }
+
+    .product-details .review-client-name,
+    .product-details .review-admin-reply > div{
+        flex-wrap:wrap;
+        row-gap:6px;
+    }
+}
+
+
+/* Product-page cards show excerpts; the review page retains full conversations. */
+.product-details .review-list > .review-card{
+    display:flex;
+    flex-direction:column;
+}
+
+.product-details .review-response-link{
+    display:block;
+    margin-top:auto;
+    padding-top:14px;
+    border-top:1px solid #efefef;
+    color:#777;
+    font-size:13px;
+    line-height:1.5;
+    text-decoration:none;
+}
+
+.product-details .review-response-link strong{color:#a96545;font-weight:600;}
+.product-details .review-response-link:hover strong{text-decoration:underline;}
+.product-details .review-response-link:focus-visible{outline:2px solid #e5a484;outline-offset:4px;}
+.product-reviews-full :is(.review-card, .review-admin-reply){scroll-margin-top:120px;}

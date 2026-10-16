@@ -1,7 +1,10 @@
-import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261015-28";
+import { mountMPWRDrawerSelection } from "./drawer-selection.js?v=20261016-53";
 
 export function mountMPWRDrawers(target = document.body) {
-    if (target.querySelector(":scope > .cart") || target.querySelector(":scope > .wishlist")) return;
+    if (target.querySelector(":scope > .cart") || target.querySelector(":scope > .wishlist")) {
+        mountMPWRDrawerSelection(target);
+        return;
+    }
     target.insertAdjacentHTML("beforeend", `
         <div class="cart is-empty">
             <h2 class="cart-title">My Cart <span class="cart-title-count" aria-live="polite" hidden></span></h2>

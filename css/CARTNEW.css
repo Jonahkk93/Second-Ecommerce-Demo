@@ -3604,7 +3604,7 @@ e
     background:#E5A484;
     color:#fff;
     border:none;
-    margin-top:20px;
+    margin-top:0;
 }
 
 .register-btn:hover{
@@ -3612,7 +3612,7 @@ e
     box-shadow:0 10px 22px rgba(229,164,132,.35);
 }
 .back-to-signin-btn{
-    margin-top:18px;
+    margin-top:0;
     background:#fff;
     color:#E5A484;
     border:1px solid #E5A484;
@@ -3624,7 +3624,7 @@ e
 }
 
 .back-to-signin-btn{
-    margin-top:18px;
+    margin-top:0;
     padding:14px;
     border:1px solid #E5A484;
     border-radius:12px;
@@ -3672,7 +3672,7 @@ e
     }
 
     .register-btn{
-        margin-top:4px;
+        margin-top:0;
         padding:12px;
     }
 
@@ -3690,6 +3690,45 @@ e
     .register-name-row{
         grid-template-columns:1fr;
         gap:10px;
+    }
+}
+
+/* Keep the Create Account identity panel fixed while its form scrolls below. */
+.account-modal:has(.register-view.active){
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+}
+
+.account-modal:has(.register-view.active) .register-view.active{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+    -webkit-overflow-scrolling:touch;
+}
+
+.account-modal:has(.register-view.active) .register-view.active::-webkit-scrollbar{
+    display:none;
+    width:0;
+    height:0;
+}
+
+.register-view.active > .account-header{
+    position:sticky;
+    top:0;
+    z-index:3;
+    margin:0 0 12px;
+    padding-bottom:18px;
+    background:#fff;
+}
+
+@media screen and (max-width:600px){
+    .register-view.active > .account-header{
+        margin-bottom:4px;
+        padding-bottom:10px;
     }
 }
 

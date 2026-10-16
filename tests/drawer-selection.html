@@ -1,0 +1,46 @@
+<!doctype html><html><body><pre id="result">Running drawer regression checks...</pre><script type="module">
+import {mountMPWRDrawers} from '../js/drawer-component.js?v=20261016-selection-53';
+const result = document.querySelector('#result');
+const checks=[];
+function check(name,condition) { if(!condition) throw Error(name); checks.push(name); }
+try {
+mountMPWRDrawers();
+for (const kind of ['cart','wishlist']) {
+ const drawer=document.querySelector('.'+kind); drawer.classList.add('active');
+ const content=drawer.querySelector('.'+kind+'-content');
+ content.innerHTML=Array.from({length:3},(_,i)=>kind==='cart'?`<div class="cart-box"><div class="cart-box-main"><span>Item ${i}</span><button class="increment">+</button></div><div class="cart-swipe-actions"></div></div>`:`<div class="wishlist-item"><span>Item ${i}</span><button>Add to cart</button></div>`).join('');
+ await new Promise(r=>setTimeout(r,0));
+ const rows=[...content.children];
+ let clicks=0; rows[0].querySelector('button').addEventListener('click',()=>clicks++);
+ rows[0].querySelector('button').click(); check(kind+' normal item buttons work',clicks===1);
+ const main=rows[0].querySelector('.cart-box-main')||rows[0];
+ let cancelled=false; main.addEventListener('pointercancel',()=>cancelled=true);
+ main.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1,clientX:10,clientY:10,button:0,pointerType:'touch'}));
+ await new Promise(r=>setTimeout(r,550));
+ check(kind+' long press enters selection',drawer.classList.contains('is-selecting-items'));
+ if(kind==='cart')check('long press cancels cart swipe',cancelled);
+ main.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1}));
+ // Touch browsers may omit the long-press click. The next fresh tap must work.
+ rows[1].dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:2,button:0,pointerType:'touch'})); rows[1].click();
+ check(kind+' next tap selects another item',drawer.querySelector('.drawer-selection-count').textContent==='2');
+ rows[0].querySelector('button').click(); check(kind+' selection intercepts item buttons',clicks===1);
+ drawer.querySelector('.drawer-selection-all').click(); check(kind+' select all',drawer.querySelector('.drawer-selection-count').textContent==='3');
+ drawer.querySelector('.drawer-selection-delete').click();
+ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ check(kind+' Escape dismisses confirmation only',!document.querySelector('.delete-item-confirm-overlay').classList.contains('active')&&drawer.classList.contains('is-selecting-items'));
+ drawer.querySelector('.drawer-selection-delete').click();
+ document.querySelector('.delete-item-confirm-overlay').click();
+ check(kind+' backdrop cancels confirmation',!document.querySelector('.delete-item-confirm-overlay').classList.contains('active'));
+ let removal; drawer.addEventListener('mpwr:drawer-remove-selected',e=>removal=e.detail,{once:true});
+ drawer.querySelector('.drawer-selection-delete').click(); document.querySelector('.delete-item-confirm').click();
+ check(kind+' bulk remove emits selected indices',JSON.stringify(removal)===JSON.stringify({drawer:kind,indices:[0,1,2]}));
+ check(kind+' selection exits after removal',!drawer.classList.contains('is-selecting-items'));
+ drawer.querySelector('.drawer-selection-start').click(); check(kind+' menu starts selection',drawer.classList.contains('is-selecting-items'));
+ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ check(kind+' Escape exits selection',!drawer.classList.contains('is-selecting-items'));
+ rows[0].querySelector('button').click(); check(kind+' item buttons restored after selection',clicks===2);
+ drawer.classList.remove('active');
+}
+result.textContent='PASS: '+checks.length+' checks\n'+checks.join('\n');
+} catch(e) { result.textContent='FAIL: '+e.stack+'\nPassed: '+checks.join('\n'); }
+</script></body></html>
