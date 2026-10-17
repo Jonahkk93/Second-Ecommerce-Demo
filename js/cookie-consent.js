@@ -133,7 +133,7 @@
         banner.setAttribute("aria-labelledby", "cookie-banner-title");
         banner.innerHTML = `
             <div class="cookie-banner-copy"><strong id="cookie-banner-title">Your privacy choices</strong><p>We use essential cookies to run MPWR. With your permission, optional cookies help us improve the shop, remember what you browse, and personalize products. <a href="privacy-policy.html#cookies">Privacy &amp; Cookie Policy</a></p></div>
-            <div class="cookie-banner-actions"><button type="button" data-cookie-banner="manage">Manage cookies</button><button type="button" data-cookie-banner="reject" aria-label="Reject optional cookies">Reject</button><button type="button" data-cookie-banner="accept">Accept all</button></div>`;
+            <div class="cookie-banner-actions"><button type="button" data-cookie-banner="manage">Manage cookies</button><button type="button" data-cookie-banner="reject" aria-label="Reject all optional cookies">Reject all</button><button type="button" data-cookie-banner="accept">Accept all</button></div>`;
         banner.hidden = true;
         document.body.appendChild(banner);
         banner.querySelector('[data-cookie-banner="reject"]').addEventListener("click", () => confirm({}));

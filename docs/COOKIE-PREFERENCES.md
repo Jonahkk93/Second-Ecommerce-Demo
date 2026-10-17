@@ -6,7 +6,7 @@ for 180 days on the current browser origin. Account, footer, About MPWR and
 privacy-policy links open the same modal. `manage-cookies.html` is the standalone
 fallback and also opens that modal on arrival.
 Visitors without a current saved choice see a bottom banner on storefront pages.
-Its Reject and Accept all buttons save the choice immediately; Manage
+Its Reject all and Accept all buttons save the choice immediately; Manage
 cookies opens the detailed panel. The banner stays hidden after a valid choice,
 returns when that choice expires, and is suppressed on the standalone settings
 page. Closing the detailed panel without saving returns to the banner.
