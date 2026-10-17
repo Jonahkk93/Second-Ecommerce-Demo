@@ -23,11 +23,6 @@
     transform: translateY(-50%);
 }
 
-.discount-view-all:hover,
-.discount-view-all:focus-visible {
-    text-decoration: underline;
-}
-
 .discount-eyebrow {
     margin: 0 0 8px;
     color: #9c674d;
