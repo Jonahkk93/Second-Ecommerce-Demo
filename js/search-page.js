@@ -215,11 +215,13 @@ function renderLiveSuggestions(query) {
 }
 
 function savedSearches() {
+    if (!window.MPWRCookieConsent?.allows("functional")) return [];
     try { return JSON.parse(localStorage.getItem(RECENT_SEARCH_KEY)) || []; }
     catch { return []; }
 }
 
 function saveSearch(query) {
+    if (!window.MPWRCookieConsent?.allows("functional")) return;
     const normalized = query.trim();
     if (!normalized) return;
     const next = [normalized,...savedSearches().filter(item => item.toLowerCase() !== normalized.toLowerCase())].slice(0,8);
@@ -294,13 +296,22 @@ function renderRecentSearches() {
         recentContainer.classList.remove("is-expanded");
         const empty = document.createElement("p");
         empty.className = "recent-empty";
-        empty.textContent = "Your recent searches will appear here.";
+        empty.textContent = window.MPWRCookieConsent?.allows("functional") ? "Your recent searches will appear here." : "Recent searches are off. ";
+        if (!window.MPWRCookieConsent?.allows("functional")) {
+            const link = document.createElement("a");
+            link.href = "manage-cookies.html";
+            link.dataset.manageCookies = "";
+            link.textContent = "Manage cookies";
+            empty.appendChild(link);
+        }
         recentContainer.appendChild(empty);
         return;
     }
     recent.forEach(item => recentContainer.appendChild(chip(item)));
     updateRecentSearchLimit();
 }
+
+window.addEventListener("mpwr:cookie-consent-changed", renderRecentSearches);
 
 function searchableText(product) {
     const optionValues = (product.options || []).flatMap(group => group.values || []);

@@ -27,12 +27,21 @@ async function ensureSession(db) {
 
 async function request(path, options = {}) {
     if (!options.skipSession && options.auth !== false) await ensureSession(options.db);
+    let body = options.body;
+    if (["/cart", "/orders/legacy"].includes(path) && body?.items && options.db?.kind !== "admin" && !window.MPWRCookieConsent?.allows("performance")) {
+        const stripAttribution = value => {
+            if (Array.isArray(value)) return value.map(stripAttribution);
+            if (!value || typeof value !== "object") return value;
+            return Object.fromEntries(Object.entries(value).filter(([key]) => key !== "searchAttribution").map(([key, entry]) => [key, stripAttribution(entry)]));
+        };
+        body = { ...body, items: stripAttribution(body.items) };
+    }
     const response = await fetch(`${API_ROOT}${path}`, {
         method: options.method || "GET",
         credentials: "include",
         cache: options.cache,
         headers: options.body ? { "Content-Type": "application/json" } : undefined,
-        body: options.body ? JSON.stringify(options.body) : undefined
+        body: body ? JSON.stringify(body) : undefined
     });
     const payload = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) throw new Error(payload?.message || `API request failed (${response.status})`);
@@ -156,7 +165,7 @@ function normalizeProductUpdate(data) {
 }
 
 export async function addDoc(reference, data) {
-    if (reference.name === "orders") { const order = await request("/orders/legacy", { method: "POST", body: { items: data.items || [], customer: data.customer || {}, delivery: data.delivery || {}, payment: data.payment || {}, deliveryFee: Number(data.deliveryFee) || 0 }, db: reference.db }); return { id: order.id }; }
+    if (reference.name === "orders") { const order = await request("/orders/legacy", { method: "POST", body: { termsAccepted: data.termsAccepted, termsVersion: data.termsVersion, items: data.items || [], customer: data.customer || {}, delivery: data.delivery || {}, payment: data.payment || {}, deliveryFee: Number(data.deliveryFee) || 0 }, db: reference.db }); return { id: order.id }; }
     if (reference.name === "products") { const product = await request("/admin/products", { method: "POST", body: normalizeProduct(data), db: reference.db }); return { id: product.id }; }
     throw new Error(`Unsupported add operation for ${reference.name}`);
 }

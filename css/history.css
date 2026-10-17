@@ -311,9 +311,13 @@ body.history-cart-open .history-cart-backdrop{
 }
 
 .history-empty{
-    flex:1 1 auto;
-    max-width:420px;
+    flex:0 1 auto;
+    width:min(420px, 100%);
+    max-height:100%;
     margin:auto;
+    padding:24px 0;
+    box-sizing:border-box;
+    overflow-y:auto;
     text-align:center;
 }
 
@@ -340,6 +344,10 @@ body.history-cart-open .history-cart-backdrop{
     background:var(--history-accent);
     color:#fff;
     text-decoration:none;
+}
+
+.history-empty a[data-manage-cookies]{
+    background:#333;
 }
 
 @media (max-width:760px){

@@ -1,3 +1,4 @@
+import { TERMS_VERSION } from "./legal-policy.js";
 import { addDoc, collection, doc, getDoc, initializePayment, serverTimestamp, setDoc } from "./firestore-api.js";
 import { onAuthStateChanged } from "./auth-api.js";
 import { deliveryQuoteFor, populateUgandaDistricts } from "./shipping-config.js?v=20260925-1";
@@ -278,7 +279,7 @@ form.addEventListener("submit", async event => {
         const pendingOwner = sessionStorage.getItem("mpwrPendingPaymentUser");
         const pendingCart = sessionStorage.getItem("mpwrPendingPaymentCart");
         const cartSnapshot = JSON.stringify(cart);
-        if ((pendingOwner && pendingOwner !== currentUser.uid) || (pendingCart && pendingCart !== cartSnapshot)) {
+        if (sessionStorage.getItem("mpwrPendingPaymentTermsVersion") !== TERMS_VERSION || (pendingOwner && pendingOwner !== currentUser.uid) || (pendingCart && pendingCart !== cartSnapshot)) {
             sessionStorage.removeItem("mpwrPendingPaymentOrder");
             sessionStorage.removeItem("mpwrPendingPaymentUser");
             sessionStorage.removeItem("mpwrPendingPaymentCart");
@@ -287,6 +288,7 @@ form.addEventListener("submit", async event => {
         if (!orderId) {
             const order = await addDoc(collection(db, "orders"), {
                 userId: currentUser.uid,
+                termsAccepted: data.get("termsAccepted") === "on", termsVersion: TERMS_VERSION,
                 customer: { firstName: data.get("firstName").trim(), lastName: data.get("lastName").trim(), email: data.get("email").trim(), phone: data.get("phone").trim() },
                 delivery: {
                     address: data.get("address").trim(),
@@ -319,6 +321,7 @@ form.addEventListener("submit", async event => {
             sessionStorage.setItem("mpwrPendingPaymentOrder", orderId);
             sessionStorage.setItem("mpwrPendingPaymentUser", currentUser.uid);
             sessionStorage.setItem("mpwrPendingPaymentCart", cartSnapshot);
+            sessionStorage.setItem("mpwrPendingPaymentTermsVersion", TERMS_VERSION);
         }
         const payment = await initializePayment(orderId, data.get("paymentMethod"));
         if (!payment.checkoutUrl) throw new Error("Payment checkout URL was not returned");

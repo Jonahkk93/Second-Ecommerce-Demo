@@ -587,6 +587,7 @@ function applySearchRules(matches, searchQuery) {
 }
 
 function searchVisitorId() {
+    if (!window.MPWRCookieConsent?.allows("performance")) return "";
     const key = "mpwrSearchVisitor";
     try {
         const existing = localStorage.getItem(key);
@@ -598,7 +599,7 @@ function searchVisitorId() {
 }
 
 function recordSearchEvent(kind, details = {}) {
-    if (!query) return;
+    if (!query || !window.MPWRCookieConsent?.allows("performance")) return;
     fetch(`${searchApiRoot}/storefront/search-events`, {
         method:"POST", credentials:"include", keepalive:true,
         headers:{ "Content-Type":"application/json" },
@@ -607,6 +608,7 @@ function recordSearchEvent(kind, details = {}) {
 }
 
 function rememberSearchAttribution(productId) {
+    if (!window.MPWRCookieConsent?.allows("performance")) return;
     try {
         sessionStorage.setItem("mpwrSearchAttribution", JSON.stringify({
             query: correctedQuery || query,
@@ -618,6 +620,7 @@ function rememberSearchAttribution(productId) {
 }
 
 function searchAttributionForCart(productId) {
+    if (!window.MPWRCookieConsent?.allows("performance")) return null;
     try {
         const attribution = JSON.parse(sessionStorage.getItem("mpwrSearchAttribution") || "{}");
         const clickedAt = Date.parse(attribution.clickedAt);

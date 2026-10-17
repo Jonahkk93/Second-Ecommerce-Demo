@@ -1,10 +1,11 @@
 import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { buildInformationPages } from "./build-information.mjs";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outputRoot = path.join(projectRoot, "dist");
-const assetDirectories = ["css", "data", "fonts", "images", "js"];
+const assetDirectories = ["css", "data", "fonts", "images", "js", "legal-archive"];
 const deploymentVersion = (process.env.CF_PAGES_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || Date.now().toString()).slice(0,12);
 const configuredApiRoot = String(process.env.MPWR_API_URL || "").trim().replace(/\/$/, "");
 
@@ -14,6 +15,8 @@ if (outputRoot === projectRoot || path.dirname(outputRoot) !== projectRoot) {
 
 await rm(outputRoot, { recursive:true, force:true });
 await mkdir(outputRoot, { recursive:true });
+
+await buildInformationPages();
 
 const rootEntries = await readdir(projectRoot, { withFileTypes:true });
 const htmlFiles = rootEntries

@@ -14,6 +14,10 @@
             ? (hash === "#homepage" ? "homepage" : hash === "#categories" ? "categories" : hash === "#sidebar" ? "sidebar" : hash === "#search-page" ? "search" : hash === "#deleted-products" ? "deleted" : "products")
             : onCategoryEditor
                 ? "categories"
+                : page === "admin-privacy.html"
+                ? "privacy"
+                : page === "admin-feedback.html"
+                ? "feedback"
                 : page === "admin-reviews.html"
                 ? "reviews"
                 : page === "admin-analytics.html"
@@ -70,6 +74,8 @@
             ${link("customers", "admin-customers.html", "Customers", icon("Customers Icon_Light Gray.PNG"))}
             ${link("appeals", "admin-appeals.html", "Account Appeals", "<span>⚑</span>")}
             ${link("reviews", "admin-reviews.html", '<span class="management-nav-label">Reviews <em id="reviews-nav-count">0</em></span>', icon("Reviews Icon_Light Gray.PNG"))}
+            ${link("privacy", "admin-privacy.html", "Privacy requests", icon("Customers Icon_Light Gray.PNG"))}
+            ${link("feedback", "admin-feedback.html", "Feedback & Rating", icon("Feedback Icon_Light Gray.PNG"))}
             ${link("analytics", "admin-analytics.html", "Analytics", icon("Analytics Icon_Light Gray.PNG"))}
             ${comingSoon("Marketing", icon("Marketing Icon_Light Gray.PNG"))}
             ${comingSoon("Settings", icon("Settings Icon_Light Gray.PNG"))}

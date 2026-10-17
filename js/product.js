@@ -42,7 +42,7 @@ const discountPercent = Math.min(
 );
 
 function recordProductVisit(item) {
-    if (!item) return;
+    if (!item || !window.MPWRCookieConsent?.allows("functional")) return;
 
     try {
         const storedHistory = JSON.parse(localStorage.getItem("mpwrProductHistory")) || [];
@@ -878,6 +878,7 @@ productModalFavorite?.addEventListener("click", () => {
     if (cardIcon) cardIcon.src = isFavoriteProduct(selectedModalProduct) ? "images/Heart7.PNG" : "images/optimized/heart-outline.png";
 });
 function searchAttributionForCart(productId) {
+    if (!window.MPWRCookieConsent?.allows("performance")) return null;
     try {
         const attribution = JSON.parse(sessionStorage.getItem("mpwrSearchAttribution") || "{}");
         const clickedAt = Date.parse(attribution.clickedAt);

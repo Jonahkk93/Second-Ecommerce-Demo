@@ -16,8 +16,10 @@ import { MediaModule } from "./modules/media.module";
 import { AnalyticsModule } from "./modules/analytics.module";
 import { AccountAppealsModule } from "./modules/account-appeals.module";
 
+import { FeedbackModule } from "./modules/feedback.module";
+
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }), JwtModule.register({ global: true }), CommonModule, DatabaseModule, AuthModule, AddressesModule, CustomerDataModule, MediaModule, AccountAppealsModule, ProductsModule, DeliveryModule, OrdersModule, PaymentsModule, AnalyticsModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }), JwtModule.register({ global: true }), CommonModule, DatabaseModule, AuthModule, AddressesModule, CustomerDataModule, MediaModule, FeedbackModule, AccountAppealsModule, ProductsModule, DeliveryModule, OrdersModule, PaymentsModule, AnalyticsModule],
   controllers: [HealthController]
 })
 export class AppModule {}

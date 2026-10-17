@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" class="feedback-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Feedback & Rating | MPWR</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/account.css">
+    <link rel="stylesheet" href="css/feedback.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <script src="js/cookie-consent.js"></script>
+
+    <script src="js/runtime-config.js"></script>
+    <link rel="stylesheet" href="css/mpwr-select.css">
+    <script type="module" src="js/mpwr-select.js"></script>
+</head>
+<body class="feedback-body">
+    <header class="account-page-header feedback-header">
+        <a href="Account.html" class="account-back" aria-label="Back to account"></a>
+        <h1>Feedback & Rating</h1>
+        <span aria-hidden="true"></span>
+    </header>
+    <main class="feedback-page">
+        <div class="feedback-notice">Help us make your MPWR experience better. For delivery or order issues, visit <a href="orders.html">Order Status <span aria-hidden="true">›</span></a>. To review a purchased product, go to <a href="purchases.html">My Purchases <span aria-hidden="true">›</span></a>.</div>
+        <p id="feedback-session" role="status">Checking your account…</p>
+        <form id="feedback-form" hidden>
+            <fieldset class="feedback-section feedback-topics">
+                <legend><span class="required">*</span> 1. What do you have suggestions for?</legend>
+                <label><input type="radio" name="category" value="finding" required> <span>Finding products</span></label>
+                <label><input type="radio" name="category" value="details"> <span>Product details & reviews</span></label>
+                <label><input type="radio" name="category" value="ordering"> <span>Placing an order</span></label>
+                <label><input type="radio" name="category" value="other"> <span>Other functions</span></label>
+                <label><input type="radio" name="category" value="bug"> <span>Bug & website error</span></label>
+            </fieldset>
+            <section class="feedback-section">
+                <label class="feedback-question" for="feedback-problem"><span class="required">*</span> 2. Which problem have you experienced?</label>
+                <select id="feedback-problem" name="problem" required disabled><option value="">Please answer question 1 first</option></select>
+            </section>
+            <section class="feedback-section">
+                <label class="feedback-question" for="feedback-description"><span class="required">*</span> 3. Describe your suggestion in detail</label>
+                <div class="feedback-textarea"><textarea id="feedback-description" name="description" maxlength="500" required rows="7" placeholder="Tell us what happened and how we can improve your experience." aria-describedby="feedback-count feedback-privacy"></textarea><span id="feedback-count">0 / 500</span></div>
+                <p id="feedback-privacy" class="feedback-hint">Please don’t include passwords or payment details.</p>
+                <p class="feedback-hint">Images can help us understand your suggestion (up to 5).</p>
+                <div class="feedback-media"><div id="feedback-images"></div><label class="feedback-upload"><img src="images/Icon Folder/Plus Icon_E5A484.PNG" alt=""><span>Add image</span><input id="feedback-files" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Add supporting images"></label></div>
+                <p class="feedback-hint feedback-small">JPG, PNG, WebP or GIF · Up to 5 MB each</p>
+            </section>
+            <fieldset class="feedback-section feedback-rating">
+                <legend>4. How was your MPWR experience? <small>(Optional)</small></legend>
+                <div class="feedback-stars" role="radiogroup" aria-label="Shopping experience rating"><label><input type="radio" name="rating" value="1" aria-label="1 star"><span aria-hidden="true">★</span></label><label><input type="radio" name="rating" value="2" aria-label="2 stars"><span aria-hidden="true">★</span></label><label><input type="radio" name="rating" value="3" aria-label="3 stars"><span aria-hidden="true">★</span></label><label><input type="radio" name="rating" value="4" aria-label="4 stars"><span aria-hidden="true">★</span></label><label><input type="radio" name="rating" value="5" aria-label="5 stars"><span aria-hidden="true">★</span></label></div>
+                <div class="feedback-rating-caption"><span id="feedback-rating-label">Tap a star to rate your experience</span><button type="button" id="feedback-clear-rating" hidden>Clear</button></div>
+            </fieldset>
+            <div class="feedback-submit-bar"><p id="feedback-error" role="alert"></p><button id="feedback-submit" type="submit" disabled>SUBMIT</button></div>
+        </form>
+        <section class="feedback-success" id="feedback-success" hidden aria-labelledby="feedback-success-title" tabindex="-1">
+            <span class="feedback-success-icon" aria-hidden="true">✓</span><p class="account-kicker">Made better, together</p><h2 id="feedback-success-title">Thank you for your feedback</h2><p>Your suggestion has been sent to the MPWR team.</p><p id="feedback-reference"></p><a href="Account.html">Back to my account</a><button id="feedback-another" type="button">Send another suggestion</button>
+        </section>
+    </main>
+    <script type="module" src="js/feedback.js"></script>
+</body>
+</html>

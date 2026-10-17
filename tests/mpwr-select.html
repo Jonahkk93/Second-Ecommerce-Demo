@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><base href="../"><title>MPWR dropdown checks</title><link rel="stylesheet" href="css/mpwr-select.css"></head>
+<body style="font:16px system-ui;margin:40px;max-width:600px"><h1>MPWR dropdown checks</h1><p id="result" role="status">Running…</p><ul id="checks"></ul>
+<form id="fixture"><label for="choice">Test choice</label><select id="choice" name="choice" required><option value="">Choose an option</option><option value="a">Access</option><option value="b">Correction</option></select></form><button id="outside" type="button">Outside</button>
+<script type="module">
+import { enhanceMPWRSelect } from './js/mpwr-select.js';
+const select=document.getElementById('choice'), form=document.getElementById('fixture');
+const picker=enhanceMPWRSelect(select); let failures=0, count=0;
+const tick=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+function check(name,pass){count++;const li=document.createElement('li');li.textContent=`${pass?'PASS':'FAIL'}: ${name}`;document.getElementById('checks').append(li);if(!pass)failures++;}
+function key(value){picker.trigger.dispatchEvent(new KeyboardEvent('keydown',{key:value,bubbles:true,cancelable:true}));}
+try {
+ check('No duplicate enhancement',enhanceMPWRSelect(select)===picker&&document.querySelectorAll('.mpwr-select').length===1);
+ check('Accessible name preserved',picker.trigger.getAttribute('aria-label')==='Test choice');
+ let changes=0;select.addEventListener('change',()=>changes++);
+ picker.trigger.click();key('ArrowDown');key('Enter');
+ check('Keyboard choice updates form data and emits change',new FormData(form).get('choice')==='a'&&changes===1&&picker.menu.hidden);
+ picker.trigger.click();key('ArrowDown');key('Escape');
+ check('Escape leaves selection unchanged',select.value==='a'&&picker.menu.hidden);
+ picker.trigger.click();document.getElementById('outside').click();
+ check('Outside click closes menu',picker.menu.hidden);
+ select.disabled=true;await tick();check('Disabled state synchronizes',picker.trigger.disabled);
+ select.disabled=false;select.replaceChildren(new Option('Choose again',''),new Option('Kampala','kampala'),new Option('Wakiso','wakiso'));await tick();
+ check('Dynamic options refresh',!picker.trigger.disabled&&picker.menu.children.length===3&&picker.trigger.textContent==='Choose again');
+ picker.trigger.click();key('w');key('Enter');
+ check('Typing selects matching option',select.value==='wakiso');
+ form.reset();await tick();check('Form reset refreshes selected label',select.value===''&&picker.trigger.textContent==='Choose again');
+ form.reportValidity();
+ check('Required validation reaches custom control',picker.trigger.getAttribute('aria-invalid')==='true'&&!picker.menu.hidden&&document.activeElement===picker.trigger);
+ key('Escape');picker.trigger.click();picker.menu.children[1].click();
+ check('Tap selection clears invalid state',select.value==='kampala'&&!picker.trigger.hasAttribute('aria-invalid')&&picker.menu.hidden);
+ const dynamic=document.createElement('select');dynamic.setAttribute('aria-label','Dynamic status');dynamic.append(new Option('New','new'),new Option('Resolved','resolved'));form.append(dynamic);await tick();
+ check('New admin-style controls are enhanced automatically',dynamic.nextElementSibling?.classList.contains('mpwr-select'));
+} catch(error){check(error.message,false);}
+document.getElementById('result').textContent=`${failures?'FAILED':'PASSED'}: ${count-failures}/${count} checks`;
+</script></body></html>

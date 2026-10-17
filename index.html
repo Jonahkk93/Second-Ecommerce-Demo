@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="home-page">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         <title>MPWR</title>
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <script src="js/cookie-consent.js"></script>
+
         <script src="js/runtime-config.js?v=20261001-1"></script>
-        <link rel="stylesheet" href="css/CARTNEW.css?v=20261016-account-header-4">
+        <link rel="stylesheet" href="css/CARTNEW.css?v=20261017-register-links-5">
         <link rel="stylesheet" href="css/discounts.css?v=20260927-5">
         <link rel="stylesheet" href="css/password-toggle.css?v=20260923-4">
         <link rel="stylesheet" href="css/signout-confirm.css">
@@ -831,9 +834,10 @@
             <div class="footer-col">
                 <h4>Company</h4>
                 <ul>
-                    <li><a href="#">about us</a></li>
+                    <li><a href="about-mpwr.html">about us</a></li>
                     <li><a href="#">our services</a></li>
-                    <li><a href="#">privacy policy</a></li>
+                    <li><a href="privacy-policy.html">privacy policy</a></li>
+                    <li><a href="manage-cookies.html" data-manage-cookies>manage cookies</a></li>
                     <li><a href="#">affililiate program</a></li>
                 </ul>
     </div>
@@ -841,11 +845,11 @@
         <div class="footer-col">
                  <h4>Get Help</h4>
                  <ul>
-                    <li><a href="#">FAQ</a></li>
-                    <li><a href="#">shipping</a></li>
-                    <li><a href="#">returns</a></li>
+                    <li><a href="about-mpwr.html">FAQ</a></li>
+                    <li><a href="shipping-info.html">shipping</a></li>
+                    <li><a href="return-policy.html">returns</a></li>
                     <li><a href="orders.html">order status</a></li>
-                    <li><a href="#">payment options</a></li>
+                    <li><a href="payment-methods.html">payment options</a></li>
                 </ul>
              </div>
 
@@ -1044,10 +1048,13 @@
                 placeholder="Confirm your password">
         </div>
 
-        <label class="terms-check">
-            <input type="checkbox">
-            I agree to the Terms & Conditions
-        </label>
+        <div class="register-legal">
+            <label class="terms-check" for="register-terms">
+                <input type="checkbox" id="register-terms" required>
+                <span>I agree to the <a href="terms-and-conditions.html" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</span>
+            </label>
+            <p class="register-privacy-note">Learn how we use your data: <a href="privacy-policy.html" target="_blank" rel="noopener">Privacy &amp; Cookie Policy</a></p>
+        </div>
 
         <button
             class="register-btn"

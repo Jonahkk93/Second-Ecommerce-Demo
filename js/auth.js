@@ -278,7 +278,8 @@ document.getElementById("register-phone").value.trim();
 await createUserWithEmailAndPassword(
     auth,
     email,
-    password
+    password,
+    document.getElementById("register-terms")?.checked === true
 );
 await setDoc(
     doc(db, "users", userCredential.user.uid),

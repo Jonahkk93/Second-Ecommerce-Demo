@@ -38,10 +38,10 @@
         return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
     }
 
-    let sessionSeed = storageGet(sessionStorage, SESSION_KEY);
+    let sessionSeed = window.MPWRCookieConsent?.allows("functional") ? storageGet(sessionStorage, SESSION_KEY) : null;
     if (!sessionSeed) {
         sessionSeed = makeSeed();
-        storageSet(sessionStorage, SESSION_KEY, sessionSeed);
+        if (window.MPWRCookieConsent?.allows("functional")) storageSet(sessionStorage, SESSION_KEY, sessionSeed);
     }
 
     function hash(value) {
@@ -64,6 +64,7 @@
     }
 
     function readSignals() {
+        if (!window.MPWRCookieConsent?.allows("targeting")) return [];
         try {
             const value = JSON.parse(storageGet(localStorage, SIGNAL_KEY) || "[]");
             return Array.isArray(value) ? value : [];
@@ -82,7 +83,7 @@
     }
 
     function record(id, category, action = "open") {
-        if (!id) return;
+        if (!id || !window.MPWRCookieConsent?.allows("targeting")) return;
         const signals = readSignals();
         signals.push({
             id: String(id),

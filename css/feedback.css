@@ -1,0 +1,59 @@
+:root{--feedback-accent:#b66c48}
+.feedback-body{background:#f6f6f6}
+html.feedback-root,.feedback-body{scrollbar-width:none;-ms-overflow-style:none}
+html.feedback-root::-webkit-scrollbar,.feedback-body::-webkit-scrollbar{display:none;width:0;height:0}
+.feedback-header{padding-inline:24px;gap:12px}
+.feedback-header h1{margin:0;font-size:20px;white-space:nowrap}
+.feedback-page{width:min(760px,100%);margin:28px auto 0;padding-bottom:140px}
+.feedback-notice{padding:22px 26px;background:#f0eeec;font-size:15px;line-height:1.7}
+.feedback-notice a{color:var(--feedback-accent);font-weight:700;text-decoration:none}
+#feedback-session{padding:24px;line-height:1.7}
+#feedback-session a{color:var(--feedback-accent)}
+.feedback-section{min-width:0;margin:0;border:0;border-top:10px solid #f6f6f6;padding:26px;background:#fff}
+fieldset.feedback-section{position:relative;padding-top:65px}
+.feedback-section legend{position:absolute;top:25px;left:26px;right:26px;width:auto;padding:0;font-size:17px;font-weight:700;line-height:1.5}
+.feedback-question{display:block;font-size:17px;line-height:1.5;font-weight:700;margin-bottom:20px}
+.required{color:#b65e3c}
+.feedback-topics label{display:flex;gap:13px;align-items:center;min-height:57px;cursor:pointer;font-size:16px}
+.feedback-topics input{appearance:none;flex:0 0 23px;width:23px;height:23px;border:1.5px solid #969696;border-radius:50%;margin:0;display:grid;place-content:center}
+.feedback-topics input:checked{border-color:var(--accent)}
+.feedback-topics input:checked:after{content:"";width:13px;height:13px;border-radius:50%;background:var(--accent)}
+.feedback-section select{width:100%;min-height:54px;padding:12px 35px 12px 14px;border:1px solid #dedede;border-radius:6px;background:#fff;color:var(--ink);font:inherit}
+.feedback-section select:disabled{color:#929292;background:#fafafa}
+.feedback-textarea{position:relative;border:1px solid #dedede;border-radius:6px}
+.feedback-textarea textarea{display:block;width:100%;padding:16px 16px 40px;resize:vertical;border:0;border-radius:6px;font:inherit;line-height:1.6;min-height:185px;background:#fff;color:var(--ink)}
+.feedback-textarea textarea::placeholder{color:#a4a4a4}
+#feedback-count{position:absolute;right:16px;bottom:12px;color:#858585;font-size:13px;pointer-events:none}
+.feedback-hint{color:#777;font-size:13px;line-height:1.6;margin:18px 0 12px}
+.feedback-small{font-size:11px;margin-top:9px}
+.feedback-media,#feedback-images{display:flex;flex-wrap:wrap;gap:10px}
+.feedback-upload{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;width:86px;height:86px;border:1px dashed #c7b4aa;border-radius:8px;background:#fcf8f5;font-size:11px;color:#8c624d;cursor:pointer;overflow:hidden}
+.feedback-upload img{width:23px;height:23px;object-fit:contain}
+.feedback-upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.feedback-upload:focus-within{outline:2px solid var(--feedback-accent);outline-offset:3px}
+.feedback-upload.is-disabled{opacity:.45;cursor:default}
+.feedback-thumbnail{position:relative;width:86px;height:86px}
+.feedback-thumbnail>img{width:100%;height:100%;object-fit:cover;border-radius:8px}
+.feedback-thumbnail button{position:absolute;top:4px;right:4px;width:24px;height:24px;border:0;border-radius:50%;background:white;cursor:pointer;padding:6px}
+.feedback-thumbnail button img{width:100%;height:100%;object-fit:contain}
+.feedback-rating legend small{font-size:12px;font-weight:400;color:#777;white-space:nowrap}
+.feedback-stars{display:flex;gap:20px;margin-top:10px}
+.feedback-stars label{position:relative;cursor:pointer;line-height:1}
+.feedback-stars input{position:absolute;opacity:0;width:100%;height:100%;margin:0}
+.feedback-stars span{font-size:40px;color:#ddd;display:block}
+.feedback-stars label.is-selected span{color:var(--accent)}
+.feedback-stars label:focus-within{outline:2px solid var(--feedback-accent);outline-offset:4px}
+.feedback-rating-caption{display:flex;align-items:center;gap:12px;min-height:32px;margin-top:12px;font-size:13px;color:#777}
+.feedback-rating-caption button{border:0;background:none;text-decoration:underline;color:var(--feedback-accent);font:inherit;cursor:pointer}
+.feedback-submit-bar{position:fixed;bottom:0;left:0;right:0;z-index:5;background:rgba(246,246,246,.97);padding:12px max(20px,calc((100% - 708px)/2)) max(16px,env(safe-area-inset-bottom));border-top:1px solid #eee}
+#feedback-submit{width:100%;min-height:52px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:700 16px Larke,Arial,sans-serif;letter-spacing:1px;cursor:pointer}
+#feedback-submit:disabled{background:#c8c8c8;cursor:default}
+#feedback-error{margin:0 0 9px;color:#a23c28;line-height:1.5;font-size:13px}
+#feedback-error:empty{display:none}
+.feedback-success{text-align:center;padding:56px 24px;background:#fff;border-radius:16px;margin:24px}
+.feedback-success-icon{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 25px;background:#fcf1e9;color:var(--feedback-accent);border-radius:50%;font-size:30px}
+.feedback-success h2{font-size:26px}.feedback-success p{line-height:1.6}
+.feedback-success a{display:block;width:min(330px,100%);padding:16px;margin:28px auto 15px;background:var(--accent);color:white;border-radius:8px;text-decoration:none}
+.feedback-success button{border:0;background:none;color:var(--feedback-accent);text-decoration:underline;font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--feedback-accent);outline-offset:3px}
+@media(max-width:600px){.feedback-header{grid-template-columns:42px 1fr 42px;padding-inline:16px;gap:4px}.feedback-header h1{text-align:center;font-size:18px}.feedback-page{margin-top:0}.feedback-notice{padding:19px 20px;font-size:14px}.feedback-section{padding:22px 20px}.feedback-section legend{left:20px;right:20px;top:22px;font-size:16px}.feedback-question{font-size:16px}.feedback-topics label{min-height:59px;font-size:15px}.feedback-rating legend small{display:block}fieldset.feedback-rating{padding-top:83px}.feedback-stars{gap:22px}.feedback-success{margin:20px 16px}}

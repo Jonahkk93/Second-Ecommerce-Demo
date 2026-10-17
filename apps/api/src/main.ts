@@ -12,6 +12,13 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ bodyLimit: 55 * 1024 * 1024 }), { rawBody: true });
   const config = app.get(ConfigService);
   const production = config.get("NODE_ENV") === "production";
+  // API responses can include account, address and payment information. Never
+  // permit a shared cache to retain them, including authentication failures.
+  app.getHttpAdapter().getInstance().addHook("onSend", async (_request: unknown, reply: { header(name: string, value: string): unknown }, payload: unknown) => {
+    reply.header("Cache-Control", "no-store");
+    reply.header("X-Content-Type-Options", "nosniff");
+    return payload;
+  });
   // npm workspaces can resolve Nest's Fastify and plugin types from separate paths.
   await app.register(cookie as never);
   await app.register(rateLimit, { max: production ? 120 : 2000, timeWindow: "1 minute" });

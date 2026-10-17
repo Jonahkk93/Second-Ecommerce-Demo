@@ -5,8 +5,14 @@
     font-family: Larke;
 }
 
+html {
+    background: #FCFCFC;
+    overscroll-behavior-y: none;
+}
+
 body {
     color: #333;
+    background: #fff;
 }
 
 /* Homepage catalogues grouped beneath the Popular section. */
@@ -88,8 +94,23 @@ body{
     max-width:100%;
 }
 
+html.home-page,
+html.home-page body{
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+}
+
+html.home-page::-webkit-scrollbar,
+html.home-page body::-webkit-scrollbar{
+    display:none;
+    width:0;
+    height:0;
+}
+
 html.side-panel-open,
-body.side-panel-open{
+body.side-panel-open,
+html:has(#sidebar-toggle:checked),
+body:has(#sidebar-toggle:checked){
     overflow: hidden;
     overscroll-behavior: none;
 }
@@ -6767,3 +6788,17 @@ body.shop-all-page .shop-all-category-filter .filter-btn{
         padding-top:calc(280px + var(--additional-filter-space, 0px));
     }
 }
+
+/* Keep registration consent text together and match MPWR form controls. */
+.register-legal{margin:16px 0 18px;flex:none}
+.register-form .register-legal .terms-check{display:flex;align-items:flex-start;gap:10px;margin:0;color:#555;font-size:13px;line-height:1.65;cursor:pointer}
+.register-legal .terms-check>span{display:block;flex:1;min-width:0}
+.register-form .terms-check input{appearance:none;-webkit-appearance:none;display:block;flex:0 0 18px;width:18px;height:18px;min-height:0;margin:2px 0 0;padding:0;border:1.5px solid #c9c2be;border-radius:5px;background:#fff;cursor:pointer;transition:border-color .18s ease,background-color .18s ease}
+.register-form .terms-check input:checked{border-color:#e5a484;background:#e5a484 url("../images/Icon Folder/Tick Icon_White.PNG") center/11px 11px no-repeat}
+.register-form .terms-check input:focus-visible{outline:2px solid #b66c48;outline-offset:3px}
+.register-form .terms-check input[aria-invalid="true"]{border-color:#b66c48}
+.register-privacy-note{margin:7px 0 0;padding-left:28px;color:#888;font-size:12px;line-height:1.65}
+.register-legal a,.register-legal a:visited{display:inline;color:#a45e3c;font:inherit;font-weight:600;text-decoration:none;white-space:normal}
+.register-legal a:hover{color:#875034;text-decoration:none}
+.register-form .register-legal a:any-link,.register-form .register-legal a:is(:hover,:focus,:active){text-decoration:none!important;border-bottom:0;box-shadow:none}
+@media(prefers-reduced-motion:reduce){.register-form .terms-check input{transition:none}}

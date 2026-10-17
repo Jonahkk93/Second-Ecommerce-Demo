@@ -129,3 +129,24 @@ export const accountAppeals = pgTable("account_appeals", {
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   ...timestamps
 }, t => [uniqueIndex("account_appeals_reference_unique").on(t.reference), index("account_appeals_user_idx").on(t.userId), index("account_appeals_status_idx").on(t.status)]);
+
+export const siteFeedback = pgTable("site_feedback", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  reference: text("reference").notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  category: text("category").notNull(),
+  problem: text("problem").notNull(),
+  description: text("description").notNull(),
+  rating: integer("rating"),
+  images: jsonb("images").default([]).notNull(),
+  status: text("status").default("new").notNull(),
+  ...timestamps
+}, t => [uniqueIndex("site_feedback_reference_unique").on(t.reference), index("site_feedback_created_idx").on(t.createdAt)]);
+
+export const privacyRequests = pgTable("privacy_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  reference: text("reference").notNull(), kind: text("kind").notNull(), details: text("details").default("").notNull(),
+  status: text("status").default("new").notNull(), response: text("response").default("").notNull(),
+  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }), ...timestamps
+}, t => [uniqueIndex("privacy_requests_reference_unique").on(t.reference), index("privacy_requests_user_idx").on(t.userId), uniqueIndex("privacy_requests_one_open_kind").on(t.userId, t.kind).where(sql`${t.status} <> 'closed'`)]);

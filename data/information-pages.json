@@ -1,0 +1,634 @@
+[
+  {
+    "slug": "shipping-info",
+    "title": "Shipping Info",
+    "intro": "Delivery details, all in one place.",
+    "sections": [
+      {
+        "title": "Delivery in Uganda",
+        "html": "<p>MPWR currently sells and delivers only within Uganda. International orders and delivery are not offered.</p><p>Enter your district and delivery address at checkout. Your delivery fee and estimated delivery window appear before you continue to payment.</p><p>The fee depends on your district and the items in your order. The total shown at checkout includes delivery.</p>"
+      },
+      {
+        "title": "Check your district",
+        "html": "<div class=\"delivery-estimator\" id=\"delivery-estimator\" hidden><label for=\"info-district\">Delivery district</label><select id=\"info-district\"><option value=\"\">Select district</option></select><div id=\"info-delivery-result\" class=\"delivery-result\" role=\"status\" aria-live=\"polite\">Choose a district to see the starting fee and estimated delivery time.</div><p class=\"info-note\">This is an estimate. Your order’s final delivery charge and delivery window are shown at checkout.</p></div><noscript><p>Select your district at checkout to see the delivery fee and estimate.</p></noscript>"
+      },
+      {
+        "title": "Getting your address ready",
+        "html": "<p>Include your street, building or a useful landmark, city or town, district, and a phone number. Use delivery notes for directions that help locate your address.</p><p>You can save addresses in your account and choose a default for future orders.</p>"
+      },
+      {
+        "title": "After placing an order",
+        "html": "<p>Open Order Status to see progress and any delivery updates recorded for your order. Delivery estimates are estimates rather than guaranteed arrival dates.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "orders.html",
+        "View order status"
+      ],
+      [
+        "shipping-address.html",
+        "Manage my addresses"
+      ],
+      [
+        "contact-mpwr.html",
+        "Contact MPWR"
+      ]
+    ],
+    "script": "shipping-information.js"
+  },
+  {
+    "slug": "return-policy",
+    "title": "Return Policy",
+    "intro": "A little clarity when something is not quite right.",
+    "sections": [
+      {
+        "title": "Your statutory rights come first",
+        "html": "<p>The item-condition and hygiene rules below apply to MPWR’s voluntary return offer. They must not be used to deny a statutory cancellation or other mandatory remedy. You can notify MPWR directly without waiting for an in-app approval. See <a href=\"terms-and-conditions.html#cancellation\">Cancellation and consumer rights</a>.</p>"
+      },
+      {
+        "title": "Request a return within 7 days",
+        "html": "<p>Contact MPWR within 7 calendar days after receiving your order to request a change-of-mind return. Include your order reference, the item, delivery date, and reason for returning it.</p><p>For a change-of-mind return, keep the item unused, unworn, unwashed, and in its original packaging with its accessories and any hygiene seals intact.</p>"
+      },
+      {
+        "title": "Beauty and hygiene conditions",
+        "html": "<p>Our change-of-mind return offer excludes used or opened lashes, nail products, cosmetics, and other items whose hygiene seal has been broken. Wigs should not have been worn, installed, cut, coloured, washed, or altered. Personalised items are excluded from this voluntary offer unless we agree otherwise.</p><p>These conditions do not remove any right you have under applicable law, including rights relating to faulty, incorrect, or misdescribed goods.</p>"
+      },
+      {
+        "title": "Damaged, incorrect, or missing items",
+        "html": "<p>Contact us as soon as you notice a problem. Send your order reference, a description, and clear photos where available. Keep the packaging so we can investigate. The 7-day change-of-mind window does not limit your legal rights for faulty or misdescribed goods.</p><p>We will review the issue with you and arrange the appropriate remedy, which may include a replacement or refund.</p>"
+      },
+      {
+        "title": "How to return an item",
+        "html": "<ol><li>Email or WhatsApp MPWR with your order reference and item details.</li><li>We will confirm the return instructions and the address to use. Your right to notify us of a cancellation is not dependent on our reply.</li><li>For our voluntary return offer, send the item within 14 calendar days of receiving the instructions, unless we agree otherwise.</li><li>Keep proof of dispatch until the return is resolved.</li></ol><p>Please use the return address we confirm, rather than an address printed on a delivery package.</p>"
+      },
+      {
+        "title": "Return delivery costs",
+        "html": "<p>For a change-of-mind return, you pay the direct cost of returning the item. We do not charge a restocking fee. If MPWR sent the wrong item or the item is faulty, we will arrange the return or agree reasonable return-delivery costs with you.</p>"
+      },
+      {
+        "title": "Cancellation and your rights",
+        "html": "<p>Use the cancellation action on an eligible Pending order, or contact us promptly if it is unavailable. A request submitted through the order page is reviewed by MPWR. This workflow does not replace any cancellation right under Ugandan law.</p><p>Nothing in this policy limits a mandatory consumer right. Where the law gives you a stronger right or a different deadline, that right or deadline applies.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "mailto:kahumajk@gmail.com?subject=MPWR%20return%20request",
+        "Email a return request"
+      ],
+      [
+        "https://wa.me/256752296121?text=Hello%20MPWR%2C%20I%20need%20help%20with%20a%20return.",
+        "Request help on WhatsApp"
+      ],
+      [
+        "refunds.html",
+        "Read the refund policy"
+      ]
+    ],
+    "updated": "17 October 2026"
+  },
+  {
+    "slug": "privacy-policy",
+    "title": "Privacy & Cookie Policy",
+    "intro": "Understand the information used when you shop with MPWR.",
+    "sections": [
+      {
+        "title": "Who to contact",
+        "html": "<p>MPWR, located at Kisaasi, Bahai Road, is responsible for the account and shopping information described here. For privacy questions or requests, email <a href=\"mailto:kahumajk@gmail.com?subject=MPWR%20privacy%20request\">kahumajk@gmail.com</a> or call <a href=\"tel:+256752296121\">+256 752 296121</a>.</p>"
+      },
+      {
+        "title": "Your account and purchases",
+        "html": "<p>Account records include your name, email, password hash, contact details, profile picture if supplied, saved addresses and payment preferences. Orders include items and selected options, totals, delivery information, payment references and status. We also keep reviews, feedback, account appeals, privacy requests and the version and time of terms acceptance.</p><p>Name, email and authentication details are needed for an account; order and delivery details are needed to fulfil a purchase. A profile image, review, feedback rating, optional browsing history and optional cookie categories are discretionary. Without an optional category, its related browsing feature may be unavailable; essential checkout remains available.</p>"
+      },
+      {
+        "title": "Payment information",
+        "html": "<p>Payment authorization takes place through the payment provider’s checkout. MPWR records order totals, payment status, and transaction references to match payments to orders.</p><p>Saved payment preferences can include a Mobile Money number or a card label and last four digits. MPWR’s checkout does not collect your full card number, PIN, or card security code.</p>"
+      },
+      {
+        "title": "Cookies and browser storage",
+        "html": "<p>MPWR uses a session cookie for sign-in and browser storage for shopping features. Strictly necessary storage supports your session, cart, checkout, account services you request, and your cookie choices.</p><p>Optional categories start off until you enable them. Performance controls optional search analytics and attribution. Functional controls recent searches, recently viewed products, and saved catalogue ordering. Targeting & personalization controls local product-interaction signals used for recommendations. MPWR currently does not load third-party advertising trackers.</p><p><a href=\"manage-cookies.html\" data-manage-cookies>Manage your cookie preferences</a> to enable, reject, or withdraw optional categories. Changes apply when saved and are remembered on this browser for 180 days. They do not automatically follow you to another browser or device.</p><p>Turning a category off clears its associated optional history, identifiers, or recommendation signals on this browser. It does not erase analytics previously received or necessary order records. Cart items, wishlists, and saved account details remain available.</p><p>You can also manage site storage through your browser. Clearing all site data may sign you out or remove locally saved preferences. Optional categories return to off if your consent record is removed, expires, or cannot be read.</p>",
+        "id": "cookies"
+      },
+      {
+        "title": "Images and public reviews",
+        "html": "<p>Profile pictures and uploaded images are stored by MPWR’s media service. Product reviews, star ratings, purchased options, review images, and MPWR’s public replies may be visible to other shoppers.</p><p>Keep passwords, payment credentials, and private details out of reviews and uploaded images.</p>"
+      },
+      {
+        "title": "Manage your information",
+        "html": "<p>Use My Profile to update your account details, My Shipping Address to manage saved addresses, and My Payment Options to manage saved payment preferences. Your History page includes controls for clearing browsing entries.</p>"
+      },
+      {
+        "title": "Why we use information",
+        "html": "<p>We use account, contact, and order information to provide the shopping services you request, process payments and deliveries, answer support requests, and protect accounts. With your optional cookie choices enabled, shopping activity helps us understand how the store is used and improve recommendations.</p><p>We rely on the applicable basis for each purpose, including providing your requested service, complying with legal duties, and consent where required. You can contact us to ask about a particular use or withdraw consent where the use depends on it.</p>"
+      },
+      {
+        "title": "Service providers and transfers",
+        "html": "<p>Our integrations include Pesapal for payment processing, Resend for account emails, Cloudflare R2 for uploaded media, and Google Maps for supported address or distance services. The providers used depend on the feature and deployment. Delivery partners receive the contact, address and parcel details needed to deliver an order. Hosting, database and backup operators support the shop. Support through WhatsApp uses WhatsApp’s service.</p><p>Payment details entered on a provider’s checkout are also subject to that provider’s notice. Media links may be accessible to anyone with the link; do not upload confidential documents, payment credentials or identity documents to reviews or feedback.</p><p>Some providers operate outside Uganda. Ask MPWR for the recipients, locations and transfer arrangements relevant to your request. We do not describe an integration as certified or a transfer as approved merely because it is present in the website code.</p>"
+      },
+      {
+        "title": "Retention and security",
+        "html": "<p>Account information is retained while the account is used and reviewed when deletion is requested. Orders, payments, refunds and related complaint records can need longer retention for fulfilment, accounting, disputes or another applicable legal duty. A deletion outcome will identify any records retained and the reason; it is not a promise to erase every transaction immediately.</p><p>The sign-in session lasts up to seven days. Password-reset links expire after one hour and verification links after 24 hours. Cookie choices expire after 180 days. Optional history and recommendation storage is cleared on this browser when its category is disabled; otherwise it remains until cleared or the browser removes it. Local storage has no automatic browser expiry. Clearing a category does not delete server reports already received.</p><p>We use password hashing, authenticated account access and role restrictions. No internet service can guarantee absolute security. Contact MPWR about suspected unauthorized access. Retention and deletion of server records, media and backups requires review across the relevant systems; contact us for a record-specific explanation.</p>"
+      },
+      {
+        "title": "Your choices and rights",
+        "html": "<p>Request access, correction, deletion or review of an objection through <a href=\"privacy-requests.html\">Privacy requests</a> or contact <a href=\"mailto:kahumajk@gmail.com\">kahumajk@gmail.com</a> or <a href=\"tel:+256752296121\">+256 752 296121</a>. We may verify identity and redact information about other people. Access requests are handled promptly and within the applicable statutory period, normally no later than thirty days after receipt. We explain a refusal or a retention requirement.</p><p>You can withdraw optional browsing consent in Manage Cookies, object to direct marketing, and ask for human review of a decision affecting you. Recommendation sorting does not decide whether you are entitled to a legal remedy. You can complain to Uganda’s <a href=\"https://pdpo.go.ug/\" target=\"_blank\" rel=\"noopener\">Personal Data Protection Office</a>; contacting us first is not a waiver of that option.</p>"
+      },
+      {
+        "title": "Children and marketing",
+        "html": "<p>The shop is intended for adults aged 18 and over. Do not create an account for a child or upload a child’s personal information. Contact us if such information has been submitted so we can review and remove it where appropriate.</p><p>Accepting shopping terms does not subscribe you to promotions. Service messages about your account, payment or order are separate from promotional messages. If you receive marketing from MPWR, you can ask us to stop it using the contact details above.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "privacy-requests.html",
+        "Make a privacy request"
+      ],
+      [
+        "personal-information.html",
+        "Open my profile"
+      ],
+      [
+        "history.html",
+        "Manage my history"
+      ]
+    ],
+    "updated": "17 October 2026",
+    "version": "2026-10-17.1"
+  },
+  {
+    "slug": "refunds",
+    "title": "Refund",
+    "intro": "Know what happens after a refund is agreed.",
+    "sections": [
+      {
+        "title": "When a refund applies",
+        "html": "<p>Refunds may follow an approved return, an agreed resolution for faulty or incorrect goods, a cancelled paid order, or another situation where a refund is required by law. We will confirm the amount and the next steps with you.</p>"
+      },
+      {
+        "title": "What is refunded",
+        "html": "<p>For a full qualifying cancellation, we refund the amount paid for the cancelled goods and the delivery charges refundable under applicable law. For a partial return, the refund reflects the amount actually paid for the returned items, including any discount.</p><p>For a change-of-mind return, the direct cost of returning the goods is your responsibility. We do not charge a restocking fee. Where MPWR is responsible for faulty or incorrect goods, agreed reasonable return costs are covered by MPWR.</p>"
+      },
+      {
+        "title": "Where your refund goes",
+        "html": "<p>Refunds are normally sent to the original payment method. If this is not possible, we will agree an alternative with you after confirming the payment and account details. Never share your PIN, password, card security code, or one-time authorization code with support.</p>"
+      },
+      {
+        "title": "Processing times",
+        "html": "<p>We aim to initiate an agreed refund within one business day after the return has been checked or the cancellation has been confirmed. This is our service target; it does not extend a legal deadline. Where Uganda’s electronic-transaction cancellation rules apply, payment is refunded within 30 days of cancellation.</p><p>After initiation, Mobile Money refunds commonly take 1–3 business days. Card refunds commonly take 5–10 business days and can take up to 15. These are estimates, and provider processing can vary. Contact us if a refund has not arrived by the date shown for your order.</p>"
+      },
+      {
+        "title": "Check your refund status",
+        "html": "<p>Open Order Status and find the relevant order. When a refund has been recorded, its panel shows the amount, destination, status, and any available reference or expected date.</p><dl class=\"info-definitions\"><div><dt>Pending</dt><dd>Waiting to be initiated.</dd></div><div><dt>Initiated</dt><dd>Sent to the payment provider.</dd></div><div><dt>Processing</dt><dd>The provider is processing the refund.</dd></div><div><dt>Refunded</dt><dd>Marked complete.</dd></div><div><dt>Needs attention</dt><dd>The latest attempt needs investigation.</dd></div></dl>"
+      },
+      {
+        "title": "Need help?",
+        "html": "<p>Send your order reference and refund reference, if available, to MPWR. We will check the payment record and follow up on the next step. Nothing in this policy limits mandatory consumer rights.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "orders.html",
+        "Check refund progress"
+      ],
+      [
+        "contact-mpwr.html",
+        "Get refund help"
+      ]
+    ],
+    "updated": "17 October 2026"
+  },
+  {
+    "slug": "payment-methods",
+    "title": "Payment Method",
+    "intro": "Choose how you would like to pay at checkout.",
+    "sections": [
+      {
+        "title": "Available options",
+        "html": "<ul><li><strong>Credit or debit card</strong> — enter your card details on the payment provider’s checkout.</li><li><strong>MTN MoMo</strong> — use your MTN Mobile Money number.</li><li><strong>Airtel Money</strong> — use your Airtel Money number.</li></ul><p>Your order total is shown in Ugandan shillings (USh). Available payment options are confirmed during secure payment.</p>"
+      },
+      {
+        "title": "Complete secure payment",
+        "html": "<p>Review your contact details, delivery address, selected payment method, and order total. Choose Continue to secure payment and follow the payment provider’s authorization steps.</p><p>Return to MPWR when prompted, then check your payment result and Order Status. If the result is unclear, check the order before trying another payment.</p>"
+      },
+      {
+        "title": "Saved payment preferences",
+        "html": "<p>My Payment Options lets you save or remove payment preferences and set a default. Saving a preference does not make a payment; you still authorize payment when ordering.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "payment-options.html",
+        "Manage payment options"
+      ],
+      [
+        "orders.html",
+        "Check an order"
+      ],
+      [
+        "contact-mpwr.html",
+        "Contact MPWR"
+      ]
+    ]
+  },
+  {
+    "slug": "offers-info",
+    "title": "Offers & Discounts",
+    "intro": "Find the offers currently available at MPWR.",
+    "sections": [
+      {
+        "title": "Browse current offers",
+        "html": "<p>Offer listings show discounted items and their current prices. Availability, options, and prices can change, so review the selected product and your order total before paying.</p>"
+      },
+      {
+        "title": "Check your selected options",
+        "html": "<p>A product’s price can depend on the option you choose, such as a wig’s length. Check the price after selecting your preferred option and quantity.</p>"
+      },
+      {
+        "title": "At checkout",
+        "html": "<p>Your order summary shows item prices, subtotal, delivery charge, and the total to pay. Use the current prices in your cart and checkout when reviewing an offer.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "Campaign.html",
+        "Explore current offers"
+      ],
+      [
+        "ProductsPage.html",
+        "Browse products"
+      ]
+    ]
+  },
+  {
+    "slug": "review-guidance",
+    "title": "Review Guidance",
+    "intro": "Share your experience and help other shoppers.",
+    "sections": [
+      {
+        "title": "Review a purchased item",
+        "html": "<ol><li>Sign in to the account used for your purchase.</li><li>Open My Purchases and select the Review tab.</li><li>Choose Review item for an eligible purchase.</li><li>Choose a star rating, add a comment, and post your review.</li></ol><p>Product reviews are available for purchased items. Cancelled and returned orders are excluded from review eligibility.</p>"
+      },
+      {
+        "title": "Add useful details",
+        "html": "<p>Describe the item you received and your experience using it. Details about the selected size, length, colour, or finish can help other shoppers choose.</p><p>You can add up to five JPG, PNG, WebP, or GIF photos, each up to 5 MB. Use clear images that you have permission to share.</p>"
+      },
+      {
+        "title": "Keep personal details private",
+        "html": "<p>Your product review may be publicly visible. Leave out contact details, payment information, passwords, and other people’s private information.</p>"
+      },
+      {
+        "title": "Website suggestions",
+        "html": "<p>Use Feedback & Rating for suggestions about finding products, product information, checkout, and website errors. Product reviews are for your experience with the item itself.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "purchases.html",
+        "Review a purchase"
+      ],
+      [
+        "feedback.html",
+        "Send website feedback"
+      ]
+    ]
+  },
+  {
+    "slug": "track-order",
+    "title": "How To Track My Order",
+    "intro": "Your order’s progress is in your account.",
+    "sections": [
+      {
+        "title": "Find your order",
+        "html": "<ol><li>Sign in to the account you used when placing the order.</li><li>Open My Account and select Order Status.</li><li>Find your order using its items, date, or reference.</li><li>Read the status and the delivery updates shown on the order.</li></ol>"
+      },
+      {
+        "title": "What the status means",
+        "html": "<dl class=\"info-definitions\"><div><dt>Pending</dt><dd>The order is awaiting the next processing step. Check its payment information as well.</dd></div><div><dt>Processing</dt><dd>The order is being prepared.</dd></div><div><dt>Shipped</dt><dd>The order has moved to delivery.</dd></div><div><dt>Delivered</dt><dd>The order is marked as delivered.</dd></div><div><dt>Cancelled or Returned</dt><dd>Check the order details and any refund panel for further information.</dd></div></dl>"
+      },
+      {
+        "title": "Delivery updates",
+        "html": "<p>The order page shows tracking details when they have been added to your order. Check it again for the latest recorded update.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "orders.html",
+        "Track my orders"
+      ],
+      [
+        "contact-mpwr.html",
+        "Contact MPWR"
+      ]
+    ]
+  },
+  {
+    "slug": "how-to-order",
+    "title": "How To Order",
+    "intro": "From finding your favourites to completing payment.",
+    "sections": [
+      {
+        "title": "1. Find your item",
+        "html": "<p>Browse wigs, press-on nails, lashes, and other available products. Open an item to see its description, images, available options, price, and customer reviews.</p>"
+      },
+      {
+        "title": "2. Make it yours",
+        "html": "<p>Select the available options you want, choose a quantity, and add the item to your cart. Check the selected options and price in your cart before continuing.</p>"
+      },
+      {
+        "title": "3. Add your delivery details",
+        "html": "<p>Sign in and open checkout from your cart. Enter your contact information, address, city or town, and district. Check the delivery fee and estimate before proceeding.</p>"
+      },
+      {
+        "title": "4. Review and pay",
+        "html": "<p>Choose card, MTN MoMo, or Airtel Money. Review your items and the full total, then choose Continue to secure payment. Follow the payment provider’s prompts to authorize the transaction.</p>"
+      },
+      {
+        "title": "5. Follow your order",
+        "html": "<p>Return to MPWR after payment. Use Order Status to check the payment and order progress. Your purchases also appear in My Purchases.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "ProductsPage.html",
+        "Start shopping"
+      ],
+      [
+        "orders.html",
+        "View my orders"
+      ],
+      [
+        "contact-mpwr.html",
+        "Contact MPWR"
+      ]
+    ]
+  },
+  {
+    "slug": "terms-and-conditions",
+    "title": "Terms & Conditions",
+    "intro": "The terms that apply to your MPWR account and purchases.",
+    "sections": [
+      {
+        "title": "1. Scope and agreement",
+        "html": "<p>These terms apply to MPWR’s online shop and orders placed through it. MPWR currently sells and delivers only within Uganda. International orders and delivery are not offered. Read the <a href=\"shipping-info.html\">Shipping Info</a>, <a href=\"return-policy.html\">Return Policy</a>, <a href=\"refunds.html\">Refund</a> and <a href=\"privacy-policy.html\">Privacy & Cookie Policy</a> before ordering. Product-specific information shown before purchase forms part of your order.</p><p>Signup and checkout ask you to agree to this version. Agreement to shopping terms does not enable optional cookies or subscribe you to marketing. Save or print these pages for your records.</p>",
+        "id": "scope"
+      },
+      {
+        "title": "2. Who you are buying from",
+        "html": "<dl class=\"info-definitions\"><div><dt>Business name</dt><dd>MPWR</dd></div><div><dt>Business location</dt><dd>Kisaasi, Bahai Road</dd></div><div><dt>Email</dt><dd><a href=\"mailto:kahumajk@gmail.com\">kahumajk@gmail.com</a></dd></div><div><dt>Telephone / WhatsApp</dt><dd><a href=\"tel:+256752296121\">+256 752 296121</a></dd></div></dl><p>Contact MPWR before a visit or parcel return so we can confirm arrangements. These contact details are also available on <a href=\"legal-information.html\">Legal Information</a>.</p><p class=\"information-draft-note\"><strong>Draft business details:</strong> The uppercase entries below are placeholders awaiting confirmation.</p><dl class=\"info-definitions\"><div><dt>Legal owner / company name</dt><dd>PUT COMPANY NAME OR OWNER’S LEGAL NAME HERE</dd></div><div><dt>Business type / legal status</dt><dd>PUT BUSINESS TYPE HERE</dd></div><div><dt>Registration number (if applicable)</dt><dd>PUT REGISTRATION NUMBER HERE</dd></div><div><dt>Place of registration (if applicable)</dt><dd>PUT PLACE OF REGISTRATION HERE</dd></div><div><dt>Registered address / address for legal notices</dt><dd>PUT REGISTERED ADDRESS HERE</dd></div><div><dt>Directors (if applicable)</dt><dd>PUT DIRECTORS’ NAMES HERE</dd></div></dl>",
+        "id": "seller"
+      },
+      {
+        "title": "3. Accounts and eligibility",
+        "html": "<p>Create and use an account only if you are 18 or older and able to enter into a purchase agreement. An adult should place an order on behalf of a younger person using the adult’s own account and payment authority. Do not send us a child’s personal information in reviews or uploads.</p><p>Give accurate contact details, keep your password private and use only payment methods you are authorized to use. Contact us promptly about suspected unauthorized access. You can correct your profile, saved addresses and payment preferences in your account.</p>",
+        "id": "accounts"
+      },
+      {
+        "title": "4. Products, options and care",
+        "html": "<p>Check the description, material, size or length, colour, included items and care instructions for the exact option you select. Screen colours and styling photographs may differ from the appearance on your device. This does not excuse a material mismatch with the description.</p><p>Ask us about information that is missing before ordering. Follow supplied product instructions; stop using a cosmetic or adhesive if it causes irritation and seek appropriate advice. No general health or performance guarantee is made beyond the product information and rights that apply to your purchase.</p>",
+        "id": "products"
+      },
+      {
+        "title": "5. Prices and offers",
+        "html": "<p>Prices are in Ugandan shillings (UGX). Review the item prices, quantities, delivery fee and final total at checkout. MPWR will not add a new charge to a completed order without your agreement. Offer conditions, eligibility and expiry are shown with an offer; an offer is not transferable or combinable unless stated.</p><p>If a price or stock error affects your order, we will contact you with the available options. We will not substitute a different item or charge a higher price without your agreement. If we cannot supply a paid item, we will refund it.</p>",
+        "id": "prices"
+      },
+      {
+        "title": "6. Reviewing and placing an order",
+        "html": "<p>Before continuing to secure payment, check your bag, product options, quantities, address, contact information, delivery estimate and total. You can edit your bag or leave checkout before submitting. A pending order reference records the request; it does not by itself confirm successful payment or dispatch.</p><p>Payment status and fulfilment status are shown in My Purchases. Contact us if a payment succeeds but the order does not update. Keep the order reference and payment receipt. If we cannot fulfil an order, we will notify you and arrange the appropriate refund.</p>",
+        "id": "orders"
+      },
+      {
+        "title": "7. Payment security",
+        "html": "<p>Card and Mobile Money authorization takes place through the payment provider. MPWR’s checkout does not collect your full card number, card security code or Mobile Money PIN. Never send these details in feedback, email, WhatsApp or a review. Saved payment preferences are labels, limited card details or Mobile Money details, not a standing authorization to take new payments.</p><p>Your bank or mobile provider may apply its own disclosed charges and processing times. A payment failure does not authorize duplicate collection. Contact MPWR if you see a duplicate payment.</p>",
+        "id": "payments"
+      },
+      {
+        "title": "8. Delivery and delays",
+        "html": "<p>Checkout displays the delivery district, charge and estimated timeframe. Give a complete address and a reachable phone number. Tell us promptly if you need to correct the address; changes after dispatch may require new arrangements, which we will explain before any additional charge.</p><p>Contact us about a late, missing, damaged or wrongly delivered parcel. A delivery status alone does not prevent you from disputing receipt. We will investigate with the delivery partner and discuss the remedy. Delay notices do not remove cancellation or refund rights.</p>",
+        "id": "delivery"
+      },
+      {
+        "title": "9. Cancellation and consumer rights",
+        "html": "<p>Uganda’s Electronic Transactions Act provides seven-day cancellation rights and refunds within thirty days of qualifying cancellation. It also provides remedies for missing required disclosures and late or unavailable supply. Statutory rights take priority over these terms, return conditions and website status controls.</p><p>You may notify cancellation by email or WhatsApp using your order reference. A website approval step is an administrative process, not a condition that removes a legal right. See the <a href=\"return-policy.html\">Return Policy</a> and <a href=\"refunds.html\">Refund page</a> for instructions.</p>",
+        "id": "cancellation"
+      },
+      {
+        "title": "10. Change-of-mind returns and problems with goods",
+        "html": "<p>Our separate voluntary return offer has a seven-calendar-day request window and item-condition requirements. Its hygiene and personalized-item exclusions apply to that offer only. They do not automatically exclude statutory cancellation, faulty-goods or misdescription remedies.</p><p>For a wrong, defective or missing item, contact us with the order reference and the available details. Photos can help an investigation, but a review or photo is not a universal condition for exercising a legal right. Do not continue using an item if that could make a safety problem worse.</p>",
+        "id": "returns"
+      },
+      {
+        "title": "11. Refunds",
+        "html": "<p>The Refund page explains the method, service targets, provider processing estimates and how to follow up. Approval in an order screen does not mean money has already arrived. We will not replace a monetary refund with store credit unless you choose it. For returns involving our error, we will agree appropriate return arrangements with you.</p>",
+        "id": "refunds"
+      },
+      {
+        "title": "12. Reviews, ratings and uploads",
+        "html": "<p>Post honest reviews about your experience and only upload material you have the right to share. Keep private details, account credentials and other people’s images out of submissions unless you have permission. Feedback sent through the feedback form is intended for MPWR’s team; product reviews and their attachments can be public.</p><p>You keep ownership of your content. You give MPWR a non-exclusive permission to host, format and display a public review with the relevant product and respond to it. This does not authorize unrelated advertising use of your photograph. Contact us to request correction or removal. We may remove unlawful, abusive, spam or misleading submissions; disagreement or a low rating alone is not a reason to remove an honest review.</p>",
+        "id": "reviews"
+      },
+      {
+        "title": "13. Acceptable use and account restrictions",
+        "html": "<p>Do not attempt unauthorized access, disrupt the shop, submit malicious files, impersonate another person, manipulate reviews or misuse payments. We may restrict an account to investigate suspected misuse or protect customers. You can contact support or use the account appeal route to challenge a restriction. A restriction does not remove your rights relating to existing orders, refunds or your personal information.</p>",
+        "id": "use"
+      },
+      {
+        "title": "14. Privacy and account deletion",
+        "html": "<p>The Privacy & Cookie Policy explains the information used for accounts, payments, delivery, support and optional browsing features. You can refuse optional cookies while using essential shopping services.</p><p>Use <a href=\"privacy-requests.html\">Privacy requests</a> to ask for access, correction, deletion or an objection review. Account deletion is a reviewed request, not instant erasure of transaction records. We explain retained records and reasons in the outcome. Submitting it does not cancel an order or waive a refund.</p>",
+        "id": "privacy"
+      },
+      {
+        "title": "15. Site availability and responsibility",
+        "html": "<p>We aim to keep the shop accurate and available, but maintenance and faults can interrupt access. If an interruption affects a payment or order, contact us rather than repeatedly paying. MPWR remains responsible for its obligations under your purchase and applicable law. These terms do not impose a blanket exclusion of liability, a compulsory waiver or a cap on mandatory consumer remedies.</p>",
+        "id": "responsibility"
+      },
+      {
+        "title": "16. Complaints and disputes",
+        "html": "<p>Send a complaint to <a href=\"mailto:kahumajk@gmail.com\">kahumajk@gmail.com</a> or <a href=\"tel:+256752296121\">+256 752 296121</a>, with the order or request reference, what happened and the outcome you seek. Do not include payment credentials. Our service target is to acknowledge complaints within two working days; statutory response duties continue to apply regardless of that target.</p><p>Ugandan law governs these terms, subject to any mandatory protections that apply. You remain free to approach a competent regulator, obtain independent advice or pursue a remedy through a court with jurisdiction. No compulsory private arbitration is required by these terms.</p>",
+        "id": "complaints"
+      },
+      {
+        "title": "17. Versions and records",
+        "html": "<p>This is version 2026-10-17.2, effective 17 October 2026. We record the version and time of acceptance at signup and when a new order is submitted. A copy of this policy bundle is available in the <a href=\"legal-archive/2026-10-17.2/terms-and-conditions.html\">policy archive</a>.</p><p>Changes apply prospectively and do not remove rights or change the agreed terms of a past purchase. Material updates require a new version at signup and checkout. Download or print your order record while your account is available, or request a copy from MPWR.</p>",
+        "id": "versions"
+      }
+    ],
+    "actions": [
+      [
+        "return-policy.html",
+        "Return guidance"
+      ],
+      [
+        "privacy-policy.html",
+        "Privacy information"
+      ],
+      [
+        "contact-mpwr.html",
+        "Contact MPWR"
+      ]
+    ],
+    "updated": "17 October 2026",
+    "version": "2026-10-17.2"
+  },
+  {
+    "slug": "about-us",
+    "title": "About Us",
+    "intro": "Beauty, your way.",
+    "sections": [
+      {
+        "title": "Meet MPWR",
+        "html": "<p>MPWR brings wigs, press-on nails, lashes, and beauty products together in one place. Explore the details, choose your favourite options, and build a look that feels like you.</p>"
+      },
+      {
+        "title": "Explore your style",
+        "html": "<p>From a new hair look to the finishing touches, browse our collections to find what suits your day. Product images, option details, and customer reviews help you make your choice.</p><div class=\"info-collections\"><a href=\"Wigs.html\">Wigs</a><a href=\"Nails.html\">Press-on nails</a><a href=\"Lashes.html\">Lashes</a><a href=\"ProductsPage.html\">All products</a></div>"
+      },
+      {
+        "title": "Your MPWR account",
+        "html": "<p>Save your favourites, keep delivery and payment preferences, follow your orders, and review purchased items from your account.</p>"
+      },
+      {
+        "title": "Help shape MPWR",
+        "html": "<p>Your experience helps us improve. Send suggestions through Feedback & Rating, or share an item review from My Purchases to help the next shopper.</p>"
+      },
+      {
+        "title": "Get in touch",
+        "html": "<p>For orders, product questions, or help with your purchase, email <a href=\"mailto:kahumajk@gmail.com\">kahumajk@gmail.com</a> or contact us on <a href=\"https://wa.me/256752296121\" target=\"_blank\" rel=\"noopener\">WhatsApp at +256 752 296121</a>.</p>"
+      },
+      {
+        "title": "Where to find us",
+        "html": "<p>MPWR is based at Kisaasi, Bahai Road. For order help or visit arrangements, please contact us using the details below.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "ProductsPage.html",
+        "Explore MPWR"
+      ],
+      [
+        "feedback.html",
+        "Share your feedback"
+      ]
+    ]
+  },
+  {
+    "slug": "contact-mpwr",
+    "title": "Contact MPWR",
+    "intro": "We’re here to help with your MPWR experience.",
+    "sections": [
+      {
+        "title": "Talk to MPWR",
+        "html": "<div class=\"info-contact-links\"><a href=\"mailto:kahumajk@gmail.com\"><span>Email</span><strong>kahumajk@gmail.com</strong></a><a href=\"https://wa.me/256752296121\" target=\"_blank\" rel=\"noopener\"><span>WhatsApp</span><strong>+256 752 296121</strong></a><a href=\"tel:+256752296121\"><span>Phone</span><strong>+256 752 296121</strong></a></div>"
+      },
+      {
+        "title": "Our business",
+        "html": "<dl class=\"info-definitions\"><div><dt>Business name</dt><dd>MPWR</dd></div><div><dt>Business location</dt><dd>Kisaasi, Bahai Road</dd></div><div><dt>Email</dt><dd><a href=\"mailto:kahumajk@gmail.com\">kahumajk@gmail.com</a></dd></div><div><dt>Telephone / WhatsApp</dt><dd><a href=\"tel:+256752296121\">+256 752 296121</a></dd></div></dl><p>Please contact us before visiting or sending a return parcel so we can confirm the arrangements.</p>"
+      },
+      {
+        "title": "For order, delivery, or return help",
+        "html": "<p>Include your order reference, the item involved, and a short description of what happened. Photos can help with damaged or incorrect items. For returns, contact us before sending a parcel so we can confirm the correct instructions and return address.</p>"
+      },
+      {
+        "title": "Keep payment details private",
+        "html": "<p>We may ask for an order or transaction reference. Never send a password, PIN, card security code, or one-time payment code. Opening email or WhatsApp lets you compose a message; it is only sent when you choose to send it.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "https://wa.me/256752296121?text=Hello%20MPWR%2C%20I%20need%20help%20with%20my%20order.",
+        "Open WhatsApp"
+      ],
+      [
+        "mailto:kahumajk@gmail.com?subject=MPWR%20customer%20support",
+        "Email MPWR"
+      ]
+    ]
+  },
+  {
+    "slug": "ip-notice",
+    "title": "IP Notice",
+    "intro": "Respect for original work.",
+    "sections": [
+      {
+        "title": "MPWR and product content",
+        "html": "<p>The MPWR name and original website material are used to identify our storefront. Product names, logos, and other third-party material remain subject to their owners’ rights. Do not copy or reuse content unless you have permission or another lawful basis.</p>"
+      },
+      {
+        "title": "Reviews and images",
+        "html": "<p>Only upload photos or other material that you created or are authorized to share. Avoid including other people’s private information in a public review.</p>"
+      },
+      {
+        "title": "Report a concern",
+        "html": "<p>If you believe material on MPWR infringes your intellectual property, email us with the page URL, a description of the material, details of the rights you hold or represent, and a way to contact you. We will review the report and follow up as appropriate.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "mailto:kahumajk@gmail.com?subject=MPWR%20intellectual%20property%20concern",
+        "Email an IP concern"
+      ]
+    ],
+    "updated": "17 October 2026"
+  },
+  {
+    "slug": "legal-information",
+    "title": "Legal Information",
+    "intro": "MPWR’s business and policy information.",
+    "sections": [
+      {
+        "title": "Business details",
+        "html": "<dl class=\"info-definitions\"><div><dt>Business name</dt><dd>MPWR</dd></div><div><dt>Business location</dt><dd>Kisaasi, Bahai Road</dd></div><div><dt>Email</dt><dd><a href=\"mailto:kahumajk@gmail.com\">kahumajk@gmail.com</a></dd></div><div><dt>Telephone / WhatsApp</dt><dd><a href=\"tel:+256752296121\">+256 752 296121</a></dd></div></dl><p class=\"information-draft-note\"><strong>Draft business details:</strong> The uppercase entries below are placeholders awaiting confirmation.</p><dl class=\"info-definitions\"><div><dt>Legal owner / company name</dt><dd>PUT COMPANY NAME OR OWNER’S LEGAL NAME HERE</dd></div><div><dt>Business type / legal status</dt><dd>PUT BUSINESS TYPE HERE</dd></div><div><dt>Registration number (if applicable)</dt><dd>PUT REGISTRATION NUMBER HERE</dd></div><div><dt>Place of registration (if applicable)</dt><dd>PUT PLACE OF REGISTRATION HERE</dd></div><div><dt>Registered address / address for legal notices</dt><dd>PUT REGISTERED ADDRESS HERE</dd></div><div><dt>Directors (if applicable)</dt><dd>PUT DIRECTORS’ NAMES HERE</dd></div></dl>"
+      },
+      {
+        "title": "Sales and delivery area",
+        "html": "<p>MPWR currently sells and delivers only within Uganda. International orders and delivery are not offered.</p>"
+      },
+      {
+        "title": "Shopping policies",
+        "html": "<p>Read the Terms & Conditions, Return Policy, Refund, and Privacy & Cookie Policy pages for details about using MPWR and making a purchase.</p><p>These policies do not limit rights that apply under Ugandan law. Contact MPWR using the details above to discuss a purchase, privacy request, or concern.</p>"
+      },
+      {
+        "title": "Returns and visits",
+        "html": "<p>Contact us before visiting or sending a parcel. We will confirm the visit arrangements or the return instructions and address relevant to your order.</p>"
+      }
+    ],
+    "actions": [
+      [
+        "terms-and-conditions.html",
+        "Read terms & conditions"
+      ],
+      [
+        "contact-mpwr.html",
+        "Contact MPWR"
+      ]
+    ],
+    "updated": "17 October 2026"
+  },
+  {
+    "slug": "privacy-requests",
+    "title": "Privacy Requests",
+    "intro": "Ask about your information and follow your request.",
+    "script": "privacy-requests.js",
+    "updated": "17 October 2026",
+    "sections": [
+      {
+        "title": "Choose how we can help",
+        "html": "<p>Use this form when signed in, or contact <a href=\"mailto:kahumajk@gmail.com\">kahumajk@gmail.com</a> or <a href=\"tel:+256752296121\">+256 752 296121</a> if you cannot access your account. Do not upload identity documents or payment credentials here. We may contact you to verify identity or clarify the request.</p><form id=\"privacy-request-form\"><label>Request type<select name=\"kind\" required><option value=\"access\">Access my information</option><option value=\"correction\">Correct my information</option><option value=\"deletion\">Delete my information / account</option><option value=\"objection\">Object to or restrict a use</option></select></label><label>Details (optional)<textarea name=\"details\" rows=\"5\" maxlength=\"2000\" placeholder=\"Tell us which information or use you mean.\"></textarea></label><p>Deletion is reviewed and does not happen immediately. Your account remains available during review. Orders and refunds are handled separately; records may need to be retained for legal obligations. We will explain the outcome.</p><button type=\"submit\">Submit privacy request</button><p id=\"privacy-request-message\" role=\"status\"></p></form>"
+      },
+      {
+        "title": "Your requests",
+        "html": "<p id=\"privacy-requests-state\" role=\"status\">Loading your requests…</p><div id=\"privacy-request-list\"></div>"
+      }
+    ],
+    "actions": [
+      [
+        "privacy-policy.html",
+        "Read the privacy policy"
+      ],
+      [
+        "personal-information.html",
+        "My profile"
+      ]
+    ]
+  }
+]

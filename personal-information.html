@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="css/account.css?v=20260925-1">
     <link rel="stylesheet" href="css/touch-interactions.css">
     <link rel="stylesheet" href="css/loading-states.css?v=20260809-23">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <script src="js/cookie-consent.js"></script>
+
     <script src="js/loading-states.js?v=20260809-23" defer></script>
     <script src="js/touch-interactions.js" defer></script>
 </head>
@@ -49,9 +52,10 @@
             <button type="submit" id="personal-information-save">Save Changes</button>
             <button class="personal-account-delete" id="personal-account-delete" type="button">
                 <img src="images/Icon Folder/Delete Icon_Black.PNG" alt="">
-                <span>Delete Account</span>
+                <span>Request account deletion</span>
             </button>
         </form>
+        <p><a href="privacy-requests.html">Privacy requests and account deletion status</a></p>
     </main>
 
     <div class="account-loading" id="personal-information-loading">Loading your profile…</div>
@@ -59,11 +63,11 @@
     <div class="personal-delete-confirm-overlay" id="personal-delete-confirm-overlay" aria-hidden="true">
         <div class="personal-delete-confirm-box" role="dialog" aria-modal="true" aria-labelledby="personal-delete-confirm-title">
             <img src="images/trashbin.png" alt="">
-            <h2 id="personal-delete-confirm-title">Delete Account</h2>
-            <p>This permanently deletes your account and you will no longer be able to sign in.</p>
+            <h2 id="personal-delete-confirm-title">Request account deletion</h2>
+            <p>We will review your request and explain any records that must be retained for orders, refunds or legal obligations. Your account stays available during review. This does not cancel orders.</p>
             <div>
                 <button class="personal-delete-cancel" id="personal-delete-cancel" type="button">Cancel</button>
-                <button class="personal-delete-confirm" id="personal-delete-confirm" type="button">Delete Account</button>
+                <button class="personal-delete-confirm" id="personal-delete-confirm" type="button">Submit request</button>
             </div>
         </div>
     </div>

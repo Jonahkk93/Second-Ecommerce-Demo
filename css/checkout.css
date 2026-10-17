@@ -814,3 +814,7 @@ body.checkout-exit-open{
         padding-left:22px
     }
 }
+
+.checkout-terms { display:flex; align-items:flex-start; gap:10px; margin:20px 0; font-size:14px; line-height:1.65; }
+.checkout-terms input { width:18px; height:18px; flex:0 0 18px; margin-top:3px; accent-color:#E5A484; }
+.checkout-terms a { color:#925337; text-underline-offset:3px; }

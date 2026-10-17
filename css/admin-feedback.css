@@ -1,0 +1,13 @@
+#feedback-admin-list{display:grid;gap:18px;margin-top:20px}
+.feedback-admin-card{border:1px solid #e5e5e5;border-radius:16px;background:#fff;padding:24px;min-width:0;overflow-wrap:anywhere}
+.feedback-admin-card header{display:flex;align-items:start;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.feedback-admin-card h2{font-size:18px;margin:0 0 9px}
+.feedback-admin-card p{line-height:1.6}.feedback-admin-card .description{white-space:pre-wrap}
+.feedback-admin-card small,.feedback-admin-note{color:#777;font-size:12px}
+.feedback-admin-card select{padding:10px;border:1px solid #ddd;border-radius:8px;background:#fff;font:inherit}
+.feedback-admin-images{display:flex;gap:10px;flex-wrap:wrap}
+.feedback-admin-images img{width:90px;height:90px;object-fit:cover;border-radius:8px}
+#feedback-reload{border:1px solid #ddd;border-radius:8px;background:#fff;padding:10px 18px;font:inherit;cursor:pointer}
+#feedback-admin-message{color:#9f5131}
+#feedback-admin-loading{padding:30px}
+[hidden]{display:none!important}

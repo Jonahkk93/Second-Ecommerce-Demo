@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback · MPWR Management</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/admin-products.css">
+    <link rel="stylesheet" href="css/admin-reviews.css">
+    <link rel="stylesheet" href="css/management-navigation.css">
+    <link rel="stylesheet" href="css/admin-feedback.css">
+    <script src="js/runtime-config.js"></script>
+    <script src="js/management-navigation.js" defer></script>
+    <script type="module" src="js/management-account.js"></script>
+    <link rel="stylesheet" href="css/mpwr-select.css">
+    <script type="module" src="js/mpwr-select.js"></script>
+</head>
+<body>
+<div class="management-shell" id="feedback-admin" hidden>
+    <aside class="management-sidebar" data-management-sidebar></aside>
+    <main class="management-main reviews-main">
+        <header class="management-topbar"><div><p class="eyebrow">Customer experience</p><h1>Feedback & Rating</h1><p>Website suggestions and experience ratings from MPWR customers.</p></div></header>
+        <div class="reviews-toolbar"><label class="search-field"><input id="feedback-search" type="search" placeholder="Search customer, topic or suggestion…" aria-label="Search feedback"></label><select id="feedback-status-filter" aria-label="Filter feedback status"><option value="all">All feedback</option><option value="new">New</option><option value="seen">Seen</option><option value="resolved">Resolved</option></select></div>
+        <p id="feedback-admin-count"></p><p class="feedback-admin-note">Showing the latest 500 submissions.</p>
+        <p id="feedback-admin-message" role="status"></p><button id="feedback-reload" type="button">Refresh</button>
+        <section id="feedback-admin-list" aria-label="Customer feedback"></section>
+    </main>
+</div>
+<p id="feedback-admin-loading" role="status">Loading feedback…</p>
+<script type="module" src="js/admin-feedback.js"></script>
+</body>
+</html>

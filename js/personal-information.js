@@ -98,23 +98,24 @@ deleteConfirmButton.addEventListener("click", async () => {
     if (!currentUser) return;
 
     deleteConfirmButton.disabled = true;
-    deleteConfirmButton.textContent = "Deleting…";
+    deleteConfirmButton.textContent = "Submitting…";
 
     try {
-        await deleteUser(currentUser);
-        window.location.replace("index.html");
+        const receipt = await deleteUser(currentUser);
+        closeDeleteConfirmation();
+        showMessage(`Deletion request received: ${receipt.reference}. Your account remains available during review. Check Privacy requests for updates.`);
     } catch (error) {
         console.error("Unable to delete account:", error);
         closeDeleteConfirmation();
         showMessage(
             String(error?.code || "").includes("requires-recent-login")
                 ? "For security, sign out and sign in again before deleting your account."
-                : "Your account could not be deleted. Please try again.",
+                : "Your deletion request could not be submitted. Please try again or contact MPWR.",
             "error"
         );
     } finally {
         deleteConfirmButton.disabled = false;
-        deleteConfirmButton.textContent = "Delete Account";
+        deleteConfirmButton.textContent = "Submit request";
     }
 });
 

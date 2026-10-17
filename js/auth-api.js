@@ -1,3 +1,4 @@
+import { TERMS_VERSION } from "./legal-policy.js";
 const localHost = /^(?:localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i.test(window.location.hostname)
     || /(?:^|\.)local$/i.test(window.location.hostname)
     || (window.location.protocol === "http:" && Boolean(window.location.port) && window.location.port !== "80");
@@ -118,9 +119,9 @@ async function applySession(auth, payload) {
     return { user: auth.currentUser, ...payload };
 }
 
-export async function createUserWithEmailAndPassword(auth, email, password) {
+export async function createUserWithEmailAndPassword(auth, email, password, termsAccepted = false) {
     const firstName = email.split("@")[0] || "MPWR";
-    return applySession(auth, await request("/auth/register", { method: "POST", body: { email, password, firstName, lastName: "Customer" } }));
+    return applySession(auth, await request("/auth/register", { method: "POST", body: { email, password, firstName, lastName: "Customer", termsAccepted, termsVersion: TERMS_VERSION } }));
 }
 
 export async function signInWithEmailAndPassword(auth, email, password) {
@@ -155,11 +156,12 @@ export async function verifyBeforeUpdateEmail(user, email) {
 }
 
 export async function deleteUser() {
-    await request("/auth/account", { method: "DELETE" });
-    const auth = window.auth || window.adminAuth;
-    auth.currentUser = null;
-    auth.notify();
+    return request("/auth/account", { method: "DELETE" });
 }
+export function submitPrivacyRequest(kind, details) {
+    return request("/privacy-requests", { method: "POST", body: { kind, details } });
+}
+export function listPrivacyRequests() { return request("/privacy-requests"); }
 
 export function sendPasswordResetEmail(_auth, email) {
     return request("/auth/password-reset/request", { method: "POST", body: { email } });

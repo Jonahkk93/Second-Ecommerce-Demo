@@ -347,6 +347,7 @@ function closeCart() {
 }
 
 function getHistory() {
+    if (!window.MPWRCookieConsent?.allows("functional")) return [];
     try {
         const visits = JSON.parse(localStorage.getItem(historyKey)) || [];
         return Array.isArray(visits) ? visits : [];
@@ -623,6 +624,7 @@ function historyDateLabel(timestamp) {
 }
 
 function removeProductFromHistory(productId) {
+    if (!window.MPWRCookieConsent?.allows("functional")) return;
     const nextHistory = getHistory().filter(visit => String(visit?.id) !== String(productId));
     localStorage.setItem(historyKey, JSON.stringify(nextHistory));
     renderHistory();
@@ -767,8 +769,21 @@ function renderHistory() {
     const isEmpty = visitedProducts.length === 0;
     historyGrid.hidden = isEmpty;
     emptyState.hidden = !isEmpty;
+    const historyDisabled = !window.MPWRCookieConsent?.allows("functional");
+    emptyState.querySelector("p").textContent = historyDisabled ? "Recently viewed history is off. Enable functional cookies to remember the products you browse." : "Products you view will appear here.";
+    let cookieLink = emptyState.querySelector("[data-manage-cookies]");
+    if (!cookieLink) {
+        cookieLink = document.createElement("a");
+        cookieLink.href = "manage-cookies.html";
+        cookieLink.dataset.manageCookies = "";
+        cookieLink.textContent = "Manage cookies";
+        emptyState.appendChild(cookieLink);
+    }
+    cookieLink.hidden = !historyDisabled;
     historyFooter.hidden = isEmpty;
 }
+
+window.addEventListener("mpwr:cookie-consent-changed", renderHistory);
 
 clearButton.addEventListener("click", () => {
     clearButton.querySelector("img").src = "images/Icon Folder/Delete Icon_d9534f.PNG";

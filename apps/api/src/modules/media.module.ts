@@ -90,7 +90,7 @@ export class MediaService {
 
   async upload(user: AuthUser, purpose: string, request: MultipartRequest) {
     this.assertConfigured();
-    if (!["profile", "review", "product", "banner", "category", "appeal"].includes(purpose)) throw new UnsupportedMediaTypeException("Unsupported media purpose");
+    if (!["profile", "review", "product", "banner", "category", "appeal", "feedback"].includes(purpose)) throw new UnsupportedMediaTypeException("Unsupported media purpose");
     if (["product", "banner", "category"].includes(purpose) && user.role !== "admin") throw new ForbiddenException("Admin access required for storefront images");
     const maxFileSize = purpose === "product" ? 50 * 1024 * 1024 : purpose === "banner" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
     const file = await request.file({ limits: { files: 1, fileSize: maxFileSize } });
@@ -145,7 +145,7 @@ export class MediaService {
 
   async remove(user: AuthUser, key: string) {
     this.assertConfigured();
-    if (user.role !== "admin" && !key.startsWith(`profile/${user.sub}/`) && !key.startsWith(`review/${user.sub}/`)) throw new ForbiddenException("You cannot remove this image");
+    if (user.role !== "admin" && !key.startsWith(`profile/${user.sub}/`) && !key.startsWith(`review/${user.sub}/`) && !key.startsWith(`feedback/${user.sub}/`)) throw new ForbiddenException("You cannot remove this image");
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
     return { ok: true };
   }

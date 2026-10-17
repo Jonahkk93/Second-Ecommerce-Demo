@@ -5,7 +5,9 @@ import { AuthGuard, AuthUser, CurrentUser, OrdersGuard } from "../common/auth";
 import { DB, Database } from "../database/database.module";
 import { deliveryQuotes, orderItems, orders, paymentEvents, payments, products, searchDailyAnalytics, searchEvents, storefrontSettings, users } from "../database/schema";
 
-class CreateOrderDto { @IsUUID() quoteId!: string; @IsString() firstName!: string; @IsString() lastName!: string; @IsEmail() email!: string; @IsString() phone!: string; @IsOptional() @IsString() notes?: string; }
+import { TermsAcceptanceDto, acceptanceReceipt } from "../common/legal-policy";
+
+class CreateOrderDto extends TermsAcceptanceDto { @IsUUID() quoteId!: string; @IsString() firstName!: string; @IsString() lastName!: string; @IsEmail() email!: string; @IsString() phone!: string; @IsOptional() @IsString() notes?: string; }
 class UpdateStatusDto { @IsIn(["pending", "processing", "shipped", "delivered", "cancelled", "returned"]) status!: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "returned"; }
 class UpdateTrackingDto {
   @IsString() @MaxLength(120) trackingNumber!: string;
@@ -15,7 +17,7 @@ class UpdateTrackingDto {
 class UpdateCancellationSeenDto { @IsBoolean() seen!: boolean; }
 class ReviewCancellationDto { @IsIn(["approve", "reject"]) decision!: "approve" | "reject"; }
 class UpdateRefundDto { @IsIn(["pending", "initiated", "processing", "refunded", "failed"]) status!: "pending" | "initiated" | "processing" | "refunded" | "failed"; @IsOptional() @IsString() reference?: string; @IsOptional() @IsString() note?: string; }
-class LegacyOrderDto { @IsArray() items!: unknown[]; @IsObject() customer!: Record<string, unknown>; @IsObject() delivery!: Record<string, unknown>; @IsOptional() @IsObject() payment?: Record<string, unknown>; @IsInt() @Min(0) deliveryFee!: number; }
+class LegacyOrderDto extends TermsAcceptanceDto { @IsArray() items!: unknown[]; @IsObject() customer!: Record<string, unknown>; @IsObject() delivery!: Record<string, unknown>; @IsOptional() @IsObject() payment?: Record<string, unknown>; @IsInt() @Min(0) deliveryFee!: number; }
 type QuotedOrderItem = { productId: string; variantId?: string; title: string; sku?: string; quantity: number; unitPrice: number; options?: Record<string, unknown> };
 
 function normalizeSearchAnalyticsQuery(value: string) {
@@ -290,7 +292,7 @@ export class OrdersService {
       const [claimed] = await tx.update(deliveryQuotes).set({ consumedAt: new Date() }).where(and(eq(deliveryQuotes.id, quote.id), isNull(deliveryQuotes.consumedAt))).returning();
       if (!claimed) throw new BadRequestException("Delivery quote already used");
       const destination = quote.destination as { items?: QuotedOrderItem[]; [key: string]: unknown }; const { items: quotedItems = [], ...deliveryDestination } = destination;
-      const [order] = await tx.insert(orders).values({ userId, quoteId: quote.id, subtotal: quote.subtotal, deliveryFee: quote.fee, total: quote.total, customer: { firstName: dto.firstName.trim(), lastName: dto.lastName.trim(), email: dto.email.toLowerCase(), phone: dto.phone.trim() }, delivery: { ...deliveryDestination, notes: dto.notes || "", distanceKm: quote.distanceKm, durationMinutes: quote.durationMinutes, shippingClass: quote.class, fee: quote.fee, pricingVersion: quote.pricingVersion } }).returning();
+      const [order] = await tx.insert(orders).values({ userId, quoteId: quote.id, subtotal: quote.subtotal, deliveryFee: quote.fee, total: quote.total, customer: { firstName: dto.firstName.trim(), lastName: dto.lastName.trim(), email: dto.email.toLowerCase(), phone: dto.phone.trim() }, delivery: { ...deliveryDestination, notes: dto.notes || "", distanceKm: quote.distanceKm, durationMinutes: quote.durationMinutes, shippingClass: quote.class, fee: quote.fee, pricingVersion: quote.pricingVersion, policyAcceptance: acceptanceReceipt("checkout") } }).returning();
       await tx.insert(orderItems).values(quotedItems.map(item => ({ orderId: order.id, productId: item.productId, variantId: item.variantId || null, title: item.title, sku: item.sku || null, quantity: item.quantity, unitPrice: item.unitPrice, options: item.options || {} })));
       await Promise.all(quotedItems.map(item => this.recordSearchPurchase(tx, { productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice, options: item.options || {} }, order.id)));
       return order;
@@ -307,7 +309,7 @@ export class OrdersService {
     return this.db.transaction(async tx => {
       let subtotal = 0;
       const snapshots = rawItems.map(item => { const product = productMap.get(String(item.id))!; const quantity = Math.max(1, Math.min(20, Number(item.quantity) || 1)); const metadata = product.metadata as Record<string, any>; const selectedSize = item.selectedOptions?.length || item.selectedOptions?.size || item.size; const optionPrice = selectedSize ? Number(metadata.sizePrices?.[selectedSize]) : NaN; const regularPrice = Number.isFinite(optionPrice) ? optionPrice : product.price; const discount = discountMap.get(String(product.legacyId)) as number | undefined; const unitPrice = discount ? Math.round(regularPrice * (1 - discount / 100)) : regularPrice; subtotal += unitPrice * quantity; const selectedOptions = item.selectedOptions || { ...(item.color ? { color: item.color } : {}), ...(item.size ? { size: item.size } : {}) }; return { productId: product.id, title: product.title, quantity, unitPrice, options: { ...selectedOptions, legacySnapshot: item } }; });
-      const [order] = await tx.insert(orders).values({ userId, subtotal, deliveryFee: dto.deliveryFee, total: subtotal + dto.deliveryFee, customer: dto.customer, delivery: { ...dto.delivery, payment: dto.payment || {} } }).returning();
+      const [order] = await tx.insert(orders).values({ userId, subtotal, deliveryFee: dto.deliveryFee, total: subtotal + dto.deliveryFee, customer: dto.customer, delivery: { ...dto.delivery, payment: dto.payment || {}, policyAcceptance: acceptanceReceipt("checkout") } }).returning();
       await tx.insert(orderItems).values(snapshots.map(item => ({ orderId: order.id, ...item })));
       await Promise.all(snapshots.map(item => this.recordSearchPurchase(tx, item, order.id)));
       return { ...order, items: snapshots };

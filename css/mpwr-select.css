@@ -1,0 +1,21 @@
+/* MPWR's existing product/shipping picker styling, scoped for shared forms. */
+select.mpwr-select-native{position:absolute!important;width:1px!important;min-width:0!important;height:1px!important;min-height:0!important;margin:-1px!important;padding:0!important;border:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+.mpwr-select{position:relative;width:100%;min-width:0;font:inherit;font-weight:400}
+.mpwr-select .product-dropdown-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:48px;padding:13px 22px;box-sizing:border-box;border:1px solid #ddd;border-radius:9px;background:#fff;color:#333;font:inherit;text-align:left;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease;-webkit-tap-highlight-color:transparent}
+.mpwr-select .product-dropdown-trigger:is(:hover,:focus-visible,[aria-expanded=true]){border-color:#e5a484;outline:0;box-shadow:0 0 0 3px rgba(229,164,132,.14)}
+.mpwr-select .product-dropdown-trigger:disabled{background:#fafafa;color:#929292;cursor:default;box-shadow:none;border-color:#dedede}
+.mpwr-select .product-dropdown-trigger[aria-invalid=true]{border-color:#b65e3c}
+.mpwr-select .product-dropdown-label{min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.mpwr-select .product-dropdown-arrow{display:block;width:13px;height:13px;flex:0 0 auto;object-fit:contain;transition:transform .2s ease}
+.mpwr-select .product-dropdown-trigger[aria-expanded=true] .product-dropdown-arrow{transform:rotate(180deg)}
+.mpwr-select .product-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;left:0;z-index:100;max-height:min(280px,40dvh);overflow:auto;overscroll-behavior:contain;padding:5px;border:1px solid #e5e5e5;border-radius:10px;background:#fff;box-shadow:0 12px 28px rgba(0,0,0,.16);scrollbar-width:none}
+.mpwr-select .product-dropdown-menu[hidden]{display:none!important}
+.mpwr-select .product-dropdown-menu.is-above{top:auto;bottom:calc(100% + 8px)}
+.mpwr-select .product-dropdown-menu::-webkit-scrollbar{display:none}
+.mpwr-select .product-dropdown-menu button{display:block;width:100%;padding:11px 12px;border:0;border-radius:7px;background:transparent;color:#333;font:inherit;line-height:1.45;text-align:left;white-space:normal;cursor:pointer}
+.mpwr-select .product-dropdown-menu button:is(:hover,:focus-visible,.is-active){border-radius:7px 20px 20px 7px;background:#f4dfd4;outline:0}
+.mpwr-select .product-dropdown-menu button.selected{border-radius:7px 20px 20px 7px;background:#e5a484;color:#fff}
+.mpwr-select .product-dropdown-menu button:disabled{display:none}
+.reviews-toolbar>.mpwr-select{width:auto;min-width:180px}
+@media(max-width:600px){.mpwr-select .product-dropdown-trigger{font-size:16px}.reviews-toolbar>.mpwr-select{width:100%;min-width:0}}
+@media(prefers-reduced-motion:reduce){.mpwr-select .product-dropdown-trigger,.mpwr-select .product-dropdown-arrow{transition:none}}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy requests · MPWR Management</title>
+    <link rel="stylesheet" href="css/Larke.css">
+    <link rel="stylesheet" href="css/admin-products.css">
+    <link rel="stylesheet" href="css/admin-reviews.css">
+    <link rel="stylesheet" href="css/management-navigation.css">
+    <link rel="stylesheet" href="css/admin-feedback.css">
+    <script src="js/runtime-config.js"></script>
+    <script src="js/management-navigation.js" defer></script>
+    <script type="module" src="js/management-account.js"></script>
+    <link rel="stylesheet" href="css/mpwr-select.css">
+    <script type="module" src="js/mpwr-select.js"></script>
+</head>
+<body>
+<div class="management-shell" id="privacy-admin" hidden>
+    <aside class="management-sidebar" data-management-sidebar></aside>
+    <main class="management-main reviews-main">
+        <header class="management-topbar"><div><p class="eyebrow">Customer experience</p><h1>Privacy requests</h1><p>Review access, correction, deletion and objection requests.</p></div></header>
+        
+        <p>Review identity and relevant deadlines promptly. Closing a request records the outcome; it does not erase data. Complete and verify any action before closing, and notify the customer through an approved channel.</p>
+        <p id="privacy-admin-message" role="status"></p><button id="privacy-reload" type="button">Refresh</button>
+        <section id="privacy-admin-list" aria-label="Privacy requests"></section>
+    </main>
+</div>
+<p id="privacy-admin-loading" role="status">Loading privacy requests…</p>
+<script type="module" src="js/admin-privacy.js"></script>
+</body>
+</html>

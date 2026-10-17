@@ -11,12 +11,15 @@ import { normalizePhone } from "../common/phone";
 import { DB, Database } from "../database/database.module";
 import { authTokens, users } from "../database/schema";
 
+import { TermsAcceptanceDto, acceptanceReceipt } from "../common/legal-policy";
+import { PrivacyModule, PrivacyService } from "./privacy.module";
+
 type CookieReply = FastifyReply & {
   setCookie(name: string, value: string, options: { httpOnly: boolean; secure: boolean; sameSite: "lax"; path: string; maxAge: number }): CookieReply;
   clearCookie(name: string, options: { path: string }): CookieReply;
 };
 
-class RegisterDto { @IsEmail() email!: string; @MinLength(8) password!: string; @IsString() firstName!: string; @IsString() lastName!: string; @IsOptional() @IsString() phone?: string; }
+class RegisterDto extends TermsAcceptanceDto { @IsEmail() email!: string; @MinLength(8) password!: string; @IsString() firstName!: string; @IsString() lastName!: string; @IsOptional() @IsString() phone?: string; }
 class LoginDto { @IsEmail() email!: string; @IsString() password!: string; }
 class AccountDto { @IsOptional() @IsEmail() email?: string; @IsOptional() @IsString() firstName?: string; @IsOptional() @IsString() lastName?: string; @IsOptional() @IsString() profileImage?: string; }
 class EmailDto { @IsEmail() email!: string; }
@@ -25,7 +28,7 @@ class ResetPasswordDto extends TokenDto { @MinLength(8) password!: string; }
 
 @Injectable()
 class AuthService {
-  constructor(@Inject(DB) private db: Database, private jwt: JwtService, private config: ConfigService) {}
+  constructor(@Inject(DB) private db: Database, private jwt: JwtService, private config: ConfigService, private privacy: PrivacyService) {}
   private publicUser(user: typeof users.$inferSelect) {
     return { id: user.id, uid: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, displayName: `${user.firstName} ${user.lastName}`.trim(), profileImage: user.profileImage, photoURL: user.profileImage, emailVerified: user.emailVerified, role: user.role, blockedAt: user.blockedAt, blockReason: user.blockReason };
   }
@@ -41,7 +44,7 @@ class AuthService {
       const blockedPhones = await this.db.select({ phone: users.phone }).from(users).where(and(eq(users.role, "customer"), isNotNull(users.blockedAt)));
       if (blockedPhones.some(account => normalizePhone(account.phone) === phone)) throw new ForbiddenException("This mobile number has been blocked. Contact MPWR support if you think this is a mistake.");
     }
-    const [user] = await this.db.insert(users).values({ email, passwordHash: await hash(dto.password, 12), firstName: dto.firstName.trim(), lastName: dto.lastName.trim(), phone: dto.phone?.trim() }).returning();
+    const [user] = await this.db.insert(users).values({ email, passwordHash: await hash(dto.password, 12), firstName: dto.firstName.trim(), lastName: dto.lastName.trim(), phone: dto.phone?.trim(), legacyData: { policyAcceptance: acceptanceReceipt("registration") } }).returning();
     return { ...(await this.session(user)), verification: await this.issueToken(user, "verify_email", "verify-email.html", "Verify your MPWR email", "Verify your email address") };
   }
   async login(dto: LoginDto) {
@@ -75,7 +78,7 @@ class AuthService {
       throw error;
     }
   }
-  async deleteAccount(id: string) { await this.db.delete(users).where(eq(users.id, id)); return { ok: true }; }
+  async deleteAccount(id: string) { return this.privacy.submit(id, { kind: "deletion", details: "Account deletion requested from Personal Information." }); }
   private tokenHash(token: string) { return createHash("sha256").update(token).digest("hex"); }
   private async issueToken(user: typeof users.$inferSelect, purpose: "password_reset" | "verify_email", page: string, subject: string, action: string) {
     const token = randomBytes(32).toString("base64url");
@@ -127,8 +130,8 @@ class AuthController {
   @Post("email-verification/confirm") verifyEmail(@Body() dto: TokenDto) { return this.service.verifyEmail(dto.token); }
   @UseGuards(AuthGuard) @Get("me") me(@CurrentUser() user: AuthUser) { return this.service.me(user.sub); }
   @UseGuards(AuthGuard) @Patch("account") async updateAccount(@CurrentUser() user: AuthUser, @Body() dto: AccountDto, @Res({ passthrough: true }) reply: CookieReply) { const result = await this.service.updateAccount(user.sub, dto); this.setCookie(reply, result.token); return result; }
-  @UseGuards(AuthGuard) @Delete("account") async deleteAccount(@CurrentUser() user: AuthUser, @Res({ passthrough: true }) reply: CookieReply) { const result = await this.service.deleteAccount(user.sub); reply.clearCookie("mpwr_session", { path: "/" }); return result; }
+  @UseGuards(AuthGuard) @Delete("account") async deleteAccount(@CurrentUser() user: AuthUser, @Res({ passthrough: true }) reply: CookieReply) { const result = await this.service.deleteAccount(user.sub); return result; }
 }
 
-@Module({ controllers: [AuthController], providers: [AuthService] })
+@Module({ imports: [PrivacyModule], controllers: [AuthController], providers: [AuthService] })
 export class AuthModule {}
